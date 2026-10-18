@@ -1,0 +1,12 @@
+# Downloaded and derived data: rebuild with src/run_all.sh
+data/
+outputs/*
+!outputs/posters/
+!outputs/findings_log.txt
+!outputs/stations/
+outputs/stations/*
+!outputs/stations/station_index.csv
+
+__pycache__/
+*.pyc
+*.part
