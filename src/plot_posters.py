@@ -5,6 +5,7 @@
     outputs/posters/3_europe_2026.png              stations with their hottest day ever, by year
     outputs/posters/4_<station>_every_day.png      one city, every day since its first year
     outputs/posters/5_<station>_hottest_day.png    one city, its hottest day of every year
+    outputs/posters/6_world_2026.png               stations worldwide with their hottest day ever this year
 
     python -I src/plot_posters.py                  # city posters for Potsdam
     python -I src/plot_posters.py --id GM000003319
@@ -203,6 +204,62 @@ def poster_by_year(f):
     P.save(fig, OUT / "3_europe_2026.png")
 
 
+def poster_world(f):
+    """Stations still reporting this year; red = hottest day ever measured this year."""
+    fy = f["final_year"]
+    idx, hot = f["idx"], f["hot"]
+    act = idx["has_final_year"].to_numpy()
+    yrs = np.asarray(f["dates"].year)
+    valid = np.isfinite(f["tmax"])
+    n_years = np.array([np.unique(yrs[valid[i]]).size for i in range(len(idx))])
+    expected = (1.0 / n_years[act]).sum()
+    st = hot[act]
+    new, old = st[st["year"] == fy], st[st["year"] != fy]
+    counts = st["year"].value_counts().reindex(range(1900, fy + 1), fill_value=0)
+    more = sorted(int(y) for y in counts[counts > counts[fy]].index)
+    n_eu = int((new["region"] == "Europe").sum())
+    eu_counts = st[st["region"] == "Europe"]["year"].value_counts()
+    eu_first = eu_counts.idxmax() == fy
+
+    fig = P.new_poster()
+    top(fig, f"{len(new)}", f"weather stations with more than 100 years of\nmeasurements had their "
+                            f"hottest day ever in {fy}.")
+    proj = ccrs.Robinson(central_longitude=0)
+    ax = fig.add_axes([0.0, 0.33, 1.0, 0.38], projection=proj)
+    ax.set_extent([-170, 180, -50, 78], crs=ccrs.PlateCarree())
+    ax.set_facecolor("none")
+    ax.spines["geo"].set_visible(False)
+    ax.add_feature(cfeature.NaturalEarthFeature("physical", "land", "50m"), facecolor="#1C1C1E",
+                   edgecolor="none")
+    ax.add_feature(cfeature.NaturalEarthFeature("cultural", "admin_0_boundary_lines_land", "50m"),
+                   facecolor="none", edgecolor="#3A3A3C", linewidth=0.3)
+    ax.scatter(old["lon"], old["lat"], s=5, color=OLD, linewidth=0, transform=ccrs.PlateCarree(), zorder=3)
+    ax.scatter(new["lon"], new["lat"], s=300, color=P.RED, alpha=0.12, linewidth=0,
+               transform=ccrs.PlateCarree(), zorder=4)
+    ax.scatter(new["lon"], new["lat"], s=34, color=P.RED, edgecolor=P.BLACK, linewidth=0.6,
+               transform=ccrs.PlateCarree(), zorder=5)
+    ax.apply_aspect()
+    fade_edges(fig, list(ax.get_position().bounds), band=0.05)
+
+    rows = [(f"{len(new)}", P.RED, f"broke their all-time heat record in {fy}"),
+            (f"≈{expected:.0f}", SOFT, "would be expected if the climate were stable"),
+            (f"{n_eu}", P.ORANGE, "of them in Europe, more than in any year before" if eu_first
+             else "of them in Europe")]
+    for i, (num, colour, label) in enumerate(rows):
+        y = 0.287 - i * 0.056
+        fig.text(P.LEFT, y, num, fontfamily=P.DISPLAY, fontweight="bold", fontsize=34, color=colour,
+                 va="center")
+        fig.text(P.LEFT + 0.17, y, label, fontsize=14, color=SOFT, va="center", fontweight="medium")
+    if more:
+        fig.text(P.LEFT, 0.122, "Only the US Dust Bowl summers of " + ", ".join(map(str, more[:-1]))
+                 + f" and {more[-1]}\nbroke more all-time records at these stations.", fontsize=12,
+                 color=P.GRAY, va="center", linespacing=1.3)
+    bottom(fig, f"Each dot is a weather station with more than 100 years of measurements that still "
+                f"reports today ({act.sum():,}).\nRed: its hottest day ever was in {fy}. Grey: earlier. "
+                f"Most stations up to mid-October {fy}\n" + SOURCES)
+    P.save(fig, OUT / f"6_world_{fy}.png")
+
+
 def poster_carpet(f, sid):
     meta = f["idx"].loc[sid]
     name = display_name({"id": sid, "name": meta["name"], "country": meta["country"], "state": meta["state"]})
@@ -294,6 +351,7 @@ def main() -> None:
     poster_by_year(f)
     poster_carpet(f, args.id)
     poster_staircase(f, args.id)
+    poster_world(f)
 
 
 if __name__ == "__main__":
