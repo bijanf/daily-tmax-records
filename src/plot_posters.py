@@ -36,22 +36,28 @@ OUT = ROOT / "outputs" / "posters"
 OLD = "#636366"
 SOFT = "#D1D1D6"
 SOURCES = "Data: NOAA, DWD, SMHI, KNMI, GeoSphere, MeteoSwiss"
+DARK = dict(suffix="", bg=P.BLACK, ink=P.INK, soft=SOFT, gray=P.GRAY, red=P.RED, blue=P.BLUE,
+            red_text=P.RED, blue_text=P.BLUE, glow=True, red_alpha=0.8, blue_alpha=0.85, on_bar=P.INK)
+# White theme for LinkedIn: Apple light-mode colours; every text colour >= 4.5:1 on white
+LIGHT = dict(suffix="_light", bg="#FFFFFF", ink="#1D1D1F", soft="#3A3A3C", gray="#6E6E73",
+             red="#FF3B30", blue="#007AFF", red_text="#D70015", blue_text="#0040DD", glow=False,
+             red_alpha=0.85, blue_alpha=1.0, on_bar="#FFFFFF")
 HEAT = LinearSegmentedColormap.from_list("heat", [
     (0.00, "#0A84FF"), (0.28, "#0B2F57"), (0.46, "#0B0B0D"), (0.54, "#0B0B0D"),
     (0.70, "#7A1410"), (0.84, P.RED), (0.94, P.ORANGE), (1.00, "#FFE8A3")])
 
 
-def top(fig, big, line, big_size=100, line_y=None):
+def top(fig, big, line, big_size=100, line_y=None, theme=DARK):
     """Huge headline, then one plain sentence in big type."""
     fig.text(P.LEFT, 0.945, big, fontfamily=P.DISPLAY, fontweight="bold", fontsize=big_size,
-             color=P.INK, va="top", ha="left", linespacing=0.92)
+             color=theme["ink"], va="top", ha="left", linespacing=0.92)
     fig.text(P.LEFT, line_y if line_y is not None else 0.775, line, fontfamily=P.TEXT_FONT,
-             fontweight="medium", fontsize=19, color=SOFT, va="top", ha="left", linespacing=1.22)
+             fontweight="medium", fontsize=19, color=theme["soft"], va="top", ha="left", linespacing=1.22)
 
 
-def bottom(fig, text):
-    fig.text(P.LEFT, 0.03, text, fontsize=8, color=P.GRAY, va="bottom", ha="left", linespacing=1.45)
-    fig.text(1 - P.LEFT, 0.03, P.SIGNATURE, fontsize=9, fontweight="semibold", color=P.INK,
+def bottom(fig, text, theme=DARK):
+    fig.text(P.LEFT, 0.03, text, fontsize=8, color=theme["gray"], va="bottom", ha="left", linespacing=1.45)
+    fig.text(1 - P.LEFT, 0.03, P.SIGNATURE, fontsize=9, fontweight="semibold", color=theme["ink"],
              va="bottom", ha="right")
 
 
@@ -76,15 +82,18 @@ def europe(f):
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-def poster_ratio(f):
+def poster_ratio(f, theme=DARK):
     """Mirror chart: red up = heat records per cold record, blue down = cold records per heat record."""
+    t = theme
     decades = np.arange(1880, 2030, 10)
     hc = np.array([findings.record_counts(f, "Europe", d, d + 9) for d in decades], dtype=float)
     heat_wins = hc[:, 0] >= hc[:, 1]
     size = np.where(heat_wins, hc[:, 0] / hc[:, 1], hc[:, 1] / hc[:, 0])
     top_ratio = size[-1]
-    fig = P.new_poster(glow=P.RED, at=(0.86, 0.42), size=0.30, alpha=0.26)
-    top(fig, f"{top_ratio:.0f} : 1", f"Europe now breaks {top_ratio:.0f} heat records\nfor every cold record.")
+    fig = P.new_poster(glow=t["red"] if t["glow"] else None, at=(0.86, 0.42), size=0.30, alpha=0.26,
+                       bg=t["bg"])
+    top(fig, f"{top_ratio:.0f} : 1", f"Europe now breaks {top_ratio:.0f} heat records\nfor every cold record.",
+        theme=t)
 
     ax = fig.add_axes([P.LEFT, 0.13, 1 - 2 * P.LEFT, 0.53])
     P.bare(ax)
@@ -95,37 +104,38 @@ def poster_ratio(f):
     ax.set_yticks([])
     for xi, w, r, d in zip(x, heat_wins, size, decades):
         if not w:
-            P.top_rounded_bar(ax, xi, -r, 0.66, P.BLUE, alpha=0.85, radius_px=8)
+            P.top_rounded_bar(ax, xi, -r, 0.66, t["blue"], alpha=t["blue_alpha"], radius_px=8)
         elif d < decades[-1]:
-            P.top_rounded_bar(ax, xi, r, 0.66, P.RED, alpha=0.8, radius_px=12)
+            P.top_rounded_bar(ax, xi, r, 0.66, t["red"], alpha=t["red_alpha"], radius_px=12)
             ax.text(xi, r + top_ratio * 0.02, f"{r:.0f}", ha="center", va="bottom", fontsize=15,
-                    color=SOFT, fontweight="semibold")
+                    color=t["soft"], fontweight="semibold")
         else:
-            P.glow_box(ax, xi - 0.33, xi + 0.33, 0, r, P.RED, sigma_px=60, strength=0.6)
-            P.top_rounded_bar(ax, xi, r, 0.66, P.RED, radius_px=16, zorder=4)
+            if t["glow"]:
+                P.glow_box(ax, xi - 0.33, xi + 0.33, 0, r, t["red"], sigma_px=60, strength=0.6)
+            P.top_rounded_bar(ax, xi, r, 0.66, t["red"], radius_px=16, zorder=4)
             ax.text(xi, r + top_ratio * 0.02, f"{r:.0f}", ha="center", va="bottom", fontsize=40,
-                    fontfamily=P.DISPLAY, fontweight="bold", color=P.INK)
+                    fontfamily=P.DISPLAY, fontweight="bold", color=t["ink"])
     worst = int(np.argmax(np.where(heat_wins, 0, size)))
     ax.text(x[worst], -size[worst] * 0.55, f"{size[worst]:.0f}", ha="center", va="center",
-            fontsize=15, color=P.INK, fontweight="bold", zorder=6)
-    ax.axhline(0, color=P.INK, linewidth=0.8, alpha=0.6, zorder=5)
-    ax.text(-0.45, top_ratio * 0.30, "More heat records ↑", fontsize=15, color=P.RED, fontweight="semibold",
-            va="bottom")
+            fontsize=15, color=t["on_bar"], fontweight="bold", zorder=6)
+    ax.axhline(0, color=t["ink"], linewidth=0.8, alpha=0.6, zorder=5)
+    ax.text(-0.45, top_ratio * 0.30, "More heat records ↑", fontsize=15, color=t["red_text"],
+            fontweight="semibold", va="bottom")
     ax.text(-0.45, top_ratio * 0.30 - top_ratio * 0.012, "red bar = heat records\nfor every cold record",
-            fontsize=11, color=P.GRAY, va="top", linespacing=1.25)
-    ax.text(-0.45, -cold_max * 1.25, "More cold records ↓", fontsize=15, color=P.BLUE,
+            fontsize=11, color=t["gray"], va="top", linespacing=1.25)
+    ax.text(-0.45, -cold_max * 1.25, "More cold records ↓", fontsize=15, color=t["blue_text"],
             fontweight="semibold", va="top")
     ax.text(-0.45, -cold_max * 1.25 - top_ratio * 0.065, "blue bar = cold records for every heat record",
-            fontsize=11, color=P.GRAY, va="top")
+            fontsize=11, color=t["gray"], va="top")
     show = {1880: "1880s", 1910: "1910s", 1950: "1950s", 1990: "1990s", 2020: "2020s"}
     ax.set_xticks([])
     for i, d in enumerate(decades):
         if d in show:
-            ax.text(i, -cold_max * 2.85, show[d], ha="center", va="center", fontsize=12, color=P.GRAY)
+            ax.text(i, -cold_max * 2.85, show[d], ha="center", va="center", fontsize=12, color=t["gray"])
     bottom(fig, "Heat record: the hottest day ever measured on that date. Cold record: the coldest.\n"
                 f"{int((f['region'] == 'Europe').sum())} weather stations in Europe, each with more than "
-                f"100 years of measurements\n{SOURCES}")
-    P.save(fig, OUT / "1_europe_23_to_1.png")
+                f"100 years of measurements\n{SOURCES}", theme=t)
+    P.save(fig, OUT / f"1_europe_23_to_1{t['suffix']}.png")
 
 
 def poster_map(f):
@@ -347,6 +357,7 @@ def main() -> None:
     f = findings.compute()
     P.apply_style()
     poster_ratio(f)
+    poster_ratio(f, LIGHT)
     poster_map(f)
     poster_by_year(f)
     poster_carpet(f, args.id)

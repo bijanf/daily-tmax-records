@@ -60,9 +60,9 @@ def apply_style() -> None:
 apply_style()
 
 
-def new_poster(glow: str | None = None, at=(0.5, 0.45), size=0.35, alpha=0.18):
-    """Black canvas; optional radial glow centred at `at` (figure coordinates)."""
-    fig = plt.figure(figsize=(W, H), dpi=DPI, facecolor=BLACK)
+def new_poster(glow: str | None = None, at=(0.5, 0.45), size=0.35, alpha=0.18, bg: str = BLACK):
+    """Canvas (black by default); optional radial glow centred at `at` (figure coordinates)."""
+    fig = plt.figure(figsize=(W, H), dpi=DPI, facecolor=bg)
     if glow:
         bg = fig.add_axes([0, 0, 1, 1], zorder=-10)
         bg.axis("off")
@@ -158,6 +158,6 @@ def halo(ax, x, y, color, size=60, layers=6, zorder=5):
 
 def save(fig, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=DPI)
+    fig.savefig(path, dpi=DPI, facecolor=fig.get_facecolor())
     plt.close(fig)
     print(path)
