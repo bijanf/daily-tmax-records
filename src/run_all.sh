@@ -43,6 +43,6 @@ python -I "$ROOT/src/findings.py" > "$ROOT/outputs/findings_log.txt"
 python -I "$ROOT/src/plot_findings.py"
 python -I "$ROOT/src/plot_impact.py"
 python -I "$ROOT/src/plot_posters.py"
-python -I "$ROOT/src/plot_onebit.py"
+python -I "$ROOT/src/plot_onebit.py" --theme all
 python -I "$ROOT/src/composite.py" | tee "$ROOT/outputs/composite_log.txt"
 python -I "$ROOT/src/plot_records.py"
