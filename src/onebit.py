@@ -4,18 +4,29 @@ The look follows the retro-terminal pages of typesafe.ai: Floyd–Steinberg stip
 field, windows with black title bars, pixel type for the windows (VT323), code labels
 (JetBrains Mono) and one big grotesk headline (Inter Display). A `Story` holds every word and
 number of a poster; `Desktop` lays it out the same way for every story (headline, map, station
-grid, records race, one widget, a badge) and animates it: a loader, windows that open and
-fill one after another at a reading pace, and a slow close-up of the widget at the end.
+grid, records race, one widget, a badge) and animates it along a `Timeline`: a loader, windows
+that open and fill one after another, and a camera that moves in on them.
 Every station keeps its own mark: a dot on the map, a cell in the grid.
+
+Two cuts of the animation:
+
+    CLASSIC  32 s, reading pace, ends on a slow close-up of the widget
+    SOCIAL   30 s loop for Instagram reels: opens on the finished poster, switches
+             the screen off like an old monitor, builds the desk at double speed, then the
+             camera visits every window and returns to the full poster, so the last frame is
+             the first. Dots are 2 x 2 pixels and nothing shimmers, so the stipple survives
+             the platforms' compression.
 
 Themes recolour the whole scene:
 
-    pink    TS.Pink      the typesafe.ai palette
-    violet  Violet.Hour  the sky over the Spree after sunset
-    orange  BSR.Orange   the street sweepers' orange
-    berlin  BVG.Gelb     U-Bahn yellow, black station signs, the red of the city flag
-    xberg   SO36.Nacht   Kreuzberg at night: asphalt, a neon Späti sign, spray paint
-    sand    Streusand    Brandenburg's sand, "the sandbox of the Holy Roman Empire"
+    pink    TS.Pink       the typesafe.ai palette
+    violet  Violet.Hour   the sky over the Spree after sunset
+    orange  BSR.Orange    the street sweepers' orange
+    berlin  BVG.Gelb      U-Bahn yellow, black station signs, the red of the city flag
+    xberg   SO36.Nacht    Kreuzberg at night: asphalt, a neon Späti sign, spray paint
+    sand    Streusand     Brandenburg's sand, "the sandbox of the Holy Roman Empire"
+    uv      Schwarzlicht  black light on the dance floor: ultraviolet, neon mint and magenta
+    beton   Beton         Berlin concrete, black type, signal red
 """
 
 from __future__ import annotations
@@ -41,18 +52,15 @@ MONO = FONTS / "jetbrains-mono" / "JetBrainsMono-Medium.ttf"
 GROTESK = FONTS / "inter" / "ttf" / "InterDisplay-SemiBold.ttf"
 TEXT = FONTS / "inter" / "ttf" / "Inter-Medium.ttf"
 
-W, H = 1080, 1350           # logical canvas = video size; the poster is drawn at 2x
-FPS, SECONDS = 30, 32
-CRF, WEB_CRF = 18, 25       # x264 quality: the full video, and the calm one for web pages
+W, H = 1080, 1350           # logical poster = classic video size; the poster PNG is drawn at 2x
+SIZES = {"poster": (W, H), "reel": (1080, 1920), "feed": (1080, 1350)}
+FPS = 30
+CRF, WEB_CRF, SOCIAL_CRF = 18, 25, 16   # x264 quality: full, calm web cut, platform upload
 LEFT, RIGHT = 64, 1016
 SIGNATURE = "Bijan Fallah"
 EXTENT = [-11, 58, 35.5, 70.5]
-
-# timeline of the animation (seconds): each window opens, fills, then rests long enough to be
-# read; the video ends on a slow close-up of the widget. The poster is t = inf.
-T_DESK, T_MAP, T_GRID, T_RACE, T_WIDGET, T_ZOOM = 1.8, 5.5, 11.5, 16.8, 22.5, 25.5
 OPEN = 0.4                  # zoom rectangles of an opening window
-ZOOM, ZOOM_TIME = 5.0, 4.0  # close-up magnification and how long the camera takes to get there
+SWITCH_OFF = 0.5            # the screen switching off between the intro and the loader
 
 
 @dataclass(frozen=True)
@@ -99,6 +107,12 @@ THEMES = {
     "sand": Theme("Streusand", field="#E2BC72", ink="#2A1B0D", head="#3A2613", paper="#FFFAF0",
                   light="#F1E3C6", track="#D9C49C", cold="#285899", hot="#A63A12",
                   levels=("#F1E3C6", "#C49A5E", "#7B4D24", "#2A1B0D"), accent="#C9471A"),
+    "uv": Theme("Schwarzlicht", field="#12081F", ink="#CFB8FF", head="#F1EAFF", paper="#1C1030",
+                light="#281A42", track="#47366B", cold="#4FB3FF", hot="#FF2BD6",
+                levels=("#33264D", "#5E4A8C", "#9A80D9", "#CFB8FF"), accent="#3DFFB0", dots="#3A2A5C"),
+    "beton": Theme("Beton", field="#B9B8B2", ink="#141414", head="#161616", paper="#F2F1EC",
+                   light="#D8D7D1", track="#C6C5BE", cold="#2A5AA6", hot="#D7191C",
+                   levels=("#E3E2DC", "#9C9B95", "#4B4A46", "#141414"), accent="#D7191C"),
 }
 
 # pixel icons of the badge, one character per 2 x 2 logical pixels
@@ -108,6 +122,41 @@ ICONS = {
     "drop": ["....#....", "....#....", "...###...", "...###...", "..#####..", "..#####..",
              ".#######.", ".#.#####.", ".#.#####.", ".##.####.", "..#####..", "...###..."],
 }
+
+# ── layout (logical pixels, x, y, w, h unless noted) ─────────────────────────
+
+FULL = (0, 0, W, H)
+DESK = (LEFT, 424, RIGHT, 1212)     # x0, y0, x1, y1
+MAP = (84, 462, 524, 424)
+GRID = (628, 446, 368, 456)
+RACE = (148, 920, 646, 270)
+WIDGET = (816, 950, 180, 124)
+BADGE = (LEFT, 1236, 286, 92)
+BALLS = [(0.97, 0.80, 0.20), (0.03, 0.96, 0.17), (0.60, 1.06, 0.20)]
+
+
+@dataclass(frozen=True)
+class Timeline:
+    """When each window opens (seconds), how fast it fills (pace 1 = the classic reading pace)
+    and where the camera looks: keyframes (t, box) in poster coordinates. The camera glides from
+    one box to the next and rests where neighbouring keyframes share a box. With an intro, the
+    video opens on the finished poster and switches the screen off before the loader; a camera
+    that ends on the full poster then closes the loop on that same frame."""
+    desk: float
+    map: float
+    grid: float
+    race: float
+    widget: float
+    end: float
+    camera: tuple
+    pace: float = 1.0
+    intro: float = 0.0
+
+
+CLASSIC = Timeline(1.8, 5.5, 11.5, 16.8, 22.5, end=32, camera=((25.5, FULL), (29.5, WIDGET)))
+SOCIAL = Timeline(3.0, 4.6, 7.3, 10.0, 12.9, end=30, pace=0.55, intro=1.0, camera=(
+    (14.2, FULL), (15.1, MAP), (17.4, MAP), (18.3, GRID), (20.6, GRID), (21.5, RACE), (23.8, RACE),
+    (24.7, WIDGET), (27.4, WIDGET), (28.6, FULL)))
 
 
 @dataclass
@@ -179,6 +228,13 @@ def dither(density: np.ndarray) -> np.ndarray:
     return ~np.asarray(Image.fromarray(grey).convert("1"))
 
 
+def blocks(a: np.ndarray, dot: int, shape) -> np.ndarray:
+    """Every cell of a coarse array as a dot x dot block, cropped to shape."""
+    if dot == 1:
+        return a
+    return np.kron(a, np.ones((dot, dot), a.dtype))[:shape[0], :shape[1]]
+
+
 def spheres(w: int, h: int, balls, light: float) -> np.ndarray:
     """Density of lit spheres with a sparse spray around them, the dithered 'clouds'."""
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
@@ -206,16 +262,25 @@ def smooth(p: float) -> float:
     return p * p * (3 - 2 * p)
 
 
+def glide(a0, z0, a1, z1, e):
+    """View between two views (top-left corner a, zoom z) for 0 <= e <= 1: a zoom about the one
+    point that sits at the same place on screen in both views, so the camera never swerves."""
+    z = z0 ** (1 - e) * z1 ** e
+    if abs(z1 - z0) < 1e-9:
+        return a0 + (a1 - a0) * e, z
+    p = (z1 * a1 - z0 * a0) / (z1 - z0)
+    return p - (p - a0) * z0 / z, z
+
+
 class Canvas:
-    """Pillow image addressed in logical pixels; one logical pixel = s x s output pixels.
+    """Pillow image addressed in poster coordinates (logical pixels); one logical pixel is
+    s x s output pixels at zoom 1. The view draws everything `zoom` times larger with the
+    logical point `at` in the top-left corner, so the camera moves without losing sharpness."""
 
-    A close-up draws everything `zoom` times larger with the logical point `at` in the top-left
-    corner, so the camera can move in without losing sharpness."""
-
-    def __init__(self, s: int, th: Theme, zoom: float = 1.0, at=(0.0, 0.0)):
+    def __init__(self, s: int, th: Theme, zoom: float = 1.0, at=(0.0, 0.0), size=(W, H)):
         self.s, self.th = s, th
         self.k, (self.ox, self.oy) = s * zoom, at
-        self.im = Image.new("RGB", (W * s, H * s), th.field)
+        self.im = Image.new("RGB", (size[0] * s, size[1] * s), th.field)
         self.d = ImageDraw.Draw(self.im)
         self._fonts: dict = {}
 
@@ -295,24 +360,24 @@ class Canvas:
             self.frame(cx - hw, cy - hh, cx + hw, cy + hh)
 
 
-# ── layout (logical pixels) ──────────────────────────────────────────────────
-
-DESK = (LEFT, 424, RIGHT, 1212)
-MAP = (84, 462, 524, 424)
-GRID = (628, 446, 368, 456)
-RACE = (148, 920, 646, 270)
-WIDGET = (816, 950, 180, 124)
-BADGE = (LEFT, 1236, 286, 92)
-BALLS = [(0.97, 0.80, 0.20), (0.03, 0.96, 0.17), (0.60, 1.06, 0.20)]
-
-
 class Desktop:
-    def __init__(self, story: Story, th: Theme, shimmer: bool = True):
-        self.S, self.th, self.shimmer = story, th, shimmer
+    def __init__(self, story: Story, th: Theme, timeline: Timeline = CLASSIC, shimmer: bool = True,
+                 dot: int = 1):
+        """dot: side of one stipple dot in logical pixels (2 survives video compression)."""
+        self.S, self.th, self.L, self.shimmer, self.dot = story, th, timeline, shimmer, dot
+        self.open = max(0.25, OPEN * timeline.pace)
+        self.rest = None
+        self._clouds, self._still = None, None
         st = story.stations
         x0, y0, x1, y1 = DESK
         self.dw, self.dh = x1 - x0, y1 - y0
-        self.desk_rand = np.random.default_rng(1).random((self.dh, self.dw))
+        cw, ch = -(-self.dw // dot), -(-self.dh // dot)
+        self.desk_rand = blocks(np.random.default_rng(1).random((ch, cw)), dot, (self.dh, self.dw))
+        self.desk_grid = np.zeros((self.dh, self.dw), bool)
+        step, off = (6, 3) if dot == 1 else (4 * dot, 2 * dot)
+        for j in range(dot):
+            for i in range(dot):
+                self.desk_grid[off + j::step, off + i::step] = True
         # map: land mask and stations, inside the map window below two lines of text
         mx, my, mw, mh = MAP
         self.map_box = (mx + 8, my + 90, mw - 16, mh - 98)
@@ -323,35 +388,63 @@ class Desktop:
         dist_in = ndimage.distance_transform_edt(land)
         dist_out = ndimage.distance_transform_edt(~land)
         dens = np.where(land, 0.07 + 0.43 * (1 - np.exp(-dist_in / 30)), 0.08 * np.exp(-dist_out / 3))
-        self.land = dither(dens)
-        self.land_rand = np.random.default_rng(2).random(self.land.shape)
+        self.land = blocks(dither(dens[::dot, ::dot]), dot, land.shape)
+        self.land_rand = blocks(np.random.default_rng(2).random(dens[::dot, ::dot].shape), dot, land.shape)
         self.map_st = inside.assign(x=xy[:, 0], y=xy[:, 1]).sort_values("year")
         # grid: stations north to south
         self.grid_st = st.sort_values("lat", ascending=False)
         self.b64 = base64.b64encode(story.secret.encode()).decode()
+
+    def d(self, seconds: float) -> float:
+        """A duration of the classic cut, at this timeline's pace."""
+        return seconds * self.L.pace
+
+    # ── camera ──
+
+    @staticmethod
+    def view(box, size):
+        """Top-left corner and zoom that fit a box (poster coordinates) into the frame."""
+        ow, oh = size
+        x, y, w, h = box
+        z = min(ow / w, oh / h) * (1 if box == FULL else 0.9)
+        return np.array([x + w / 2 - ow / 2 / z, y + h / 2 - oh / 2 / z]), z
+
+    def camera(self, t: float, size):
+        """Top-left corner, zoom, and the box the camera rests on (None while moving)."""
+        keys = self.L.camera if np.isfinite(t) else ((0, FULL),)
+        if t <= keys[0][0]:
+            return (*self.view(keys[0][1], size), keys[0][1])
+        for (t0, b0), (t1, b1) in zip(keys, keys[1:]):
+            if t <= t1:
+                if b0 == b1:
+                    return (*self.view(b0, size), b0)
+                (a0, z0), (a1, z1) = self.view(b0, size), self.view(b1, size)
+                return (*glide(a0, z0, a1, z1, smooth(prog(t, t0, t1 - t0))), None)
+        return (*self.view(keys[-1][1], size), keys[-1][1])
 
     # ── pieces ──
 
     def background(self, c: Canvas, t: float):
         """Dot grid on the whole desk; dithered clouds that shimmer as the light turns."""
         x0, y0, x1, y1 = DESK
-        if t < T_DESK:
+        if t < self.L.desk:
             return
-        grid = np.zeros((self.dh, self.dw), bool)
-        grid[3::6, 3::6] = True
-        c.pixels(x0, y0, grid, self.th.dots)
+        c.pixels(x0, y0, self.desk_grid, self.th.dots)
         light = 2.2 + 0.2 * np.sin(2 * np.pi * t / 10) if np.isfinite(t) and self.shimmer else 2.2
-        clouds = dither(spheres(self.dw, self.dh, BALLS, light))
-        c.pixels(x0, y0, clouds & (self.desk_rand < ease(prog(t, T_DESK, 1.8))), self.th.ink)
+        if self._clouds is None or self._clouds[0] != light:
+            coarse = dither(spheres(-(-self.dw // self.dot), -(-self.dh // self.dot), BALLS, light))
+            self._clouds = (light, blocks(coarse, self.dot, (self.dh, self.dw)))
+        reveal = self.desk_rand < ease(prog(t, self.L.desk, self.d(1.8)))
+        c.pixels(x0, y0, self._clouds[1] & reveal, self.th.ink)
         c.frame(x0, y0, x1, y1)
         c.chip(x0 + 1, y0 + 19, self.S.os_name, size=22, fg=self.th.field, pad=4)
 
     def headline(self, c: Canvas, t: float):
-        S, HEAD, INK = self.S, self.th.head, self.th.ink
+        S, HEAD, INK, L = self.S, self.th.head, self.th.ink, self.L
         for x, y, dx, dy in ((LEFT, 34, 1, 1), (RIGHT, 34, -1, 1), (LEFT, 392, 1, -1), (RIGHT, 392, -1, -1)):
             c.fill(min(x, x + 12 * dx), y if dy > 0 else y - 1, max(x, x + 12 * dx), (y + 1) if dy > 0 else y, INK)
             c.fill(x if dx > 0 else x - 1, min(y, y + 12 * dy), (x + 1) if dx > 0 else x, max(y, y + 12 * dy), INK)
-        if t < T_DESK:
+        if t < L.desk:
             return
         w0, w1 = c.width(S.lead, TEXT, 24), c.width(S.tail, TEXT, 24)
         c.text(LEFT, 70, S.lead, TEXT, 24, HEAD)
@@ -359,7 +452,7 @@ class Desktop:
         dots = "." * int((RIGHT - LEFT - w0 - w1 - 24) / c.width(".", TEXT, 24))
         c.text(LEFT + w0 + 12, 70, dots, TEXT, 24, HEAD)
 
-        p = ease(prog(t, T_DESK, 2.5))
+        p = ease(prog(t, L.desk, self.d(2.5)))
         x = LEFT - 8
         size = 300
         for ch in S.big_fmt.format(round(S.big * p)):
@@ -369,7 +462,7 @@ class Desktop:
         for (n, label), base in zip(S.stats, (190, 300)):
             c.text(RIGHT, base, f"{round(n * p):,}", GROTESK, 76, HEAD, anchor="rs")
             c.text(RIGHT, base + 34, label, TEXT, 21, HEAD, anchor="rs")
-        k = int(len(S.note) * prog(t, T_DESK + 0.8, 2.4))
+        k = int(len(S.note) * prog(t, L.desk + self.d(0.8), self.d(2.4)))
         w = c.text(LEFT, 374, S.note[:k], MONO, 16, HEAD)
         if not np.isfinite(t) or int(t * 2) % 2 == 0:
             c.fill(LEFT + w + 3, 360, LEFT + w + 13, 378, HEAD)
@@ -382,10 +475,11 @@ class Desktop:
 
     def map_window(self, c: Canvas, t: float):
         x, y, w, h = MAP
-        if t < T_MAP:
+        t0 = self.L.map
+        if t < t0:
             return
-        if t < T_MAP + OPEN:
-            return c.opening(x, y, w, h, prog(t, T_MAP, OPEN))
+        if t < t0 + self.open:
+            return c.opening(x, y, w, h, prog(t, t0, self.open))
         fy = self.S.final_year
         x0, y0, x1, y1 = c.window(x, y, w, h, "Europe.Map")
         c.text(x0 + 8, y0 + 24, self.S.map_title, size=22)
@@ -397,9 +491,10 @@ class Desktop:
         for i, (label, m) in enumerate(groups):
             self.marker(c, lx + 5, y0 + 46, i)
             lx += 16 + c.text(lx + 16, y0 + 52, f"{label} {int(m.sum())}", size=22) + 22
-        c.pixels(mx, my, self.land & (self.land_rand < ease(prog(t, T_MAP + OPEN, 1.2))), self.th.ink)
+        reveal = self.land_rand < ease(prog(t, t0 + self.open, self.d(1.2)))
+        c.pixels(mx, my, self.land & reveal, self.th.ink)
         # stations appear in the order of their year: the recent ones come last
-        shown = int(len(st) * prog(t, T_MAP + 1.0, 4.0))
+        shown = int(len(st) * prog(t, t0 + self.d(1.0), self.d(4.0)))
         for (_, s) in st.iloc[:shown].iterrows():
             kind = 0 if s["year"] >= 2020 else 1 if s["year"] >= 2000 else 2
             self.marker(c, mx + s["x"], my + s["y"], kind)
@@ -419,14 +514,15 @@ class Desktop:
 
     def grid_window(self, c: Canvas, t: float):
         x, y, w, h = GRID
-        if t < T_GRID:
+        t0 = self.L.grid
+        if t < t0:
             return
-        if t < T_GRID + OPEN:
-            return c.opening(x, y, w, h, prog(t, T_GRID, OPEN))
+        if t < t0 + self.open:
+            return c.opening(x, y, w, h, prog(t, t0, self.open))
         st = self.grid_st
         x0, y0, x1, y1 = c.window(x, y, w, h, "Station.Grid")
         c.text(x0 + 8, y0 + 24, self.S.grid_title, size=22)
-        shown = int(len(st) * ease(prog(t, T_GRID + 0.6, 3.5)))
+        shown = int(len(st) * ease(prog(t, t0 + self.d(0.6), self.d(3.5))))
         # denominator: stations with data for the question (class -1 = none, an empty cell)
         cw = c.chip(x0 + 8, y0 + 60, f"{int(st['hit'].iloc[:shown].sum())} / {int((st['cls'] >= 0).sum())}",
                     size=36, pad=4)
@@ -449,10 +545,11 @@ class Desktop:
 
     def race_window(self, c: Canvas, t: float):
         x, y, w, h = RACE
-        if t < T_RACE:
+        t0 = self.L.race
+        if t < t0:
             return
-        if t < T_RACE + OPEN:
-            return c.opening(x, y, w, h, prog(t, T_RACE, OPEN))
+        if t < t0 + self.open:
+            return c.opening(x, y, w, h, prog(t, t0, self.open))
         x0, y0, x1, y1 = c.window(x, y, w, h, "Records.Race")
         th = self.th
         if self.S.race_legend:
@@ -480,7 +577,7 @@ class Desktop:
             r = row.a / max(row.b, 0.25)
             by = y0 + 52 + i * step
             c.chip(ax0, by, row.label, size=22, bg=getattr(th, row.chip))
-            p = smooth(prog(t, T_RACE + 0.8 + 0.5 * i, 1.6))
+            p = smooth(prog(t, t0 + self.d(0.8 + 0.5 * i), self.d(1.6)))
             rr = 2 ** (np.log2(r) * p)
             c.text(ax0 + 116, by, f"{rr:.1f}x", size=24)
             c.text(ax1, by, f"{round(row.a * p):,} : {round(row.b * p):,}", size=22, anchor="rs")
@@ -498,18 +595,19 @@ class Desktop:
 
     def widget(self, c: Canvas, t: float):
         x, y, w, h = WIDGET
-        if t < T_WIDGET:
+        t0 = self.L.widget
+        if t < t0:
             return
-        if t < T_WIDGET + OPEN:
-            return c.opening(x, y, w, h, prog(t, T_WIDGET, OPEN))
+        if t < t0 + self.open:
+            return c.opening(x, y, w, h, prog(t, t0, self.open))
         S = self.S
         x0, y0, x1, y1 = c.window(x, y, w, h, S.widget_title, body=self.th.field, title_colour=self.th.field)
         c.text(x0 + 6, y0 + 24, S.widget_line, size=22)
-        n = round(S.widget_n * ease(prog(t, T_WIDGET + OPEN, 1.2)))
+        n = round(S.widget_n * ease(prog(t, t0 + self.open, self.d(1.2))))
         cw = c.chip(x0 + 6, y0 + 62, f"{n}", size=40, pad=4)
         c.text(x0 + 6 + cw + 6, y0 + 52, S.widget_words[0], size=20)
         tw = c.text(x0 + 6 + cw + 6, y0 + 68, S.widget_words[1], size=20)
-        if np.isfinite(t) and t > T_ZOOM and int(t * 2) % 2 == 0:
+        if np.isfinite(t) and self.rest == WIDGET and int(t * 2) % 2 == 0:
             cx = x0 + 6 + cw + 6 + tw + 2
             c.fill(cx, y0 + 55, cx + 6, y0 + 69, self.th.ink)
 
@@ -529,7 +627,8 @@ class Desktop:
         w, h = 380, 150
         x, y = (W - w) / 2, (H - h) / 2
         x0, y0, x1, y1 = c.window(x, y, w, h, self.S.app, body=self.th.light)
-        p = ease(prog(t, 0.2, 1.4))
+        start = self.L.intro + (SWITCH_OFF if self.L.intro else 0)
+        p = ease(prog(t, start + 0.2, self.L.desk - start - 0.4))
         c.text(x0 + 10, y0 + 26, "Loading ...", size=24)
         c.text(x0 + 10, y0 + 50, self.S.loader_line, size=22)
         c.text(x1 - 10, y0 + 50, f"{round(100 * p)} %", size=22, anchor="rs")
@@ -541,19 +640,43 @@ class Desktop:
             if k < round(n * p):
                 c.fill(bx0 + k * cw + 3, y0 + 71, bx0 + (k + 1) * cw - 2, y0 + 87, self.th.ink)
 
-    def draw(self, s: int, t: float = np.inf) -> Image.Image:
-        zoom, at = 1.0, (0.0, 0.0)
-        if np.isfinite(t) and t > T_ZOOM:
-            # the widget centre glides to the frame centre while the zoom grows geometrically
-            e = smooth(prog(t, T_ZOOM, ZOOM_TIME))
-            x, y, w, h = WIDGET
-            px, py = x + w / 2, y + h / 2
-            zoom = ZOOM ** e
-            at = (px - (px + (W / 2 - px) * e) / zoom, py - (py + (H / 2 - py) * e) / zoom)
-        c = Canvas(s, self.th, zoom, at)
-        if t < T_DESK:
+    def switch_off(self, s: int, p: float, size) -> Image.Image:
+        """An old monitor switching off: the finished frame squeezes into a line, the line into a dot."""
+        if self._still is None or self._still[0] != (s, size):
+            self._still = ((s, size), self.draw(s, np.inf, size))
+        im = self._still[1]
+        w, h = im.size
+        out = Image.new("RGB", (w, h), self.th.field)
+        if p < 0.6:
+            nh = max(2 * s, round(h * (1 - smooth(p / 0.6)) ** 2))
+            out.paste(im.resize((w, nh), Image.BILINEAR), (0, (h - nh) // 2))
+        else:
+            nw = round(w * (1 - smooth((p - 0.6) / 0.4)))
+            if nw > 0:
+                ImageDraw.Draw(out).rectangle([(w - nw) // 2, h // 2 - s, (w + nw) // 2, h // 2 + s], fill=self.th.ink)
+        return out
+
+    def draw(self, s: int, t: float = np.inf, size=(W, H)) -> Image.Image:
+        L = self.L
+        if np.isfinite(t) and L.intro:
+            if t < L.intro or (t >= L.camera[-1][0] and L.camera[-1][1] == FULL):
+                t = np.inf      # the finished poster: the first and the last frames of the loop
+            elif t < L.intro + SWITCH_OFF:
+                return self.switch_off(s, prog(t, L.intro, SWITCH_OFF), size)
+        at, zoom, self.rest = self.camera(t, size)
+        c = Canvas(s, self.th, zoom, tuple(at), size)
+        if t < L.desk:
             self.loader(c, t)
             return c.im
+        return self.scene(c, t)
+
+    def still(self, s: int, box, size) -> Image.Image:
+        """The finished poster seen through a camera resting on one box (a carousel slide)."""
+        at, zoom = self.view(box, size)
+        self.rest = None
+        return self.scene(Canvas(s, self.th, zoom, tuple(at), size), np.inf)
+
+    def scene(self, c: Canvas, t: float) -> Image.Image:
         self.background(c, t)
         self.headline(c, t)
         self.map_window(c, t)
@@ -564,23 +687,32 @@ class Desktop:
         return c.im
 
 
-def video(desk: Desktop, path: Path, crf: int = CRF) -> None:
-    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-           "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "slow", "-crf", str(crf),
-           "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(path)]
+def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: bool = False) -> None:
+    """H.264 in BT.709 (what phones assume), optionally with a silent audio track."""
+    ow, oh = size
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}",
+           "-r", str(FPS), "-i", "-"]
+    if audio:
+        cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-shortest", "-c:a", "aac", "-b:a", "128k"]
+    cmd += ["-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p", "-c:v", "libx264",
+            "-preset", "slow", "-crf", str(crf), "-profile:v", "high", "-colorspace", "bt709",
+            "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", str(path)]
     with subprocess.Popen(cmd, stdin=subprocess.PIPE) as ff:
-        for k in range(FPS * SECONDS):
-            ff.stdin.write(desk.draw(1, k / FPS).tobytes())
+        for k in range(round(desk.L.end * FPS)):
+            ff.stdin.write(desk.draw(1, k / FPS, size).tobytes())
         ff.stdin.close()
     print("saved", path)
 
 
-def render(story: Story, keys, stem: str, default: str, with_video: bool, web: bool = False) -> None:
+def render(story: Story, keys, stem: str, default: str, with_video: bool, web: bool = False,
+           social: bool = False) -> None:
     """Poster (and videos) of a story in each theme; the default theme gets no suffix. The web
-    video drops the shimmer: still dither compresses to a fraction of the size."""
+    video drops the shimmer: still dither compresses to a fraction of the size. Social writes
+    the looping cut as an Instagram reel (9:16) with its cover, and a 4:5 carousel."""
     OUT.mkdir(parents=True, exist_ok=True)
     for key in THEMES if "all" in keys else keys:
-        desk = Desktop(story, THEMES[key])
+        th = THEMES[key]
+        desk = Desktop(story, th)
         name = stem + ("" if key == default else f"_{key}")
         desk.draw(2).save(OUT / f"{name}.png", optimize=True)
         print("saved", OUT / f"{name}.png")
@@ -589,3 +721,17 @@ def render(story: Story, keys, stem: str, default: str, with_video: bool, web: b
         if web:
             desk.shimmer = False
             video(desk, OUT / f"{name}_web.mp4", WEB_CRF)
+        if social:
+            (OUT / "social").mkdir(exist_ok=True)
+            base = OUT / "social" / f"{stem}_{key}"
+            loop = Desktop(story, th, SOCIAL, shimmer=False, dot=2)
+            loop.draw(1, np.inf, SIZES["reel"]).save(f"{base}_cover.png", optimize=True)
+            video(loop, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio=True)
+            carousel(loop, base)
+
+
+def carousel(desk: Desktop, base: Path) -> None:
+    """An Instagram carousel: five 4:5 slides, the full poster and the camera's four stops."""
+    for i, box in enumerate((FULL, MAP, GRID, RACE, WIDGET), 1):
+        desk.still(1, box, SIZES["feed"]).save(f"{base}_slide{i}.png", optimize=True)
+    print("saved", f"{base}_slide1-5.png")

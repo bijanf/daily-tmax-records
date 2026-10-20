@@ -9,6 +9,8 @@ was their driest on record.
     outputs/onebit/europe_drought[_<theme>].png       2160 x 2700 poster (no suffix for sand)
     outputs/onebit/europe_drought[_<theme>].mp4       1080 x 1350, 32 s animation
     outputs/onebit/europe_drought[_<theme>]_web.mp4   the same without the shimmer (--web)
+    outputs/onebit/social/europe_drought_<theme>_reel.mp4, _cover.png, _slide1-5.png
+                                                       30 s Instagram reel loop and carousel (--social)
 
     python -I src/plot_onebit_drought.py                     # Streusand poster and animation
     python -I src/plot_onebit_drought.py --theme berlin --no-video
@@ -90,8 +92,11 @@ def main() -> None:
     ap.add_argument("--theme", nargs="+", default=["sand"], choices=[*onebit.THEMES, "all"], help="colour themes")
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
+    ap.add_argument("--social", action="store_true",
+                    help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
-    onebit.render(story(drought.compute()), args.theme, "europe_drought", "sand", not args.no_video, args.web)
+    onebit.render(story(drought.compute()), args.theme, "europe_drought", "sand", not args.no_video, args.web,
+                  args.social)
 
 
 if __name__ == "__main__":

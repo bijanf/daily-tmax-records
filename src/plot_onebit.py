@@ -8,6 +8,8 @@ stations measured their hottest day ever.
     outputs/onebit/europe_extremes[_<theme>].mp4       1080 x 1350, 32 s: the poster assembling itself
     outputs/onebit/europe_extremes[_<theme>]_web.mp4   the same without the shimmer, small enough
                                                        for a web page (--web)
+    outputs/onebit/social/europe_extremes_<theme>_reel.mp4, _cover.png, _slide1-5.png
+                                                       30 s Instagram reel loop and carousel (--social)
 
     python -I src/plot_onebit.py                        # pink poster and animation
     python -I src/plot_onebit.py --theme berlin xberg   # chosen themes
@@ -87,9 +89,11 @@ def main() -> None:
     ap.add_argument("--theme", nargs="+", default=["pink"], choices=[*onebit.THEMES, "all"], help="colour themes")
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
+    ap.add_argument("--social", action="store_true",
+                    help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
     onebit.render(story(findings.compute()), args.theme, "europe_extremes", "pink",
-                  not args.no_video, args.web)
+                  not args.no_video, args.web, args.social)
 
 
 if __name__ == "__main__":
