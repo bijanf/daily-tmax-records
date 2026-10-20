@@ -121,6 +121,8 @@ ICONS = {
                     "..###..", ".#####.", "#######", "#######", "#######", ".#####."],
     "drop": ["....#....", "....#....", "...###...", "...###...", "..#####..", "..#####..",
              ".#######.", ".#.#####.", ".#.#####.", ".##.####.", "..#####..", "...###..."],
+    "bolt": ["....###", "...###.", "...##..", "..###..", "..##...", ".######", "....##.", "...##..",
+             "...#...", "..##...", "..#....", ".#.....", "#......"],
 }
 
 # ── layout (logical pixels, x, y, w, h unless noted) ─────────────────────────
@@ -164,9 +166,11 @@ class Race:
     """One row of the records race: a period and its two record counts."""
     label: str
     chip: str                    # theme role of the label chip: "cold", "hot" or "ink"
-    a: int                       # records on the right of 1 : 1 (heat, dry)
-    b: int                       # records on the left (cold, wet)
+    a: float                     # right of 1 : 1 (heat or dry records; or the recent value)
+    b: float                     # left (cold or wet records; or the base value)
     ghost: float | None = None   # second ratio, drawn as a hollow square
+    unit: str | None = None      # set: the row shows "b → a unit" (a change), not "a : b" records
+    digits: int = 1
 
 
 @dataclass
@@ -198,6 +202,9 @@ class Story:
     loader_line: str
     icon: str = "thermometer"
     race_legend: tuple | None = None   # (hollow, filled) labels in the race title bar
+    race_title: str = "Records.Race"
+    race_center: str = "1 : 1"
+    big_digits: int = 0          # decimals of the headline number
 
 
 def europe_raster(lon, lat, w: int, h: int):
@@ -455,12 +462,14 @@ class Desktop:
         p = ease(prog(t, L.desk, self.d(2.5)))
         x = LEFT - 8
         size = 300
-        for ch in S.big_fmt.format(round(S.big * p)):
+        big = round(S.big * p, S.big_digits) if S.big_digits else round(S.big * p)
+        for ch in S.big_fmt.format(big):
             c.text(x, 330, ch, GROTESK, size, HEAD)
             x += c.width(ch, GROTESK, size) - 0.045 * size
         # the numbers behind the headline, as stacked stat blocks
-        for (n, label), base in zip(S.stats, (190, 300)):
-            c.text(RIGHT, base, f"{round(n * p):,}", GROTESK, 76, HEAD, anchor="rs")
+        for (n, label, *digits), base in zip(S.stats, (190, 300)):
+            k = digits[0] if digits else 0
+            c.text(RIGHT, base, f"{n * p:,.{k}f}", GROTESK, 76, HEAD, anchor="rs")
             c.text(RIGHT, base + 34, label, TEXT, 21, HEAD, anchor="rs")
         k = int(len(S.note) * prog(t, L.desk + self.d(0.8), self.d(2.4)))
         w = c.text(LEFT, 374, S.note[:k], MONO, 16, HEAD)
@@ -550,7 +559,7 @@ class Desktop:
             return
         if t < t0 + self.open:
             return c.opening(x, y, w, h, prog(t, t0, self.open))
-        x0, y0, x1, y1 = c.window(x, y, w, h, "Records.Race")
+        x0, y0, x1, y1 = c.window(x, y, w, h, self.S.race_title)
         th = self.th
         if self.S.race_legend:
             # hollow and filled square, in the title bar
@@ -570,7 +579,7 @@ class Desktop:
         one, step = pos(1), 38
         c.text(ax0, y0 + 22, self.S.race_left, size=20, colour=th.head)
         c.text(ax1, y0 + 22, self.S.race_right, size=20, colour=th.head, anchor="rs")
-        c.text(one, y0 + 22, "1 : 1", size=20, anchor="ms")
+        c.text(one, y0 + 22, self.S.race_center, size=20, anchor="ms")
         for yy in range(int(y0 + 30), int(y0 + 58 + 4 * step + 12), 4):
             c.fill(one, yy, one + 1, yy + 2, th.head)
         for i, row in enumerate(self.S.race):
@@ -580,7 +589,12 @@ class Desktop:
             p = smooth(prog(t, t0 + self.d(0.8 + 0.5 * i), self.d(1.6)))
             rr = 2 ** (np.log2(r) * p)
             c.text(ax0 + 116, by, f"{rr:.1f}x", size=24)
-            c.text(ax1, by, f"{round(row.a * p):,} : {round(row.b * p):,}", size=22, anchor="rs")
+            if row.unit is None:
+                right = f"{round(row.a * p):,} : {round(row.b * p):,}"
+            else:   # the value moves from before to now; "→" is not in the pixel font
+                k = row.digits
+                right = f"{row.b:.{k}f} » {row.b + (row.a - row.b) * p:.{k}f}{row.unit}"
+            c.text(ax1, by, right, size=22, anchor="rs")
             c.fill(ax0, by + 12, ax1, by + 13, th.ink)
             if row.ghost is not None:
                 gx = pos(2 ** (np.log2(row.ghost) * p))
@@ -687,13 +701,21 @@ class Desktop:
         return c.im
 
 
-def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: bool = False) -> None:
-    """H.264 in BT.709 (what phones assume), optionally with a silent audio track."""
+def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: str | None = None) -> None:
+    """H.264 in BT.709 (what phones assume). audio: None, "silent" (an empty track) or "music"
+    (onebit_audio's techno, timed to the film; the WAV is kept beside the video)."""
     ow, oh = size
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}",
            "-r", str(FPS), "-i", "-"]
+    if audio == "silent":
+        cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
+    elif audio == "music":
+        import onebit_audio
+        wav = onebit_audio.write(desk, path.with_name(path.stem.removesuffix("_reel") + "_music.wav"))
+        cmd += ["-i", str(wav)]
+        print("saved", wav)
     if audio:
-        cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-shortest", "-c:a", "aac", "-b:a", "128k"]
+        cmd += ["-shortest", "-c:a", "aac", "-b:a", "192k"]
     cmd += ["-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p", "-c:v", "libx264",
             "-preset", "slow", "-crf", str(crf), "-profile:v", "high", "-colorspace", "bt709",
             "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", str(path)]
@@ -708,7 +730,8 @@ def render(story: Story, keys, stem: str, default: str, with_video: bool, web: b
            social: bool = False) -> None:
     """Poster (and videos) of a story in each theme; the default theme gets no suffix. The web
     video drops the shimmer: still dither compresses to a fraction of the size. Social writes
-    the looping cut as an Instagram reel (9:16) with its cover, and a 4:5 carousel."""
+    the looping cut as an Instagram reel (9:16) with its techno soundtrack and cover, and a 4:5
+    carousel."""
     OUT.mkdir(parents=True, exist_ok=True)
     for key in THEMES if "all" in keys else keys:
         th = THEMES[key]
@@ -726,7 +749,7 @@ def render(story: Story, keys, stem: str, default: str, with_video: bool, web: b
             base = OUT / "social" / f"{stem}_{key}"
             loop = Desktop(story, th, SOCIAL, shimmer=False, dot=2)
             loop.draw(1, np.inf, SIZES["reel"]).save(f"{base}_cover.png", optimize=True)
-            video(loop, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio=True)
+            video(loop, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="music")
             carousel(loop, base)
 
 

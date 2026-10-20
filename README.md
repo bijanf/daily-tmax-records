@@ -17,6 +17,8 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `onebit/europe_extremes[_<theme>].png`, `.mp4` | Europe's heat extremes as a 1-bit retro desktop (2160 × 2700 poster; 1080 × 1350, 32 s animation of the poster assembling itself, ending on a close-up of the hottest day): heat : cold ratio, map of each station's hottest-day year, one grid cell per station, decade race. Themes: `pink` (no suffix), `violet` Violet.Hour, `orange` BSR.Orange, `berlin` BVG.Gelb, `xberg` SO36.Nacht (`plot_onebit.py --theme`); VT323 and JetBrains Mono in `data/fonts` (SIL Open Font License) |
 | `onebit/europe_drought[_<theme>].png`, `.mp4` | the same desktop for drought (`plot_onebit_drought.py`, default theme `sand` Streusand): stations whose driest growing season (March–August, rain minus Hargreaves evaporation) on record fell in the 2020s, against rain alone and a stable climate; numbers in `drought_log.txt` (`drought.py`) |
 | `onebit/social/<story>_<theme>_reel.mp4`, `_cover.png`, `_slide1-5.png` | Instagram cut (`--social`): a 30 s 9:16 loop that opens on the poster, rebuilds it and tours every window with the camera (2 x 2 px dots, BT.709, silent audio track), its cover, and a 5-slide 4:5 carousel |
+| `onebit/europe_scoreboard[_<theme>].png`, `social/europe_scoreboard_*` | Europe's extremes scoreboard (`plot_onebit_extremes.py`, default theme `beton`): how often days ≥ 35 °C, hot nights, dry seasons, downpours and frost days happen in 2016–2025 against 1961–1990, the year of each station's warmest night, and Vienna's two wettest days (2024); numbers in `extremes_log.txt` (`extremes.py`) |
+| `onebit/social/<story>_<theme>_music.wav` | the reel's soundtrack (`onebit_audio.py`): minimal techno synthesized from scratch, 64 beats per film so it loops with the picture, with the data sonified (station blips, grid chirps, race glides) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
 | `stations/records_long.csv.gz` | record value, record year, ties and years of data for every station and day |
@@ -49,6 +51,8 @@ python -I src/plot_onebit.py --theme all --no-video   # 1-bit desktop posters in
 python -I src/drought.py > outputs/drought_log.txt    # drought: record-dry growing seasons, rain and water balance
 python -I src/plot_onebit_drought.py --web           # drought desktop: poster, animation, small web cut
 python -I src/plot_onebit_drought.py --theme uv --no-video --social   # Instagram: 30 s reel loop, cover, carousel
+python -I src/extremes.py > outputs/extremes_log.txt   # extremes scoreboard numbers
+python -I src/plot_onebit_extremes.py --no-video --social   # scoreboard reel with soundtrack
 ```
 
 ## Data and method
