@@ -61,6 +61,7 @@ def story(d: dict) -> Story:
     n_rain, _, _ = drought.period_counts(rain.loc[rain.index.intersection(with20)], 2020, fy)
     sig = drought.significance(bal, 2020, fy)
     p = max(sig["n_exceed"], 1) / sig["n_draw"]
+    p_any = (sig["n_exceed_window"] + 1) / (sig["n_window"] + 1)    # had the window been picked by looking
     has = bal[bal["years"].map(lambda ys: fy in ys)]
     n_latest = int((has["dry_year"] == fy).sum())
     n = len(bal)
@@ -83,15 +84,16 @@ def story(d: dict) -> Story:
         Scene(2, MAP, f"Record-dry 2020s in {{{st.loc[st['year'] >= 2020, 'country'].nunique()} countries}}",
               f"filled squares: driest season in 2020–{str(fy)[2:]}"),
         Scene(3, WIDGET, f"{fy}: {{{n_latest} stations}} had their driest season ever", " · ".join(cities)),
-        Scene(4, FULL, "Europe's droughts are now {made by heat.}", "Follow for more of Europe's extremes in 1-bit"),
+        Scene(4, FULL, f"Heat {{{'more than doubles' if n_dry >= 2 * n_rain else f'×{n_dry / n_rain:.1f}'}}} "
+                       "Europe's record-dry seasons", "Follow for more of Europe's extremes in 1-bit"),
     )
     return Story(
         os_name="EU.DRY.OS1", app="EU.DRY 1.1",
         lead=f"Europe 2020–{fy}", tail="Stations with a record-dry growing season",
         big=n_dry, big_fmt="{}",
         stats=[(n_rain, "from rain alone"), (round(expected), "in a stable climate")],
-        note=f"*of {len(with20)} stations with 2020s data · Mar–Aug rain minus evaporation (Hargreaves) · "
-             f"p < {p:.0e}".replace("e-0", "e-"),
+        note=f"*of {len(with20)} stations with 2020s data · Mar–Aug rain minus evaporation · "
+             f"p {max(p, 1e-3):.3f} ({p_any:.2f} for any 7 years)",
         secret=f"dry={n_dry} rain_only={n_rain} expected={expected:.1f} stations={len(with20)} p<{p:.0e} ",
         final_year=fy, stations=st,
         map_title="year of each station's driest Mar–Aug",

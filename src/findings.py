@@ -147,6 +147,72 @@ def significance(f: dict, reg: str = "Europe", n_draw: int = 200_000, seed: int 
                 null_max=float(ratio.max()), n_draw=n_draw, n_exceed=int((ratio >= obs).sum()))
 
 
+def best_window(f: dict, reg: str = "Europe", n_draw: int = 50_000, seed: int = 7) -> dict:
+    """The 2020s ratio against the best contiguous window of the same length in shuffled years.
+
+    Hausfather (2026, "How not to detect warming acceleration") shows that choosing a period
+    by looking at the data and then testing it as if it had been fixed inflates false
+    positives. Here the null takes the most extreme window anywhere in each shuffled record,
+    so the test holds even if the 2020s had been picked for being extreme."""
+    fy = f["final_year"]
+    rows = f["region"] == reg
+    w = f["window"][rows]
+    pool = f["years"][(f["years"] >= 1900) & (f["years"] <= fy)]
+    H = pd.Series(f["hi_year"][rows][w]).value_counts().reindex(pool, fill_value=0).to_numpy()
+    C = pd.Series(f["lo_year"][rows][w]).value_counts().reindex(pool, fill_value=0).to_numpy()
+    k = fy - 2020 + 1
+    obs = H[-k:].sum() / C[-k:].sum()
+    rng = np.random.default_rng(seed)
+    best = np.empty(n_draw)
+    for i in range(n_draw):
+        order = rng.permutation(len(pool))
+        h = np.convolve(H[order], np.ones(k), "valid")
+        c = np.convolve(C[order], np.ones(k), "valid")
+        best[i] = (h / np.maximum(c, 1)).max()
+    return dict(observed=float(obs), null_max=float(best.max()), n_exceed=int((best >= obs).sum()), n_draw=n_draw)
+
+
+def steady_warming(f: dict, reg: str = "Europe", runs: int = 300, seed: int = 3) -> dict:
+    """Heat : cold ratio of 2020-latest if warming had gone on at its 1980-2019 rate.
+
+    Ratios of record holders rise towards the present even without acceleration: later heat
+    records overwrite earlier ones while early cold records survive. Synthetic stations carry
+    the regional anomaly of daily TMAX (vs 1961-1990), smoothed to 2019 with its 1980-2019
+    linear trend continued to the final year, plus year-to-year, region-wide daily and local
+    daily noise sized from the data; their records give the ratio steady warming would produce."""
+    fy = f["final_year"]
+    rows = f["region"] == reg
+    tx, d = f["tmax"][rows], f["dates"]
+    yr, doy = np.asarray(d.year), np.asarray(d.dayofyear)
+    base = (yr >= 1961) & (yr <= 1990)
+    anom = np.empty_like(tx)
+    for i in range(len(tx)):
+        clim = pd.Series(tx[i, base]).groupby(doy[base]).mean().reindex(range(1, 367)).interpolate(limit_direction="both")
+        anom[i] = tx[i] - clim.rolling(31, center=True, min_periods=1).mean().to_numpy()[doy - 1]
+    frame = pd.DataFrame(anom.T, index=yr)
+    annual = frame.groupby(level=0).mean().where(frame.groupby(level=0).count() >= 0.8 * 365)
+    years = np.arange(1880, fy + 1)
+    region = annual.mean(axis=1).reindex(years)
+    b, a = np.polyfit(np.arange(1980, 2020), region.loc[1980:2019].to_numpy(), 1)
+    year_sd = float(np.std(region.loc[1980:2019].to_numpy() - (a + b * np.arange(1980, 2020))))
+    daily = anom - annual.reindex(yr).to_numpy().T
+    shared_sd = float(np.nanstd(np.nanmean(daily, axis=0)[yr >= 1950]))
+    local_sd = float(np.sqrt(max(np.nanstd(daily) ** 2 - shared_sd ** 2, 0.1)))
+    smooth = region.loc[:1979].rolling(11, center=True, min_periods=4).mean().reindex(range(1880, 1980)).bfill()
+    signal = np.concatenate([smooth.to_numpy(), a + b * np.arange(1980, fy + 1)])
+    rng = np.random.default_rng(seed)
+    out = np.empty(runs)
+    for r in range(runs):
+        x = ((signal + rng.normal(0, year_sd, len(years)))[None, None, :]
+             + rng.normal(0, shared_sd, (365, len(years)))[None]
+             + rng.normal(0, local_sd, (int(rows.sum()), 365, len(years)))).reshape(-1, len(years))
+        hy, ly = years[x.argmax(axis=1)], years[x.argmin(axis=1)]
+        out[r] = (hy >= 2020).sum() / max((ly >= 2020).sum(), 1)
+    heat, cold = record_counts(f, reg, 2020, fy)
+    return dict(trend=float(b * 10), median=float(np.median(out)), q95=float(np.percentile(out, 95)),
+                observed=heat / cold, share=float(np.mean(out >= heat / cold)), runs=runs)
+
+
 if __name__ == "__main__":
     main()
     sig = significance(compute())
@@ -155,3 +221,12 @@ if __name__ == "__main__":
           f"({sig['no_cold']} have none of the latter); ratio {sig['observed']:.1f} vs random 7-year sets: "
           f"median {sig['null_median']:.2f}, max {sig['null_max']:.2f}; {sig['n_exceed']} of {sig['n_draw']:,} "
           f"random sets reach it (p < {max(sig['n_exceed'], 1) / sig['n_draw']:.0e})")
+    f = compute()
+    bw = best_window(f)
+    print(f"\n7. The same, against the most extreme {f['final_year'] - 2019}-year window anywhere in each "
+          f"shuffled record: max {bw['null_max']:.1f}; {bw['n_exceed']} of {bw['n_draw']:,} reach "
+          f"{bw['observed']:.1f} (p < {max(bw['n_exceed'], 1) / bw['n_draw']:.0e})")
+    sw = steady_warming(f)
+    print(f"\n8. Steady warming at the 1980-2019 rate ({sw['trend']:.2f} C/decade) would give a 2020s ratio of "
+          f"{sw['median']:.1f} (95th percentile {sw['q95']:.1f}) against {sw['observed']:.1f} observed; "
+          f"{sw['share']:.1%} of {sw['runs']} synthetic runs reach it")

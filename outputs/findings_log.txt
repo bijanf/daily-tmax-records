@@ -47,3 +47,7 @@ Oceania         7   8   5   7   8   3  10  11  15   7
    North America: before 1950: median 1.10, mean 1.44 (n=131763) | 1950–1999: median 1.10, mean 1.42 (n=79223) | 2000–2019: median 1.10, mean 1.57 (n=35065) | 2020s: median 1.10, mean 1.64 (n=18138)
 
 6. Significance, Europe 2020s: 123 of 123 stations have more heat than cold records (33 have none of the latter); ratio 22.9 vs random 7-year sets: median 1.05, max 9.37; 0 of 200,000 random sets reach it (p < 5e-06)
+
+7. The same, against the most extreme 7-year window anywhere in each shuffled record: max 16.7; 0 of 50,000 reach 22.9 (p < 2e-05)
+
+8. Steady warming at the 1980-2019 rate (0.50 C/decade) would give a 2020s ratio of 9.9 (95th percentile 15.2) against 22.9 observed; 0.3% of 300 synthetic runs reach it

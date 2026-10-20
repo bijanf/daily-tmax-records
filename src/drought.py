@@ -121,8 +121,14 @@ def significance(rec: pd.DataFrame, y0: int, y1: int, n_draw: int = 200_000, see
     pick = np.argsort(np.random.default_rng(seed).random((n_draw, len(years))), axis=1)[:, :k]
     null = dry[pick].sum(axis=1)
     obs = int(dry[(years >= y0) & (years <= y1)].sum())
+    # the most extreme k-year window anywhere in a shuffled record: holds even if the window had
+    # been chosen for being extreme (findings.best_window)
+    rng = np.random.default_rng(seed + 1)
+    best = np.array([np.convolve(dry[rng.permutation(len(years))], np.ones(k), "valid").max()
+                     for _ in range(n_draw // 4)])
     return dict(observed=obs, null_median=float(np.median(null)), null_max=int(null.max()),
-                n_exceed=int((null >= obs).sum()), n_draw=n_draw)
+                n_exceed=int((null >= obs).sum()), n_draw=n_draw,
+                n_exceed_window=int((best >= obs).sum()), n_window=len(best))
 
 
 def compute() -> dict:
@@ -178,7 +184,8 @@ def main() -> None:
     for name, rec in (("rain", rain), ("water balance", bal)):
         s = significance(rec, 2020, last)
         print(f"   {name:<14} observed {s['observed']}, random sets: median {s['null_median']:.0f}, max {s['null_max']}; "
-              f"{s['n_exceed']} of {s['n_draw']:,} reach it (p < {max(s['n_exceed'], 1) / s['n_draw']:.0e})")
+              f"{s['n_exceed']} of {s['n_draw']:,} reach it (p < {max(s['n_exceed'], 1) / s['n_draw']:.0e}); "
+              f"against the most extreme window anywhere: p = {(s['n_exceed_window'] + 1) / (s['n_window'] + 1):.2f}")
 
 
 if __name__ == "__main__":
