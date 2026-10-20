@@ -15,6 +15,7 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `impact/A_*, B_*, C_*.png` | high-impact figures (2160 × 2700): daily heat carpet of a station with its standing records, Europe's record-hot ÷ record-cold days by decade, a station's hottest day of every year (`plot_impact.py --id <ID>`) |
 | `posters/1_…5_*.png` | posters for a general audience (2160 × 2700), plain words and big type: Europe 23 : 1, Europe map of hottest days ever, Europe 2026, and two city posters (`plot_posters.py --id <ID>`, default Potsdam); Inter font in `data/fonts/inter` (SIL Open Font License) |
 | `onebit/europe_extremes[_<theme>].png`, `.mp4` | Europe's heat extremes as a 1-bit retro desktop (2160 × 2700 poster; 1080 × 1350, 32 s animation of the poster assembling itself, ending on a close-up of the hottest day): heat : cold ratio, map of each station's hottest-day year, one grid cell per station, decade race. Themes: `pink` (no suffix), `violet` Violet.Hour, `orange` BSR.Orange, `berlin` BVG.Gelb, `xberg` SO36.Nacht (`plot_onebit.py --theme`); VT323 and JetBrains Mono in `data/fonts` (SIL Open Font License) |
+| `onebit/europe_drought[_<theme>].png`, `.mp4` | the same desktop for drought (`plot_onebit_drought.py`, default theme `sand` Streusand): stations whose driest growing season (March–August, rain minus Hargreaves evaporation) on record fell in the 2020s, against rain alone and a stable climate; numbers in `drought_log.txt` (`drought.py`) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
 | `stations/records_long.csv.gz` | record value, record year, ties and years of data for every station and day |
@@ -44,6 +45,8 @@ python -I src/plot_stations.py --region Europe   # re-plot one region
 python -I src/plot_stations.py --carousel GM000003342 UK000056225   # slides for chosen stations
 python -I src/plot_monthly.py --ids GM000003319 GM000003342          # monthly view for chosen stations
 python -I src/plot_onebit.py --theme all --no-video   # 1-bit desktop posters in every theme (drop the flag for MP4s)
+python -I src/drought.py > outputs/drought_log.txt    # drought: record-dry growing seasons, rain and water balance
+python -I src/plot_onebit_drought.py --web           # drought desktop: poster, animation, small web cut
 ```
 
 ## Data and method

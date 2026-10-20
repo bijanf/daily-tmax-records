@@ -44,5 +44,7 @@ python -I "$ROOT/src/plot_findings.py"
 python -I "$ROOT/src/plot_impact.py"
 python -I "$ROOT/src/plot_posters.py"
 python -I "$ROOT/src/plot_onebit.py" --theme all
+python -I "$ROOT/src/drought.py" > "$ROOT/outputs/drought_log.txt"
+python -I "$ROOT/src/plot_onebit_drought.py"
 python -I "$ROOT/src/composite.py" | tee "$ROOT/outputs/composite_log.txt"
 python -I "$ROOT/src/plot_records.py"

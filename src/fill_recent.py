@@ -34,7 +34,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_tmax import DATE0, DLY, parse_dly_tmax  # noqa: E402
+from build_tmax import DATE0, DLY, parse_dly  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / "data" / "cache"
@@ -223,7 +223,7 @@ def main() -> None:
             except Exception as exc:
                 print(f"{label} {c['name']}: download failed ({exc})")
                 continue
-            g_idx, g_val = parse_dly_tmax(DLY / f"{sid}.dly")
+            g_idx, g_val = parse_dly(DLY / f"{sid}.dly")
             ghcn = pd.Series(g_val, index=g_idx)
             idx = (tx.index - date0).days.to_numpy()
             tenths = np.round(tx.to_numpy() * 10).astype(int)

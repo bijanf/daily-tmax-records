@@ -36,9 +36,10 @@ COMPLETE_FRAC = 0.8
 SUPPLEMENT = CACHE / "recent_supplement.csv"
 
 
-def parse_dly_tmax(path: Path) -> tuple[np.ndarray, np.ndarray]:
-    """Return (day_index, value_tenths_degC) for every valid TMAX value in a .dly file."""
-    lines = [ln for ln in path.read_bytes().splitlines() if ln[17:21] == b"TMAX"]
+def parse_dly(path: Path, element: bytes = b"TMAX") -> tuple[np.ndarray, np.ndarray]:
+    """Return (day_index, value_in_tenths) for every valid value of one element (TMAX, TMIN,
+    PRCP, ...) in a .dly file: tenths of degC for temperatures, tenths of mm for PRCP."""
+    lines = [ln for ln in path.read_bytes().splitlines() if ln[17:21] == element]
     if not lines:
         return np.empty(0, np.int32), np.empty(0, np.int16)
     lines = [ln.ljust(LINE_LEN)[:LINE_LEN] for ln in lines]
@@ -107,7 +108,7 @@ def main() -> None:
 
     tmax = np.full((len(ids), N_DAYS), MISSING, dtype=np.int16)
     with ProcessPoolExecutor(max_workers=12) as pool:
-        for row, (idx, val) in enumerate(pool.map(parse_dly_tmax, paths, chunksize=8)):
+        for row, (idx, val) in enumerate(pool.map(parse_dly, paths, chunksize=8)):
             tmax[row, idx] = val
 
     n_supplement = pd.Series(0, index=ids)
