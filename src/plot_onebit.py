@@ -29,14 +29,14 @@ import pandas as pd  # noqa: E402
 
 import findings  # noqa: E402
 import onebit  # noqa: E402
-from onebit import BIG_NUMBER, FA_MONTHS, FULL, GRID, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
+from onebit import BIG_NUMBER, FOLLOW, FA_MONTHS, FULL, GRID, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
 
 SOURCES = "Data: NOAA GHCN-Daily · DWD · SMHI · KNMI · GeoSphere · MeteoSwiss"
 # station grid: heat:cold ratio of 2020-latest, upper bound of each class
 BOUNDS = (10, 20, 50, np.inf)
 
 
-def story(f: dict, lang: str = "en") -> Story:
+def story(f: dict, lang: str = "en", cut: str = "long") -> Story:
     """Numbers behind the poster, Europe only: decades, stations, hottest days."""
     fy = f["final_year"]
     rows = f["region"] == "Europe"
@@ -82,8 +82,16 @@ def story(f: dict, lang: str = "en") -> Story:
               f"{int((c20 == 0).sum())} have not set a single cold record since 2020"),
         Scene(3, WIDGET, f"{day:%-d %B %Y}: {{{n_day} stations}} hit their hottest day ever", named),
         Scene(4, FULL, f"Europe now breaks {{{sig['observed']:.0f} heat records}} for every cold one.",
-              "Follow for more of Europe's extremes in 1-bit"),
+              FOLLOW["en"]),
     )
+    if cut == "one":
+        scenes = (
+            Scene(4, FULL, "Is Europe breaking more {heat} records or {cold} records?",
+                  "the continent's longest-running weather stations"),
+            Scene(6, BIG_NUMBER, f"{{{sig['observed']:.0f} heat records}} for every cold one",
+                  "since 2020", count=True),
+            Scene(6, FULL, "Europe is breaking heat records, {not cold ones.}", FOLLOW["en"]),
+        )
     if lang == "fa":
         r = sig["observed"]
         named = " · ".join(f"{city} {fa(format(on_day.loc[sid, 'value'], '.1f'))} درجه" for sid, city in
@@ -103,7 +111,7 @@ def story(f: dict, lang: str = "en") -> Story:
                   fa(f"{int((c20 == 0).sum())} ایستگاه از 2020 حتی یک رکورد سرما هم نداشته‌اند")),
             Scene(3, WIDGET, fa(f"{day.day} {FA_MONTHS[day.month]} {day.year}: {{{n_day} ایستگاه}} "
                                 "گرم‌ترین روز تاریخشان را ثبت کردند"), named),
-            Scene(4, FULL, fa(f"اروپا حالا {{{r:.0f} رکورد گرما}} در برابر هر رکورد سرما می‌شکند."), "برای داده‌های بیشتر از اقلیم اروپا، فالو کنید"),
+            Scene(4, FULL, fa(f"اروپا حالا {{{r:.0f} رکورد گرما}} در برابر هر رکورد سرما می‌شکند."), FOLLOW["fa"]),
         )
     return Story(
         os_name="EU.TMAX.OS1", app="EU.TMAX 1.1",
@@ -124,7 +132,8 @@ def story(f: dict, lang: str = "en") -> Story:
                "Cold record: the coldest daily maximum. p: 200,000 year shuffles.",
                f"{n} stations, each >100 years of daily TMAX. Izaña not mapped.",
                SOURCES],
-        loader_line=f"{n} stations, records, copy", icon="thermometer", scenes=scenes, lang=lang)
+        loader_line=f"{n} stations, records, copy", icon="thermometer",
+        scenes=scenes, lang=lang, cut=cut if cut != "long" else "")
 
 
 def main() -> None:
@@ -133,10 +142,12 @@ def main() -> None:
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
     ap.add_argument("--lang", default="en", choices=["en", "fa"], help="language of the reel's captions")
+    ap.add_argument("--cut", default="one", choices=["one", "long"],
+                    help="reel: one message per scene in three scenes (one), or eight scenes (long)")
     ap.add_argument("--social", action="store_true",
                     help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
-    onebit.render(story(findings.compute(), args.lang), args.theme, "europe_extremes", "pink",
+    onebit.render(story(findings.compute(), args.lang, args.cut), args.theme, "europe_extremes", "pink",
                   not args.no_video, args.web, args.social)
 
 

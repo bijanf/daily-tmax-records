@@ -28,14 +28,14 @@ import numpy as np  # noqa: E402
 
 import drought  # noqa: E402
 import onebit  # noqa: E402
-from onebit import BIG_NUMBER, FULL, MAP, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
+from onebit import BIG_NUMBER, FOLLOW, FULL, MAP, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
 
 
 def best_2020s_rank(ranks: dict) -> float:
     return min([r for y, r in ranks.items() if y >= 2020], default=np.nan)
 
 
-def story(d: dict, lang: str = "en") -> Story:
+def story(d: dict, lang: str = "en", cut: str = "long") -> Story:
     bal, rain, idx = d["balance"], d["rain"], d["idx"]
     fy = max(max(ys) for ys in bal["years"])
     first = min(min(ys) for ys in bal["years"])
@@ -85,8 +85,16 @@ def story(d: dict, lang: str = "en") -> Story:
               f"filled squares: driest season in 2020–{str(fy)[2:]}"),
         Scene(3, WIDGET, f"{fy}: {{{n_latest} stations}} had their driest season ever", " · ".join(cities)),
         Scene(4, FULL, f"Heat {{{'more than doubles' if n_dry >= 2 * n_rain else f'×{n_dry / n_rain:.1f}'}}} "
-                       "Europe's record-dry seasons", "Follow for more of Europe's extremes in 1-bit"),
+                       "Europe's record-dry seasons", FOLLOW["en"]),
     )
+    if cut == "one":
+        scenes = (
+            Scene(4, FULL, "Europe is drying out. Is it {rain} or {heat?}", "the growing season, March to August"),
+            Scene(6, BIG_NUMBER, f"{{{n_dry} stations}}: driest growing season on record",
+                  f"all in the 2020s; a stable climate gives about {expected:.0f}", count=True),
+            Scene(6, FULL, f"Heat {{{'more than doubles' if n_dry >= 2 * n_rain else f'×{n_dry / n_rain:.1f}'}}} "
+                           "Europe's record-dry seasons", FOLLOW["en"]),
+        )
     if lang == "fa":
         n_countries = st.loc[st["year"] >= 2020, "country"].nunique()
         cities_fa = [city for key, city in (("ROTHAMSTED", "روتامستد"), ("BORDEAUX", "بوردو"), ("MUNCHEN", "مونیخ"),
@@ -105,7 +113,7 @@ def story(d: dict, lang: str = "en") -> Story:
             Scene(2, MAP, fa(f"خشک‌ترین فصل‌های دهه‌ی 2020 در {{{n_countries} کشور}}"),
                   fa(f"مربع‌های توپر: خشک‌ترین فصل در 2020 تا {fy}")),
             Scene(3, WIDGET, fa(f"{fy}: {{{n_latest} ایستگاه}} خشک‌ترین فصل عمرشان را دیدند"), " · ".join(cities_fa)),
-            Scene(4, FULL, f"گرما شمار فصل‌های رکوردیِ خشک اروپا را {{{factor}}} کرده است", "برای داده‌های بیشتر از اقلیم اروپا، فالو کنید"),
+            Scene(4, FULL, f"گرما شمار فصل‌های رکوردیِ خشک اروپا را {{{factor}}} کرده است", FOLLOW["fa"]),
         )
     return Story(
         os_name="EU.DRY.OS1", app="EU.DRY 1.1",
@@ -127,7 +135,8 @@ def story(d: dict, lang: str = "en") -> Story:
                "from daily Tmax and Tmin. Record: the station's own driest season.",
                f"{n} stations (>=50 seasons); {len(with20)} with 2020s data, {len(has)} in {fy}.",
                "Data: NOAA GHCN-Daily · p: 200,000 year shuffles"],
-        loader_line=f"{n} stations, rain, evaporation", icon="drop", scenes=scenes, lang=lang)
+        loader_line=f"{n} stations, rain, evaporation", icon="drop",
+        scenes=scenes, lang=lang, cut=cut if cut != "long" else "")
 
 
 def main() -> None:
@@ -136,10 +145,13 @@ def main() -> None:
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
     ap.add_argument("--lang", default="en", choices=["en", "fa"], help="language of the reel's captions")
+    ap.add_argument("--cut", default="one", choices=["one", "long"],
+                    help="reel: one message per scene in three scenes (one), or eight scenes (long)")
     ap.add_argument("--social", action="store_true",
                     help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
-    onebit.render(story(drought.compute(), args.lang), args.theme, "europe_drought", "sand", not args.no_video, args.web,
+    onebit.render(story(drought.compute(), args.lang, args.cut), args.theme, "europe_drought", "sand",
+                  not args.no_video, args.web,
                   args.social)
 
 

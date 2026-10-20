@@ -60,6 +60,8 @@ TEXT = FONTS / "inter" / "ttf" / "Inter-Medium.ttf"
 BOLD = FONTS / "inter" / "ttf" / "InterDisplay-Bold.ttf"
 FA_BOLD = FONTS / "vazirmatn" / "Vazirmatn-Bold.ttf"      # Persian captions (lang "fa")
 FA_TEXT = FONTS / "vazirmatn" / "Vazirmatn-Medium.ttf"
+FOLLOW = {"en": "Follow for more of Europe's extremes in 1-bit",     # last line of every reel
+          "fa": "برای داده‌های بیشتر از اقلیم اروپا، فالو کنید"}
 FA_MONTHS = {1: "ژانویه", 2: "فوریه", 3: "مارس", 4: "آوریل", 5: "مه", 6: "ژوئن", 7: "ژوئیه", 8: "اوت",
              9: "سپتامبر", 10: "اکتبر", 11: "نوامبر", 12: "دسامبر"}
 
@@ -237,6 +239,7 @@ class Story:
     big_digits: int = 0          # decimals of the headline number
     scenes: tuple = ()           # [Scene]: the story cut for reels
     lang: str = "en"             # language of the scenes; "fa" sets the captions right to left
+    cut: str = ""                # name of the cut, in the file names ("one": one message per scene)
 
 
 def europe_raster(lon, lat, w: int, h: int):
@@ -453,7 +456,7 @@ class Desktop:
         ow, oh = size
         zx, zy, zw, zh = VISUAL if self.L.scenes and size == SIZES["reel"] else (0, 0, ow, oh)
         x, y, w, h = box
-        z = min(zw / w, zh / h) * (1 if box == FULL else 0.9)
+        z = min(zw / w, zh / h) * (1 if w >= 0.85 * W else 0.9)    # the whole poster fills the frame
         return np.array([x + w / 2 - (zx + zw / 2) / z, y + h / 2 - (zy + zh / 2) / z]), z
 
     def camera(self, t: float, size):
@@ -777,10 +780,17 @@ class Desktop:
                 x = x - wl - space if rtl else x + wl + space
             if y <= 350 + lead:
                 break
+        # the title grows while it is read, about its first corner, and each word pops in
+        grow = 0.85 + 0.15 * ease(prog(dt, 0.0, 3.0)) if np.isfinite(dt) else 1.0
+        top = 350 - px
         for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
-            if k < shown:
-                d.text((x * s, y * s), w, font=big, fill=th.hot if accent else th.head, anchor="ls", direction=way)
-        y = places[-1][1]
+            if k >= shown:
+                continue
+            pop = 0.6 + 0.4 * ease(prog(dt, 0.15 + 0.6 * k / len(words), 0.25)) if np.isfinite(dt) else 1.0
+            mid = start + (x + big.getlength(w, direction=way) / s / 2 - start) * grow
+            d.text((mid * s, (top + (y - top) * grow) * s), w, font=_font(bold, max(8, round(px * grow * pop * s))),
+                   fill=th.hot if accent else th.head, anchor="ms", direction=way)
+        y = top + (places[-1][1] - top) * grow
         if sc.line and dt > 0.9:
             d.text((start * s, (y + (72 if rtl else 66)) * s), sc.line, font=_font(text, 34 * s), fill=th.head,
                    anchor="rs" if rtl else "ls", direction=way)
@@ -848,25 +858,36 @@ def render(story: Story, keys, stem: str, default: str, with_video: bool, web: b
                 video(desk, OUT / f"{name}_web.mp4", WEB_CRF)
         if social:
             (OUT / "social").mkdir(exist_ok=True)
-            base = OUT / "social" / (f"{stem}_{key}" + ("" if story.lang == "en" else f"_{story.lang}"))
+            tag = (f"_{story.cut}" if story.cut else "") + ("" if story.lang == "en" else f"_{story.lang}")
+            base = OUT / "social" / f"{stem}_{key}{tag}"
             loop = Desktop(story, th, storyline(story) if story.scenes else SOCIAL, shimmer=False, dot=2)
             loop.draw(1, np.inf, SIZES["reel"]).save(f"{base}_cover.png", optimize=True)
             video(loop, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="music")
-            if story.lang == "en":
+            if story.lang == "en" and not story.cut:
                 carousel(loop, base)
 
 
-def storyline(story: Story, move: float = 0.9) -> Timeline:
-    """The story cut of a story: its scenes back to back, the camera gliding to each box."""
+def storyline(story: Story, move: float = 0.9, push: float = 0.92) -> Timeline:
+    """The story cut of a story: its scenes back to back. The camera glides to each scene's box
+    and keeps pushing in slowly while the scene lasts; the last scene pulls back out to its box,
+    the first frame, so a looping reel has no seam."""
     starts = np.cumsum([0.0] + [sc.bars * BAR for sc in story.scenes])
-    keys = [(0.0, story.scenes[0].box)]
-    for t0, before, sc in zip(starts[1:-1], story.scenes, story.scenes[1:]):
-        keys += [(float(t0), before.box), (float(t0) + move, sc.box)]
+    keys, last = [], len(story.scenes) - 1
+    for i, sc in enumerate(story.scenes):
+        near = _closer(sc.box, push)
+        a, b = (near, sc.box) if i == last else (sc.box, near)
+        keys += [(float(starts[i]) + (move if i else 0.0), a), (float(starts[i + 1]), b)]
     return Timeline(0, 0, 0, 0, 0, end=float(starts[-1]), camera=tuple(keys),
                     scenes=tuple(float(t) for t in starts[:-1]))
 
 
-@functools.lru_cache(maxsize=64)
+def _closer(box, f: float):
+    """The same box, f times its size about its centre."""
+    x, y, w, h = box
+    return (x + w * (1 - f) / 2, y + h * (1 - f) / 2, w * f, h * f)
+
+
+@functools.lru_cache(maxsize=1024)
 def _font(path: Path, px: int):
     return ImageFont.truetype(str(path), px)
 
