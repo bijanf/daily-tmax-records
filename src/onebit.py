@@ -58,6 +58,10 @@ MONO = FONTS / "jetbrains-mono" / "JetBrainsMono-Medium.ttf"
 GROTESK = FONTS / "inter" / "ttf" / "InterDisplay-SemiBold.ttf"
 TEXT = FONTS / "inter" / "ttf" / "Inter-Medium.ttf"
 BOLD = FONTS / "inter" / "ttf" / "InterDisplay-Bold.ttf"
+FA_BOLD = FONTS / "vazirmatn" / "Vazirmatn-Bold.ttf"      # Persian captions (lang "fa")
+FA_TEXT = FONTS / "vazirmatn" / "Vazirmatn-Medium.ttf"
+FA_MONTHS = {1: "ژانویه", 2: "فوریه", 3: "مارس", 4: "آوریل", 5: "مه", 6: "ژوئن", 7: "ژوئیه", 8: "اوت",
+             9: "سپتامبر", 10: "اکتبر", 11: "نوامبر", 12: "دسامبر"}
 
 W, H = 1080, 1350           # logical poster = classic video size; the poster PNG is drawn at 2x
 SIZES = {"poster": (W, H), "reel": (1080, 1920), "feed": (1080, 1350)}
@@ -232,6 +236,7 @@ class Story:
     race_center: str = "1 : 1"
     big_digits: int = 0          # decimals of the headline number
     scenes: tuple = ()           # [Scene]: the story cut for reels
+    lang: str = "en"             # language of the scenes; "fa" sets the captions right to left
 
 
 def europe_raster(lon, lat, w: int, h: int):
@@ -282,6 +287,13 @@ def spheres(w: int, h: int, balls, light: float) -> np.ndarray:
         out = np.maximum(out, np.where(rho2 < 1, 0.18 + 0.8 * lit * (0.4 + 0.6 * np.sqrt(rho2)),
                                        0.07 * np.exp(-(np.sqrt(rho2) - 1) / 0.12)))
     return out
+
+
+def fa(text) -> str:
+    """Persian digits, with ٬ for thousands, ٫ for decimals and ٪ for per cent."""
+    text = re.sub(r"(?<=\d),(?=\d)", "٬", str(text))
+    text = re.sub(r"(?<=\d)\.(?=\d)", "٫", text)
+    return text.translate(str.maketrans("0123456789%", "۰۱۲۳۴۵۶۷۸۹٪"))
 
 
 def prog(t: float, t0: float, dur: float) -> float:
@@ -736,36 +748,42 @@ class Desktop:
 
     def caption(self, c: Canvas, i: int, dt: float):
         """Caption band of the story cut: scene counter, one bold line typed in word by word
-        ({braces} in the accent colour), one small line once the bold one is complete."""
+        ({braces} in the accent colour), one small line once the bold one is complete. Persian
+        runs right to left from the right margin."""
         S, th, s, d = self.S, self.th, c.s, c.d
         sc = S.scenes[i]
+        rtl = S.lang == "fa"
+        bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
+        start = RIGHT if rtl else LEFT
         d.rectangle([0, 0, c.im.width, CAPTION * s], fill=th.field)
         d.rectangle([LEFT * s, CAPTION * s, RIGHT * s, (CAPTION + 1) * s], fill=th.ink)
-        d.text((LEFT * s, 262 * s), f"[{i + 1:02d}/{len(S.scenes):02d}] {S.os_name}", font=_font(MONO, 22 * s),
-               fill=th.head, anchor="ls")
+        d.text((start * s, 262 * s), f"[{i + 1:02d}/{len(S.scenes):02d}] {S.os_name}", font=_font(MONO, 22 * s),
+               fill=th.head, anchor="rs" if rtl else "ls")
         words = [(w, part.startswith("{")) for part in re.split(r"(\{[^}]*\})", sc.title) if part
                  for w in part.strip("{}").split()]
         shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
-        # two lines at 76 px; a longer title is set smaller rather than run into the small line
-        for px, lead in ((76, 86), (62, 70)):
-            big = _font(BOLD, px * s)
-            places, x, y, space = [], LEFT, 350, big.getlength(" ") / s
+        # two lines at full size; a longer title is set smaller rather than run into the small line
+        sizes = ((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70))
+        for px, lead in sizes:
+            big = _font(bold, px * s)
+            places, x, y, space = [], start, 350, big.getlength(" ") / s
             for w, _ in words:
-                wl = big.getlength(w) / s
-                if w[0] in ":;,.!?":    # punctuation after an accent phrase sticks to it
-                    x -= space
-                elif x > LEFT and x + wl > RIGHT:
-                    x, y = LEFT, y + lead
-                places.append((x, y))
-                x += wl + space
+                wl = big.getlength(w, direction=way) / s
+                if w[0] in ":;,.!?؟،":    # punctuation after an accent phrase sticks to it
+                    x += space if rtl else -space
+                elif (x < start and x - wl < LEFT) if rtl else (x > start and x + wl > RIGHT):
+                    x, y = start, y + lead
+                places.append((x - wl if rtl else x, y))
+                x = x - wl - space if rtl else x + wl + space
             if y <= 350 + lead:
                 break
         for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
             if k < shown:
-                d.text((x * s, y * s), w, font=big, fill=th.hot if accent else th.head, anchor="ls")
+                d.text((x * s, y * s), w, font=big, fill=th.hot if accent else th.head, anchor="ls", direction=way)
         y = places[-1][1]
         if sc.line and dt > 0.9:
-            d.text((LEFT * s, (y + 66) * s), sc.line, font=_font(TEXT, 34 * s), fill=th.head, anchor="ls")
+            d.text((start * s, (y + (72 if rtl else 66)) * s), sc.line, font=_font(text, 34 * s), fill=th.head,
+                   anchor="rs" if rtl else "ls", direction=way)
 
     def still(self, s: int, box, size) -> Image.Image:
         """The finished poster seen through a camera resting on one box (a carousel slide)."""
@@ -818,22 +836,24 @@ def render(story: Story, keys, stem: str, default: str, with_video: bool, web: b
     OUT.mkdir(parents=True, exist_ok=True)
     for key in THEMES if "all" in keys else keys:
         th = THEMES[key]
-        desk = Desktop(story, th)
         name = stem + ("" if key == default else f"_{key}")
-        desk.draw(2).save(OUT / f"{name}.png", optimize=True)
-        print("saved", OUT / f"{name}.png")
-        if with_video:
-            video(desk, OUT / f"{name}.mp4")
-        if web:
-            desk.shimmer = False
-            video(desk, OUT / f"{name}_web.mp4", WEB_CRF)
+        if story.lang == "en":      # the poster and its videos carry no captions: one language is enough
+            desk = Desktop(story, th)
+            desk.draw(2).save(OUT / f"{name}.png", optimize=True)
+            print("saved", OUT / f"{name}.png")
+            if with_video:
+                video(desk, OUT / f"{name}.mp4")
+            if web:
+                desk.shimmer = False
+                video(desk, OUT / f"{name}_web.mp4", WEB_CRF)
         if social:
             (OUT / "social").mkdir(exist_ok=True)
-            base = OUT / "social" / f"{stem}_{key}"
+            base = OUT / "social" / (f"{stem}_{key}" + ("" if story.lang == "en" else f"_{story.lang}"))
             loop = Desktop(story, th, storyline(story) if story.scenes else SOCIAL, shimmer=False, dot=2)
             loop.draw(1, np.inf, SIZES["reel"]).save(f"{base}_cover.png", optimize=True)
             video(loop, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="music")
-            carousel(loop, base)
+            if story.lang == "en":
+                carousel(loop, base)
 
 
 def storyline(story: Story, move: float = 0.9) -> Timeline:

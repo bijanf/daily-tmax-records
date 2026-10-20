@@ -28,14 +28,14 @@ import numpy as np  # noqa: E402
 
 import drought  # noqa: E402
 import onebit  # noqa: E402
-from onebit import BIG_NUMBER, FULL, MAP, RACE, WIDGET, Race, Scene, Story  # noqa: E402
+from onebit import BIG_NUMBER, FULL, MAP, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
 
 
 def best_2020s_rank(ranks: dict) -> float:
     return min([r for y, r in ranks.items() if y >= 2020], default=np.nan)
 
 
-def story(d: dict) -> Story:
+def story(d: dict, lang: str = "en") -> Story:
     bal, rain, idx = d["balance"], d["rain"], d["idx"]
     fy = max(max(ys) for ys in bal["years"])
     first = min(min(ys) for ys in bal["years"])
@@ -87,6 +87,26 @@ def story(d: dict) -> Story:
         Scene(4, FULL, f"Heat {{{'more than doubles' if n_dry >= 2 * n_rain else f'×{n_dry / n_rain:.1f}'}}} "
                        "Europe's record-dry seasons", "Follow for more of Europe's extremes in 1-bit"),
     )
+    if lang == "fa":
+        n_countries = st.loc[st["year"] >= 2020, "country"].nunique()
+        cities_fa = [city for key, city in (("ROTHAMSTED", "روتامستد"), ("BORDEAUX", "بوردو"), ("MUNCHEN", "مونیخ"),
+                                            ("WIEN", "وین"), ("BUDAPEST", "بوداپست")) if latest.str.contains(key).any()]
+        factor = "بیش از دو برابر" if n_dry >= 2 * n_rain else fa(f"{n_dry / n_rain:.1f} برابر")
+        scenes = (
+            Scene(2, FULL, "اروپا دارد خشک می‌شود. {باران} یا {گرما؟}",
+                  fa(f"{len(with20)} ایستگاه با سابقه‌ی طولانی، مارس تا اوت")),
+            Scene(3, BIG_NUMBER, fa(f"{{{n_dry} ایستگاه}}: خشک‌ترین فصل رشد در تاریخشان"),
+                  fa(f"همه در دهه‌ی 2020 · در اقلیم پایدار حدود {expected:.0f}"), count=True),
+            Scene(2, RACE, fa(f"اگر فقط باران را بشماریم: {{{n_rain}}}"), "مربع‌های توخالی: فقط باران", focus=4),
+            Scene(2, RACE, fa(f"با تبخیرِ ناشی از گرما: {{{n_dry}}}"), "مربع‌های توپر: باران منهای تبخیر", focus=4),
+            Scene(2, RACE, "دهه‌ی ۲۰۱۰: رکورد بارانِ بیشتر، {اما خشک‌تر}",
+                  fa(f"فقط باران: {r_dry10} خشک در برابر {r_wet10} مرطوب · با تبخیر: {tens.a} در برابر {tens.b}"),
+                  focus=3),
+            Scene(2, MAP, fa(f"خشک‌ترین فصل‌های دهه‌ی 2020 در {{{n_countries} کشور}}"),
+                  fa(f"مربع‌های توپر: خشک‌ترین فصل در 2020 تا {fy}")),
+            Scene(3, WIDGET, fa(f"{fy}: {{{n_latest} ایستگاه}} خشک‌ترین فصل عمرشان را دیدند"), " · ".join(cities_fa)),
+            Scene(4, FULL, f"گرما شمار فصل‌های رکوردیِ خشک اروپا را {{{factor}}} کرده است", "برای داده‌های بیشتر از اقلیم اروپا، فالو کنید"),
+        )
     return Story(
         os_name="EU.DRY.OS1", app="EU.DRY 1.1",
         lead=f"Europe 2020–{fy}", tail="Stations with a record-dry growing season",
@@ -107,7 +127,7 @@ def story(d: dict) -> Story:
                "from daily Tmax and Tmin. Record: the station's own driest season.",
                f"{n} stations (>=50 seasons); {len(with20)} with 2020s data, {len(has)} in {fy}.",
                "Data: NOAA GHCN-Daily · p: 200,000 year shuffles"],
-        loader_line=f"{n} stations, rain, evaporation", icon="drop", scenes=scenes)
+        loader_line=f"{n} stations, rain, evaporation", icon="drop", scenes=scenes, lang=lang)
 
 
 def main() -> None:
@@ -115,10 +135,11 @@ def main() -> None:
     ap.add_argument("--theme", nargs="+", default=["sand"], choices=[*onebit.THEMES, "all"], help="colour themes")
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
+    ap.add_argument("--lang", default="en", choices=["en", "fa"], help="language of the reel's captions")
     ap.add_argument("--social", action="store_true",
                     help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
-    onebit.render(story(drought.compute()), args.theme, "europe_drought", "sand", not args.no_video, args.web,
+    onebit.render(story(drought.compute(), args.lang), args.theme, "europe_drought", "sand", not args.no_video, args.web,
                   args.social)
 
 

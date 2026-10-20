@@ -29,14 +29,14 @@ import pandas as pd  # noqa: E402
 
 import findings  # noqa: E402
 import onebit  # noqa: E402
-from onebit import BIG_NUMBER, FULL, GRID, RACE, WIDGET, Race, Scene, Story  # noqa: E402
+from onebit import BIG_NUMBER, FA_MONTHS, FULL, GRID, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
 
 SOURCES = "Data: NOAA GHCN-Daily · DWD · SMHI · KNMI · GeoSphere · MeteoSwiss"
 # station grid: heat:cold ratio of 2020-latest, upper bound of each class
 BOUNDS = (10, 20, 50, np.inf)
 
 
-def story(f: dict) -> Story:
+def story(f: dict, lang: str = "en") -> Story:
     """Numbers behind the poster, Europe only: decades, stations, hottest days."""
     fy = f["final_year"]
     rows = f["region"] == "Europe"
@@ -84,6 +84,27 @@ def story(f: dict) -> Story:
         Scene(4, FULL, f"Europe now breaks {{{sig['observed']:.0f} heat records}} for every cold one.",
               "Follow for more of Europe's extremes in 1-bit"),
     )
+    if lang == "fa":
+        r = sig["observed"]
+        named = " · ".join(f"{city} {fa(format(on_day.loc[sid, 'value'], '.1f'))} درجه" for sid, city in
+                           (("GM000003342", "پوتسدام"), ("GM000003319", "برلین-دالم")) if sid in on_day.index)
+        scenes = (
+            Scene(2, FULL, "اروپا بیشتر {رکورد گرما} می‌شکند یا رکورد سرما؟",
+                  fa(f"{n} ایستگاه هواشناسی، هرکدام با دست‌کم 100 سال داده")),
+            Scene(3, BIG_NUMBER, fa(f"از 2020 تا امروز: {{{r:.0f} رکورد گرما}} در برابر هر رکورد سرما"),
+                  fa(f"{sig['heat']:,} رکورد گرما · {sig['cold']:,} رکورد سرما"), count=True),
+            Scene(2, RACE, "تا ۱۹۹۰، {رکوردهای سرما} برنده بودند",
+                  fa(f"{old.b:,} رکورد سرما در برابر {old.a:,} رکورد گرما، 1880 تا 1989"), focus=0),
+            Scene(2, RACE, fa(f"دهه‌های 2000 و 2010: {{{mid.a / mid.b:.0f} رکورد گرما}} به ازای هر رکورد سرما"),
+                  "کفه‌ی ترازو در دهه‌ی ۱۹۹۰ به سمت گرما چرخید", focus=3),
+            Scene(2, RACE, fa(f"دهه‌ی 2020: {{{now.a / now.b:.0f} به 1}}"),
+                  fa(f"{now.a:,} رکورد گرما · {now.b:,} رکورد سرما"), focus=4),
+            Scene(2, GRID, fa(f"{{{int(st['hit'].sum())} از {n}}} ایستگاه به سمت گرما رفته‌اند"),
+                  fa(f"{int((c20 == 0).sum())} ایستگاه از 2020 حتی یک رکورد سرما هم نداشته‌اند")),
+            Scene(3, WIDGET, fa(f"{day.day} {FA_MONTHS[day.month]} {day.year}: {{{n_day} ایستگاه}} "
+                                "گرم‌ترین روز تاریخشان را ثبت کردند"), named),
+            Scene(4, FULL, fa(f"اروپا حالا {{{r:.0f} رکورد گرما}} در برابر هر رکورد سرما می‌شکند."), "برای داده‌های بیشتر از اقلیم اروپا، فالو کنید"),
+        )
     return Story(
         os_name="EU.TMAX.OS1", app="EU.TMAX 1.1",
         lead=f"Europe 2020–{fy}", tail="Heat records per cold record",
@@ -103,7 +124,7 @@ def story(f: dict) -> Story:
                "Cold record: the coldest daily maximum. p: 200,000 year shuffles.",
                f"{n} stations, each >100 years of daily TMAX. Izaña not mapped.",
                SOURCES],
-        loader_line=f"{n} stations, records, copy", icon="thermometer", scenes=scenes)
+        loader_line=f"{n} stations, records, copy", icon="thermometer", scenes=scenes, lang=lang)
 
 
 def main() -> None:
@@ -111,10 +132,11 @@ def main() -> None:
     ap.add_argument("--theme", nargs="+", default=["pink"], choices=[*onebit.THEMES, "all"], help="colour themes")
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
+    ap.add_argument("--lang", default="en", choices=["en", "fa"], help="language of the reel's captions")
     ap.add_argument("--social", action="store_true",
                     help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
-    onebit.render(story(findings.compute()), args.theme, "europe_extremes", "pink",
+    onebit.render(story(findings.compute(), args.lang), args.theme, "europe_extremes", "pink",
                   not args.no_video, args.web, args.social)
 
 

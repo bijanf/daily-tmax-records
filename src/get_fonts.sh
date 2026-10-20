@@ -3,6 +3,7 @@
 #   inter/           Inter and Inter Display, the posters (without it they fall back to Lato)
 #   vt323/           VT323, the pixel terminal type of the 1-bit posters (plot_onebit.py)
 #   jetbrains-mono/  JetBrains Mono, the code labels of the 1-bit posters
+#   vazirmatn/       Vazirmatn, Persian captions of the reels (plot_onebit*.py --lang fa)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -41,4 +42,15 @@ if ! ls "$DEST"/JetBrainsMono-*.ttf > /dev/null 2>&1; then
     done
     cp "$TMP/jbm/OFL.txt" "$DEST/"
     echo "JetBrains Mono installed in $DEST"
+fi
+
+DEST="$FONTS/vazirmatn"
+if [ ! -f "$DEST/Vazirmatn-Bold.ttf" ]; then
+    curl -sS -L -m 300 -o "$TMP/vazirmatn.zip" \
+        https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip
+    unzip -q "$TMP/vazirmatn.zip" -d "$TMP/vazirmatn"
+    mkdir -p "$DEST"
+    cp "$TMP/vazirmatn/fonts/ttf/Vazirmatn-Bold.ttf" "$TMP/vazirmatn/fonts/ttf/Vazirmatn-Medium.ttf" \
+       "$TMP/vazirmatn/OFL.txt" "$DEST/"
+    echo "Vazirmatn installed in $DEST"
 fi

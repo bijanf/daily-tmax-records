@@ -25,12 +25,12 @@ import numpy as np  # noqa: E402
 
 import extremes  # noqa: E402
 import onebit  # noqa: E402
-from onebit import BIG_NUMBER, FULL, RACE, WIDGET, Race, Scene, Story  # noqa: E402
+from onebit import BIG_NUMBER, FA_MONTHS, FULL, RACE, WIDGET, Race, Scene, Story, fa  # noqa: E402
 
 SOURCES = "Data: NOAA GHCN-Daily · DWD · SMHI · KNMI · GeoSphere · MeteoSwiss"
 
 
-def story(d: dict) -> Story:
+def story(d: dict, lang: str = "en") -> Story:
     st, score, nights = d["st"], d["score"], d["nights"]
     hot35, hot = score["hot35"], score["hot_own"]
     ratio = (hot["recent"] / hot["base"]).reindex(st.index)
@@ -71,6 +71,25 @@ def story(d: dict) -> Story:
         Scene(4, FULL, "Heat is off the charts. Rain is only {creeping up.}",
               "Follow for more of Europe's extremes in 1-bit"),
     )
+    if lang == "fa":
+        d1, d2 = wien["d1"], wien["d2"]
+        scenes = (
+            Scene(2, FULL, "کدام {رویدادهای حدی} واقعاً بدتر شده‌اند؟", fa("اروپا، 1961 تا 1990 در برابر 2016 تا 2025")),
+            Scene(3, BIG_NUMBER, fa(f"روزهای 35 درجه: {{{x['hot35']:.1f} برابر}}"),
+                  fa(f"از {b:.2f} به {r:.2f} روز در سال، در ایستگاه میانگین"), count=True),
+            Scene(2, RACE, fa(f"شب‌های گرم: {{{x['nights']:.1f} برابر}}"), fa("شب‌هایی که دما بالای 20 درجه می‌ماند"),
+                  focus=1),
+            Scene(2, RACE, fa(f"فصل‌های رشدِ خشک: {{{x['dry']:.1f} برابر}}"),
+                  fa("مارس تا اوت، در میان 10% خشک‌ترین فصل‌های هر ایستگاه"), focus=2),
+            Scene(2, RACE, fa(f"رگبارهای شدید: فقط {{{x['downpours']:.1f} برابر}}"),
+                  fa("باران بالاتر از 1% سنگین‌ترین روزهای هر ایستگاه"), focus=3),
+            Scene(2, RACE, fa(f"روزهای یخبندان: {{{100 * (1 - x['frost']):.0f}% کمتر}}"),
+                  fa(f"از {frost['base'].mean():.0f} به {frost['recent'].mean():.0f} روز در سال"), focus=4),
+            Scene(3, WIDGET, fa(f"وین {d1:%Y}: {{دو پربارش‌ترین روزش}} از {wien['first']}"),
+                  fa(f"{d1.day} {FA_MONTHS[d1.month]} {wien['mm1']:.1f} میلی‌متر · "
+                     f"{d2.day} {FA_MONTHS[d2.month]} {wien['mm2']:.1f} میلی‌متر"), sound="rain"),
+            Scene(4, FULL, "گرما از جدول بیرون زده؛ باران {فقط آرام بالا می‌رود.}", "برای داده‌های بیشتر از اقلیم اروپا، فالو کنید"),
+        )
     return Story(
         os_name="EU.XTRM.OS1", app="EU.XTRM 1.1",
         lead="Europe 2016–2025 vs 1961–1990", tail="Days at 35 °C or more",
@@ -91,7 +110,7 @@ def story(d: dict) -> Story:
                f"Downpours: rain above the station's own 1961–90 99th percentile ({d['p99'].median():.0f} mm).",
                "Dry season: Mar–Aug rain minus evaporation below its own 10th percentile.",
                SOURCES],
-        loader_line=f"{len(st)} stations, 5 extremes", icon="bolt", scenes=scenes)
+        loader_line=f"{len(st)} stations, 5 extremes", icon="bolt", scenes=scenes, lang=lang)
 
 
 def main() -> None:
@@ -99,10 +118,11 @@ def main() -> None:
     ap.add_argument("--theme", nargs="+", default=["beton"], choices=[*onebit.THEMES, "all"], help="colour themes")
     ap.add_argument("--no-video", action="store_true", help="posters only")
     ap.add_argument("--web", action="store_true", help="also a small video without the shimmer")
+    ap.add_argument("--lang", default="en", choices=["en", "fa"], help="language of the reel's captions")
     ap.add_argument("--social", action="store_true",
                     help="also the 30 s loop as an Instagram reel (9:16, with cover) and a 4:5 carousel")
     args = ap.parse_args()
-    onebit.render(story(extremes.compute()), args.theme, "europe_scoreboard", "beton", not args.no_video,
+    onebit.render(story(extremes.compute(), args.lang), args.theme, "europe_scoreboard", "beton", not args.no_video,
                   args.web, args.social)
 
 
