@@ -1,7 +1,7 @@
 """Berlin minimal techno for the 1-bit desktops, synthesized from scratch and timed to the film.
 
-64 beats fill the video exactly (128 BPM for the 30 s social cut), and every echo and reverb
-tail is wrapped round to the start, so the track loops with the picture. Kick, off-beat hats,
+At 128 BPM the films last a whole number of bars (30 s = 16, 37.5 s = 20), and every echo and
+reverb tail is wrapped round to the start, so the track loops with the picture. Kick, off-beat hats,
 clap, a rolling bass ducked by the kick, dub-techno chord stabs in a ping-pong tape echo and a
 1-bit square arpeggio enter bar by bar as the windows open, and drop out for a pad when the
 camera returns to the poster.
@@ -20,7 +20,7 @@ import numpy as np
 from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
-BEATS = 64
+BPM = 128                    # 30 s = 16 bars, 37.5 s = 20 bars: the films loop on a bar
 RNG = np.random.default_rng(7)
 
 # dub chords (MIDI notes) and the 1-bit arpeggio scale (A minor pentatonic)
@@ -179,25 +179,39 @@ class Mixer:
 
 def soundtrack(desk) -> np.ndarray:
     """Stereo track (float32, -1..1) for a Desktop's timeline and story."""
-    L, S = desk.L, desk.S
-    spb = L.end / BEATS
+    L = desk.L
+    spb = 60 / BPM
     s16, bar = spb / 4, spb * 4
-    nxt = lambda t, step: np.ceil(t / step - 1e-9) * step  # noqa: E731
-    keys = L.camera
-    groove_end = np.floor(keys[-1][0] / bar) * bar if keys[-1][1] == keys[0][1] else L.end
-    kick_on, bass_on = nxt(L.desk, bar), nxt(L.grid, bar)
-    clap_on, stab_on = nxt(L.race, bar), nxt(L.widget, bar)
-    moving = [(t0, t1) for (t0, b0), (t1, b1) in zip(keys, keys[1:]) if b0 != b1]
-    arp_on = nxt(moving[0][0], bar) if moving else groove_end
     m = Mixer(L.end)
+    if L.scenes:
+        starts = list(L.scenes)
+        plan = dict(kick=starts[1], bass=starts[1] + bar, clap=starts[2], stab=starts[min(4, len(starts) - 1)],
+                    arp=starts[-2], end=L.end - 2 * bar, intro=starts[1])
+        _story_sfx(m, desk, starts, s16)
+    else:
+        nxt = lambda t, step: np.ceil(t / step - 1e-9) * step  # noqa: E731
+        keys = L.camera
+        end = np.floor(keys[-1][0] / bar) * bar if keys[-1][1] == keys[0][1] else L.end
+        moving = [t0 for (t0, b0), (_, b1) in zip(keys, keys[1:]) if b0 != b1]
+        plan = dict(kick=nxt(L.desk, bar), bass=nxt(L.grid, bar), clap=nxt(L.race, bar), stab=nxt(L.widget, bar),
+                    arp=nxt(moving[0], bar) if moving else end, end=end, intro=L.intro)
+        _desk_sfx(m, desk, s16)
+    kicks = _groove(m, plan, spb, s16, bar, L.end)
+    for (t0, b0), (t1, b1) in zip(L.camera, L.camera[1:]):
+        if b0 != b1:
+            m.add("sfx", whoosh(t1 - t0), t0, 0.25)
+    return _master(m, kicks, L.end)
 
-    # drums
+
+def _groove(m, plan, spb, s16, bar, seconds):
+    """Kick, hats, clap, rolling bass, dub stabs, the 1-bit arpeggio, and a pad from the end of
+    the groove that wraps round into the opening. Returns the kick times (for the ducking)."""
     k, hc, ho, cl = kick(), hat(), hat(True), clap()
-    kicks = np.arange(kick_on, groove_end - 1e-9, spb)
+    kicks = np.arange(plan["kick"], plan["end"] - 1e-9, spb)
     for i, t in enumerate(kicks):
         m.add("drums", k, t, 0.9)
         m.add("drums", ho, t + spb / 2, 0.22, pan=0.25)
-        if t >= clap_on:
+        if t >= plan["clap"]:
             for j in (1, 3):
                 m.add("drums", hc, t + j * s16, 0.12 + 0.05 * RNG.random(), pan=-0.3)
             if i % 2 == 1:
@@ -205,13 +219,13 @@ def soundtrack(desk) -> np.ndarray:
                 m.add("send", cl, t, 0.25)
 
     # rolling bass on the three sixteenths after each kick; G for the last beat of every 4th bar
-    for i, t in enumerate(np.arange(bass_on, groove_end - 1e-9, spb)):
+    for i, t in enumerate(np.arange(plan["bass"], plan["end"] - 1e-9, spb)):
         note = 31 if (i % 16) == 15 else 33
         for j in (1, 2, 3):
             m.add("music", bass(note, s16 * 0.9), t + j * s16, 0.42)
 
     # dub stabs on the "and" of beats 2 and 4, chords changing every two bars, into the echo
-    for i, t in enumerate(np.arange(stab_on, groove_end - 1e-9, bar)):
+    for i, t in enumerate(np.arange(plan["stab"], plan["end"] - 1e-9, bar)):
         notes = AM9 if (i // 2) % 2 == 0 else FMAJ9
         for off in (1.5, 3.5):
             st = chord(notes, 0.35)
@@ -219,31 +233,36 @@ def soundtrack(desk) -> np.ndarray:
             m.add("music", echo(st.mean(axis=1), 0.75 * spb), t + off * spb, 0.22)
             m.add("send", st, t + off * spb, 0.15)
 
-    # 1-bit arpeggio while the camera tours
+    # 1-bit arpeggio
     pattern = (0, 2, 4, 1, 3, 5, 2, 4, 6, 3, 1, 4, 2, 5, 3, 0)
-    for i, t in enumerate(np.arange(arp_on, groove_end - 1e-9, s16)):
+    for i, t in enumerate(np.arange(plan["arp"], plan["end"] - 1e-9, s16)):
         note = PENTA[pattern[i % 16]] - (12 if (i // 32) % 2 else 0)
         b = blip(note, s16 * 0.8, 0.03)
         m.add("music", b, t, 0.10, pan=0.4 if i % 2 else -0.4)
         if i % 4 == 2:
             m.add("music", echo(b, 0.75 * spb, 0.4, 4), t, 0.06)
 
-    # pad when the camera is back on the poster; it runs past the end and wraps into the intro
-    if groove_end < L.end:
-        length = L.end - groove_end + L.intro + 0.3
+    # pad from the end of the groove; it runs past the end and wraps into the opening
+    if plan["end"] < seconds:
+        length = seconds - plan["end"] + plan["intro"] + 0.3
         p = chord(PAD, length, cutoff=900, attack=0.6, tau=60, detune=7)
         n_out = int(0.3 * SR)
         p[-n_out:] *= np.linspace(1, 0, n_out)[:, None]
-        m.add("music", p, groove_end, 0.35)
-        m.add("send", p, groove_end, 0.12)
+        m.add("music", p, plan["end"], 0.35)
+        m.add("send", p, plan["end"], 0.12)
+    return kicks
 
-    # screen off, loader, windows opening
+
+def _desk_sfx(m, desk, s16):
+    """Sounds of the desk building itself: screen off, loader, windows, stations, cells, race."""
+    L, S = desk.L, desk.S
+    nxt = lambda t: np.ceil(t / s16 - 1e-9) * s16  # noqa: E731
     if L.intro:
         m.add("sfx", power_down(0.5), L.intro, 0.55)
         start = L.intro + 0.5
     else:
         start = 0.0
-    for i, t in enumerate(np.arange(nxt(start + 0.1, s16), L.desk - 1e-9, s16)):
+    for i, t in enumerate(np.arange(nxt(start + 0.1), L.desk - 1e-9, s16)):
         m.add("sfx", blip(PENTA[min(i, len(PENTA) - 1)] - 12, 0.04), t, 0.18)
     for t0 in (L.map, L.grid, L.race, L.widget):
         m.add("sfx", glide(76, 88, 0.15), t0, 0.5)
@@ -264,22 +283,50 @@ def soundtrack(desk) -> np.ndarray:
     # race squares gliding to their ratios
     for i, row in enumerate(S.race):
         r = row.a / max(row.b, 0.25)
-        t0 = L.race + desk.d(0.8 + 0.5 * i)
-        m.add("sfx", glide(69, 69 + 6 * np.log2(max(r, 1 / 8)), desk.d(1.6)), t0, 0.35, pan=-0.2 + 0.1 * i)
+        m.add("sfx", glide(69, 69 + 6 * np.log2(max(r, 1 / 8)), desk.d(1.6)), L.race + desk.d(0.8 + 0.5 * i),
+              0.35, pan=-0.2 + 0.1 * i)
 
     # widget counting up
-    count_t0, count_d = L.widget + desk.open, desk.d(1.2)
-    steps = max(S.widget_n, 1)
-    times = sorted({float(nxt(count_t0 + count_d * (1 - (1 - (i + 1) / steps) ** (1 / 3)), s16))
-                    for i in range(steps)})
-    for t in times:
+    t0, dur, steps = L.widget + desk.open, desk.d(1.2), max(S.widget_n, 1)
+    for t in sorted({float(nxt(t0 + dur * (1 - (1 - (i + 1) / steps) ** (1 / 3)))) for i in range(steps)}):
         m.add("sfx", blip(93, 0.03, 0.01), t, 0.15)
 
-    # camera moves
-    for t0, t1 in moving:
-        m.add("sfx", whoosh(t1 - t0), t0, 0.25)
 
-    return _master(m, kicks, L.end)
+def _story_sfx(m, desk, starts, s16):
+    """Sounds of the story cut: a key click per caption word, the count, each ratio in focus,
+    rain under a rain scene."""
+    S = desk.S
+    nxt = lambda t: np.ceil(t / s16 - 1e-9) * s16  # noqa: E731
+    ends = starts[1:] + [desk.L.end]
+    for t0, t1, sc in zip(starts, ends, S.scenes):
+        n = len(sc.title.replace("{", " ").replace("}", " ").split())
+        for k in range(n):
+            m.add("sfx", key_click(), nxt(t0 + 0.15 + 0.6 * k / n), 0.22, pan=RNG.uniform(-0.3, 0.3))
+        if sc.count:
+            for i in range(10):
+                m.add("sfx", blip(81 + 2 * i, 0.03, 0.01), nxt(t0 + 0.4 + 1.6 * (1 - (1 - (i + 1) / 10) ** (1 / 3))), 0.12)
+        if sc.focus is not None:
+            row = S.race[sc.focus]
+            r = row.a / max(row.b, 0.25)
+            m.add("sfx", glide(69, 69 + 6 * np.log2(max(r, 1 / 8)), 1.4), t0 + 0.6, 0.4)
+        if sc.sound == "rain":
+            m.add("sfx", rain(t1 - t0), t0, 0.5)
+
+
+def key_click():
+    n = int(0.03 * SR)
+    return _fade(_filter(RNG.standard_normal(n), "band", (1500, 6000)) * np.exp(-_t(n) / 0.004) * 0.6, 0.0005)
+
+
+def rain(length):
+    """Soft hiss with scattered drops."""
+    n = int(length * SR)
+    hiss = _filter(RNG.standard_normal(n), "band", (2000, 9000)) * 0.05
+    drops = np.zeros(n)
+    for i in RNG.integers(0, n - 2000, int(length * 18)):
+        drops[i:i + 2000] += np.sin(2 * np.pi * RNG.uniform(1500, 3500) * _t(2000)) * np.exp(-_t(2000) / 0.004) * 0.3
+    env = np.minimum(np.minimum(_t(n) / 0.8, 1), np.minimum((length - _t(n)) / 0.8, 1))
+    return _fade((hiss + drops) * env)
 
 
 def _sonify(m, times, kinds, voice, s16, best):

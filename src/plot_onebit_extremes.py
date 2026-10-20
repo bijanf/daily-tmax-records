@@ -25,9 +25,10 @@ import numpy as np  # noqa: E402
 
 import extremes  # noqa: E402
 import onebit  # noqa: E402
-from onebit import Race, Story  # noqa: E402
+from onebit import FULL, RACE, WIDGET, Race, Scene, Story  # noqa: E402
 
 SOURCES = "Data: NOAA GHCN-Daily · DWD · SMHI · KNMI · GeoSphere · MeteoSwiss"
+BIG_NUMBER = (40, 95, 640, 250)     # the "×5.7" of the headline, for the camera
 
 
 def story(d: dict) -> Story:
@@ -51,6 +52,26 @@ def story(d: dict) -> Story:
     wien = d["wet"].loc["AU000005901"]
     b, r = hot35["base"].mean(), hot35["recent"].mean()
     n = len(hot35)
+    x = {k: score[k]["recent"].mean() / score[k]["base"].mean() for k in score}
+    frost = score["frost"]
+    # the story cut: one message per scene, 20 bars = 37.5 s
+    scenes = (
+        Scene(2, FULL, "Which weather {extremes} really got worse?",
+              "Europe, 1961–1990 vs 2016–2025"),
+        Scene(3, BIG_NUMBER, f"Days at 35 °C: {{×{x['hot35']:.1f}}}",
+              f"{b:.2f} → {r:.2f} days a year at the average station", count=True),
+        Scene(2, RACE, f"Hot nights: {{×{x['nights']:.1f}}}", "nights that stay above 20 °C", focus=1),
+        Scene(2, RACE, f"Dry growing seasons: {{×{x['dry']:.1f}}}",
+              "March–August, among each station's driest 10 %", focus=2),
+        Scene(2, RACE, f"Downpours: only {{×{x['downpours']:.1f}}}",
+              "rain above each station's own heaviest 1 % of days", focus=3),
+        Scene(2, RACE, f"Frost days: {{−{100 * (1 - x['frost']):.0f} %}}",
+              f"{frost['base'].mean():.0f} → {frost['recent'].mean():.0f} days a year", focus=4),
+        Scene(3, WIDGET, f"Vienna {wien['d1']:%Y}: its {{two wettest days}} since {wien['first']}",
+              f"{wien['d1']:%-d %b} {wien['mm1']:.1f} mm · {wien['d2']:%-d %b} {wien['mm2']:.1f} mm", sound="rain"),
+        Scene(4, FULL, "Heat is off the charts. Rain is only {creeping up.}",
+              "Follow for more of Europe's extremes in 1-bit"),
+    )
     return Story(
         os_name="EU.XTRM.OS1", app="EU.XTRM 1.1",
         lead="Europe 2016–2025 vs 1961–1990", tail="Days at 35 °C or more",
@@ -71,7 +92,7 @@ def story(d: dict) -> Story:
                f"Downpours: rain above the station's own 1961–90 99th percentile ({d['p99'].median():.0f} mm).",
                "Dry season: Mar–Aug rain minus evaporation below its own 10th percentile.",
                SOURCES],
-        loader_line=f"{len(st)} stations, 5 extremes", icon="bolt")
+        loader_line=f"{len(st)} stations, 5 extremes", icon="bolt", scenes=scenes)
 
 
 def main() -> None:

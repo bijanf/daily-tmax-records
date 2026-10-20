@@ -16,6 +16,10 @@ Two cuts of the animation:
              camera visits every window and returns to the full poster, so the last frame is
              the first. Dots are 2 x 2 pixels and nothing shimmers, so the stipple survives
              the platforms' compression.
+    story    for a Story with scenes: one message at a time for people scrolling on a phone.
+             The top of the 9:16 frame is a caption band (one bold line typed in word by
+             word, one small line); below it the camera rests on one box per scene (the
+             headline, the race with one row in focus, the widget) for two to four bars.
 
 Themes recolour the whole scene:
 
@@ -32,6 +36,8 @@ Themes recolour the whole scene:
 from __future__ import annotations
 
 import base64
+import functools
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,6 +57,7 @@ PIXEL = FONTS / "vt323" / "VT323-Regular.ttf"
 MONO = FONTS / "jetbrains-mono" / "JetBrainsMono-Medium.ttf"
 GROTESK = FONTS / "inter" / "ttf" / "InterDisplay-SemiBold.ttf"
 TEXT = FONTS / "inter" / "ttf" / "Inter-Medium.ttf"
+BOLD = FONTS / "inter" / "ttf" / "InterDisplay-Bold.ttf"
 
 W, H = 1080, 1350           # logical poster = classic video size; the poster PNG is drawn at 2x
 SIZES = {"poster": (W, H), "reel": (1080, 1920), "feed": (1080, 1350)}
@@ -61,6 +68,10 @@ SIGNATURE = "Bijan Fallah"
 EXTENT = [-11, 58, 35.5, 70.5]
 OPEN = 0.4                  # zoom rectangles of an opening window
 SWITCH_OFF = 0.5            # the screen switching off between the intro and the loader
+BPM = 128
+BAR = 4 * 60 / BPM          # scenes and the soundtrack count in bars
+CAPTION = 600               # story cut: height of the caption band at the top of the reel
+VISUAL = (0, 640, 1080, 1000)   # story cut: where the camera puts its box, above the app's overlay
 
 
 @dataclass(frozen=True)
@@ -128,6 +139,7 @@ ICONS = {
 # ── layout (logical pixels, x, y, w, h unless noted) ─────────────────────────
 
 FULL = (0, 0, W, H)
+HEADLINE = (40, 40, 1000, 370)
 DESK = (LEFT, 424, RIGHT, 1212)     # x0, y0, x1, y1
 MAP = (84, 462, 524, 424)
 GRID = (628, 446, 368, 456)
@@ -153,6 +165,7 @@ class Timeline:
     camera: tuple
     pace: float = 1.0
     intro: float = 0.0
+    scenes: tuple = ()           # story cut: start of every scene (s)
 
 
 CLASSIC = Timeline(1.8, 5.5, 11.5, 16.8, 22.5, end=32, camera=((25.5, FULL), (29.5, WIDGET)))
@@ -171,6 +184,18 @@ class Race:
     ghost: float | None = None   # second ratio, drawn as a hollow square
     unit: str | None = None      # set: the row shows "b → a unit" (a change), not "a : b" records
     digits: int = 1
+
+
+@dataclass
+class Scene:
+    """One beat of the story cut: the camera rests on one box while the caption says one thing."""
+    bars: float                  # length, in bars of BPM
+    box: tuple                   # what the camera shows (poster coordinates)
+    title: str                   # one bold line; {braces} mark the words in the accent colour
+    line: str = ""               # one small line under it
+    focus: int | None = None     # race row to frame and replay
+    count: bool = False          # replay the headline count
+    sound: str = ""              # a texture under the scene in the soundtrack: "rain"
 
 
 @dataclass
@@ -205,6 +230,7 @@ class Story:
     race_title: str = "Records.Race"
     race_center: str = "1 : 1"
     big_digits: int = 0          # decimals of the headline number
+    scenes: tuple = ()           # [Scene]: the story cut for reels
 
 
 def europe_raster(lon, lat, w: int, h: int):
@@ -373,7 +399,7 @@ class Desktop:
         """dot: side of one stipple dot in logical pixels (2 survives video compression)."""
         self.S, self.th, self.L, self.shimmer, self.dot = story, th, timeline, shimmer, dot
         self.open = max(0.25, OPEN * timeline.pace)
-        self.rest = None
+        self.rest = self.count = self.focus = None
         self._clouds, self._still = None, None
         st = story.stations
         x0, y0, x1, y1 = DESK
@@ -408,13 +434,14 @@ class Desktop:
 
     # ── camera ──
 
-    @staticmethod
-    def view(box, size):
-        """Top-left corner and zoom that fit a box (poster coordinates) into the frame."""
+    def view(self, box, size):
+        """Top-left corner and zoom that centre a box (poster coordinates) in the frame, or in
+        the story cut's visual zone below its captions."""
         ow, oh = size
+        zx, zy, zw, zh = VISUAL if self.L.scenes and size == SIZES["reel"] else (0, 0, ow, oh)
         x, y, w, h = box
-        z = min(ow / w, oh / h) * (1 if box == FULL else 0.9)
-        return np.array([x + w / 2 - ow / 2 / z, y + h / 2 - oh / 2 / z]), z
+        z = min(zw / w, zh / h) * (1 if box == FULL else 0.9)
+        return np.array([x + w / 2 - (zx + zw / 2) / z, y + h / 2 - (zy + zh / 2) / z]), z
 
     def camera(self, t: float, size):
         """Top-left corner, zoom, and the box the camera rests on (None while moving)."""
@@ -459,7 +486,7 @@ class Desktop:
         dots = "." * int((RIGHT - LEFT - w0 - w1 - 24) / c.width(".", TEXT, 24))
         c.text(LEFT + w0 + 12, 70, dots, TEXT, 24, HEAD)
 
-        p = ease(prog(t, L.desk, self.d(2.5)))
+        p = self.count if self.count is not None else ease(prog(t, L.desk, self.d(2.5)))
         x = LEFT - 8
         size = 300
         big = round(S.big * p, S.big_digits) if S.big_digits else round(S.big * p)
@@ -586,7 +613,11 @@ class Desktop:
             r = row.a / max(row.b, 0.25)
             by = y0 + 52 + i * step
             c.chip(ax0, by, row.label, size=22, bg=getattr(th, row.chip))
-            p = smooth(prog(t, t0 + self.d(0.8 + 0.5 * i), self.d(1.6)))
+            focused = self.focus is not None and self.focus[0] == i
+            p = self.focus[1] if focused else smooth(prog(t, t0 + self.d(0.8 + 0.5 * i), self.d(1.6)))
+            if focused:
+                for k in range(2):
+                    c.frame(ax0 - 9 + k, by - 25 + k, ax1 + 9 - k, by + 19 - k, colour=th.hot)
             rr = 2 ** (np.log2(r) * p)
             c.text(ax0 + 116, by, f"{rr:.1f}x", size=24)
             if row.unit is None:
@@ -672,6 +703,8 @@ class Desktop:
 
     def draw(self, s: int, t: float = np.inf, size=(W, H)) -> Image.Image:
         L = self.L
+        if L.scenes:
+            return self.story_frame(s, t, size)
         if np.isfinite(t) and L.intro:
             if t < L.intro or (t >= L.camera[-1][0] and L.camera[-1][1] == FULL):
                 t = np.inf      # the finished poster: the first and the last frames of the loop
@@ -683,6 +716,46 @@ class Desktop:
             self.loader(c, t)
             return c.im
         return self.scene(c, t)
+
+    def story_frame(self, s: int, t: float, size) -> Image.Image:
+        """A frame of the story cut: the finished poster under the camera, one caption above."""
+        starts = self.L.scenes
+        i = int(np.searchsorted(starts, t, side="right")) - 1 if np.isfinite(t) else 0
+        dt = t - starts[i] if np.isfinite(t) else np.inf
+        sc = self.S.scenes[i]
+        self.count = ease(prog(dt, 0.4, 1.6)) if sc.count else None
+        self.focus = (sc.focus, smooth(prog(dt, 0.6, 1.4))) if sc.focus is not None else None
+        at, zoom, self.rest = self.camera(t, size)
+        c = Canvas(s, self.th, zoom, tuple(at), size)
+        self.scene(c, np.inf)
+        if size == SIZES["reel"]:
+            self.caption(c, i, dt)
+        self.count = self.focus = None
+        return c.im
+
+    def caption(self, c: Canvas, i: int, dt: float):
+        """Caption band of the story cut: scene counter, one bold line typed in word by word
+        ({braces} in the accent colour), one small line once the bold one is complete."""
+        S, th, s, d = self.S, self.th, c.s, c.d
+        sc = S.scenes[i]
+        d.rectangle([0, 0, c.im.width, CAPTION * s], fill=th.field)
+        d.rectangle([LEFT * s, CAPTION * s, RIGHT * s, (CAPTION + 1) * s], fill=th.ink)
+        d.text((LEFT * s, 262 * s), f"[{i + 1:02d}/{len(S.scenes):02d}] {S.os_name}", font=_font(MONO, 22 * s),
+               fill=th.head, anchor="ls")
+        big = _font(BOLD, 76 * s)
+        words = [(w, part.startswith("{")) for part in re.split(r"(\{[^}]*\})", sc.title) if part
+                 for w in part.strip("{}").split()]
+        shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
+        x, y, space = LEFT, 350, big.getlength(" ") / s
+        for k, (w, accent) in enumerate(words):
+            wl = big.getlength(w) / s
+            if x > LEFT and x + wl > RIGHT:
+                x, y = LEFT, y + 86
+            if k < shown:
+                d.text((x * s, y * s), w, font=big, fill=th.hot if accent else th.head, anchor="ls")
+            x += wl + space
+        if sc.line and dt > 0.9:
+            d.text((LEFT * s, (y + 66) * s), sc.line, font=_font(TEXT, 34 * s), fill=th.head, anchor="ls")
 
     def still(self, s: int, box, size) -> Image.Image:
         """The finished poster seen through a camera resting on one box (a carousel slide)."""
@@ -747,10 +820,25 @@ def render(story: Story, keys, stem: str, default: str, with_video: bool, web: b
         if social:
             (OUT / "social").mkdir(exist_ok=True)
             base = OUT / "social" / f"{stem}_{key}"
-            loop = Desktop(story, th, SOCIAL, shimmer=False, dot=2)
+            loop = Desktop(story, th, storyline(story) if story.scenes else SOCIAL, shimmer=False, dot=2)
             loop.draw(1, np.inf, SIZES["reel"]).save(f"{base}_cover.png", optimize=True)
             video(loop, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="music")
             carousel(loop, base)
+
+
+def storyline(story: Story, move: float = 0.9) -> Timeline:
+    """The story cut of a story: its scenes back to back, the camera gliding to each box."""
+    starts = np.cumsum([0.0] + [sc.bars * BAR for sc in story.scenes])
+    keys = [(0.0, story.scenes[0].box)]
+    for t0, before, sc in zip(starts[1:-1], story.scenes, story.scenes[1:]):
+        keys += [(float(t0), before.box), (float(t0) + move, sc.box)]
+    return Timeline(0, 0, 0, 0, 0, end=float(starts[-1]), camera=tuple(keys),
+                    scenes=tuple(float(t) for t in starts[:-1]))
+
+
+@functools.lru_cache(maxsize=64)
+def _font(path: Path, px: int):
+    return ImageFont.truetype(str(path), px)
 
 
 def carousel(desk: Desktop, base: Path) -> None:
