@@ -29,7 +29,7 @@ import pandas as pd  # noqa: E402
 
 import findings  # noqa: E402
 import onebit  # noqa: E402
-from onebit import Race, Story  # noqa: E402
+from onebit import BIG_NUMBER, FULL, GRID, RACE, WIDGET, Race, Scene, Story  # noqa: E402
 
 SOURCES = "Data: NOAA GHCN-Daily · DWD · SMHI · KNMI · GeoSphere · MeteoSwiss"
 # station grid: heat:cold ratio of 2020-latest, upper bound of each class
@@ -62,6 +62,28 @@ def story(f: dict) -> Story:
     sig = findings.significance(f)
     p = max(sig["n_exceed"], 1) / sig["n_draw"]
     n = len(st)
+    hot = f["hot"].loc[st.index]
+    on_day = hot[hot["date"] == day]
+    named = " · ".join(f"{name} {on_day.loc[sid, 'value']:.1f} °C" for sid, name in
+                       (("GM000003342", "Potsdam"), ("GM000003319", "Berlin-Dahlem")) if sid in on_day.index)
+    old, mid, now = race[0], race[3], race[4]
+    # the story cut: one message per scene, 20 bars = 37.5 s
+    scenes = (
+        Scene(2, FULL, "Is Europe breaking more {heat records} than cold ones?",
+              f"{n} weather stations, each with 100+ years of data"),
+        Scene(3, BIG_NUMBER, f"Since 2020: {{{sig['observed']:.0f} heat records}} for every cold one",
+              f"{sig['heat']:,} heat records · {sig['cold']:,} cold records", count=True),
+        Scene(2, RACE, "Until 1990, {cold records} won",
+              f"{old.b:,} cold against {old.a:,} heat records, 1880–1989", focus=0),
+        Scene(2, RACE, f"2000s and 2010s: {{{mid.a / mid.b:.0f} heat records}} per cold one",
+              "the balance tipped in the 1990s", focus=3),
+        Scene(2, RACE, f"2020s: {{{now.a / now.b:.0f} to 1}}", f"{now.a:,} heat · {now.b:,} cold records", focus=4),
+        Scene(2, GRID, f"{{{int(st['hit'].sum())} of {n}}} stations lean hot",
+              f"{int((c20 == 0).sum())} have not set a single cold record since 2020"),
+        Scene(3, WIDGET, f"{day:%-d %B %Y}: {{{n_day} stations}} hit their hottest day ever", named),
+        Scene(4, FULL, f"Europe now breaks {{{sig['observed']:.0f} heat records}} for every cold one.",
+              "Follow for more of Europe's extremes in 1-bit"),
+    )
     return Story(
         os_name="EU.TMAX.OS1", app="EU.TMAX 1.1",
         lead=f"Europe 2020–{fy}", tail="Heat records per cold record",
@@ -81,7 +103,7 @@ def story(f: dict) -> Story:
                "Cold record: the coldest daily maximum. p: 200,000 year shuffles.",
                f"{n} stations, each >100 years of daily TMAX. Izaña not mapped.",
                SOURCES],
-        loader_line=f"{n} stations, records, copy", icon="thermometer")
+        loader_line=f"{n} stations, records, copy", icon="thermometer", scenes=scenes)
 
 
 def main() -> None:

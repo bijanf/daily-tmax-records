@@ -28,7 +28,7 @@ import numpy as np  # noqa: E402
 
 import drought  # noqa: E402
 import onebit  # noqa: E402
-from onebit import Race, Story  # noqa: E402
+from onebit import BIG_NUMBER, FULL, MAP, RACE, WIDGET, Race, Scene, Story  # noqa: E402
 
 
 def best_2020s_rank(ranks: dict) -> float:
@@ -64,6 +64,27 @@ def story(d: dict) -> Story:
     has = bal[bal["years"].map(lambda ys: fy in ys)]
     n_latest = int((has["dry_year"] == fy).sum())
     n = len(bal)
+    latest = st.loc[has.index[has["dry_year"] == fy], "name"]
+    cities = [city for key, city in (("ROTHAMSTED", "Rothamsted"), ("BORDEAUX", "Bordeaux"), ("MUNCHEN", "Munich"),
+                                     ("WIEN", "Vienna"), ("BUDAPEST", "Budapest")) if latest.str.contains(key).any()]
+    r_dry10, r_wet10, _ = drought.period_counts(rain, 2010, 2019)
+    tens = race[3]
+    # the story cut: one message per scene, 20 bars = 37.5 s
+    scenes = (
+        Scene(2, FULL, "Europe is drying out. Is it {rain} or {heat?}",
+              f"{len(with20)} long-record stations, March to August"),
+        Scene(3, BIG_NUMBER, f"{{{n_dry} stations}}: driest growing season on record",
+              f"all in the 2020s · a stable climate gives about {expected:.0f}", count=True),
+        Scene(2, RACE, f"Count only the rain: {{{n_rain}}}", "hollow squares: rain alone", focus=4),
+        Scene(2, RACE, f"Add the heat's evaporation: {{{n_dry}}}", "filled squares: rain minus evaporation",
+              focus=4),
+        Scene(2, RACE, "2010s: more wet-rain records, {still drier}",
+              f"rain alone {r_dry10} dry : {r_wet10} wet · with evaporation {tens.a} : {tens.b}", focus=3),
+        Scene(2, MAP, f"Record-dry 2020s in {{{st.loc[st['year'] >= 2020, 'country'].nunique()} countries}}",
+              f"filled squares: driest season in 2020–{str(fy)[2:]}"),
+        Scene(3, WIDGET, f"{fy}: {{{n_latest} stations}} had their driest season ever", " · ".join(cities)),
+        Scene(4, FULL, "Europe's droughts are now {made by heat.}", "Follow for more of Europe's extremes in 1-bit"),
+    )
     return Story(
         os_name="EU.DRY.OS1", app="EU.DRY 1.1",
         lead=f"Europe 2020–{fy}", tail="Stations with a record-dry growing season",
@@ -84,7 +105,7 @@ def story(d: dict) -> Story:
                "from daily Tmax and Tmin. Record: the station's own driest season.",
                f"{n} stations (>=50 seasons); {len(with20)} with 2020s data, {len(has)} in {fy}.",
                "Data: NOAA GHCN-Daily · p: 200,000 year shuffles"],
-        loader_line=f"{n} stations, rain, evaporation", icon="drop")
+        loader_line=f"{n} stations, rain, evaporation", icon="drop", scenes=scenes)
 
 
 def main() -> None:

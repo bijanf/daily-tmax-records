@@ -25,10 +25,9 @@ import numpy as np  # noqa: E402
 
 import extremes  # noqa: E402
 import onebit  # noqa: E402
-from onebit import FULL, RACE, WIDGET, Race, Scene, Story  # noqa: E402
+from onebit import BIG_NUMBER, FULL, RACE, WIDGET, Race, Scene, Story  # noqa: E402
 
 SOURCES = "Data: NOAA GHCN-Daily · DWD · SMHI · KNMI · GeoSphere · MeteoSwiss"
-BIG_NUMBER = (40, 95, 640, 250)     # the "×5.7" of the headline, for the camera
 
 
 def story(d: dict) -> Story:

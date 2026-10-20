@@ -140,6 +140,7 @@ ICONS = {
 
 FULL = (0, 0, W, H)
 HEADLINE = (40, 40, 1000, 370)
+BIG_NUMBER = (40, 95, 640, 250)     # the big headline number, for the story cut's camera
 DESK = (LEFT, 424, RIGHT, 1212)     # x0, y0, x1, y1
 MAP = (84, 462, 524, 424)
 GRID = (628, 446, 368, 456)
@@ -742,18 +743,27 @@ class Desktop:
         d.rectangle([LEFT * s, CAPTION * s, RIGHT * s, (CAPTION + 1) * s], fill=th.ink)
         d.text((LEFT * s, 262 * s), f"[{i + 1:02d}/{len(S.scenes):02d}] {S.os_name}", font=_font(MONO, 22 * s),
                fill=th.head, anchor="ls")
-        big = _font(BOLD, 76 * s)
         words = [(w, part.startswith("{")) for part in re.split(r"(\{[^}]*\})", sc.title) if part
                  for w in part.strip("{}").split()]
         shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
-        x, y, space = LEFT, 350, big.getlength(" ") / s
-        for k, (w, accent) in enumerate(words):
-            wl = big.getlength(w) / s
-            if x > LEFT and x + wl > RIGHT:
-                x, y = LEFT, y + 86
+        # two lines at 76 px; a longer title is set smaller rather than run into the small line
+        for px, lead in ((76, 86), (62, 70)):
+            big = _font(BOLD, px * s)
+            places, x, y, space = [], LEFT, 350, big.getlength(" ") / s
+            for w, _ in words:
+                wl = big.getlength(w) / s
+                if w[0] in ":;,.!?":    # punctuation after an accent phrase sticks to it
+                    x -= space
+                elif x > LEFT and x + wl > RIGHT:
+                    x, y = LEFT, y + lead
+                places.append((x, y))
+                x += wl + space
+            if y <= 350 + lead:
+                break
+        for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
             if k < shown:
                 d.text((x * s, y * s), w, font=big, fill=th.hot if accent else th.head, anchor="ls")
-            x += wl + space
+        y = places[-1][1]
         if sc.line and dt > 0.9:
             d.text((LEFT * s, (y + 66) * s), sc.line, font=_font(TEXT, 34 * s), fill=th.head, anchor="ls")
 
