@@ -14,6 +14,7 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `findings/1_…5_*.png` | findings figures (2160 × 2700): Germany 27–28 June 2026, record highs vs lows, records by month, mountains vs cities, record margins; numbers in `findings_log.txt` |
 | `impact/A_*, B_*, C_*.png` | high-impact figures (2160 × 2700): daily heat carpet of a station with its standing records, Europe's record-hot ÷ record-cold days by decade, a station's hottest day of every year (`plot_impact.py --id <ID>`) |
 | `posters/1_…5_*.png` | posters for a general audience (2160 × 2700), plain words and big type: Europe 23 : 1, Europe map of hottest days ever, Europe 2026, and two city posters (`plot_posters.py --id <ID>`, default Potsdam); Inter font in `data/fonts/inter` (SIL Open Font License) |
+| `onebit/europe_extremes.png`, `.mp4` | Europe's heat extremes as a 1-bit retro desktop (2160 × 2700 poster; 1080 × 1350, 10 s animation of the same poster assembling itself): heat : cold ratio, map of each station's hottest-day year, one grid cell per station, decade race (`plot_onebit.py`); VT323 and JetBrains Mono in `data/fonts` (SIL Open Font License) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
 | `stations/records_long.csv.gz` | record value, record year, ties and years of data for every station and day |
@@ -27,7 +28,7 @@ Stations by region: North America 955, Europe 123 (Germany 35), Asia 22, Oceania
 
 ```bash
 pip install -r requirements.txt   # numpy, pandas, matplotlib, scipy, cartopy, pillow
-src/get_fonts.sh                  # Inter typeface for the posters (else Lato is used)
+src/get_fonts.sh                  # Inter, VT323, JetBrains Mono for the posters (else Lato is used)
 src/run_all.sh                    # downloads ~4 GB of station data, then builds everything
 ```
 
@@ -42,6 +43,7 @@ src/run_all.sh                                   # everything; downloads only wh
 python -I src/plot_stations.py --region Europe   # re-plot one region
 python -I src/plot_stations.py --carousel GM000003342 UK000056225   # slides for chosen stations
 python -I src/plot_monthly.py --ids GM000003319 GM000003342          # monthly view for chosen stations
+python -I src/plot_onebit.py --no-video           # 1-bit desktop poster only (drop the flag for the MP4)
 ```
 
 ## Data and method
