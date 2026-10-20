@@ -311,6 +311,26 @@ def _story_sfx(m, desk, starts, s16):
             m.add("sfx", glide(69, 69 + 6 * np.log2(max(r, 1 / 8)), 1.4), t0 + 0.6, 0.4)
         if sc.sound == "rain":
             m.add("sfx", rain(t1 - t0), t0, 0.5)
+    if hasattr(desk, "events"):
+        # a race of records: one blip per sixteenth, heat high and left, cold low and right,
+        # louder and higher for bigger bursts; a heatwave day also hits the cymbal
+        slots = {}
+        for t, h, c in desk.events():
+            q = float(nxt(t))
+            a, b = slots.get(q, (0, 0))
+            slots[q] = (a + h, b + c)
+        for t, (h, c) in slots.items():
+            if h:
+                note = PENTA[min(len(PENTA) - 1, int(np.log2(1 + h)))]
+                m.add("sfx", blip(note, 0.05, 0.02), t, min(0.32, 0.06 + 0.05 * np.log1p(h)), pan=-0.4)
+            if c:
+                m.add("sfx", blip(PENTA[0] - 24, 0.07, 0.03), t, min(0.30, 0.08 + 0.05 * np.log1p(c)), pan=0.4)
+            if h >= 150:
+                m.add("sfx", hat(True), t, 0.35, pan=-0.2)
+    for t in getattr(desk, "hits", []):
+        hit = chord(AM9, 2.0, cutoff=2500, tau=0.7)
+        m.add("music", hit, t, 0.45)
+        m.add("send", hit, t, 0.25)
 
 
 def key_click():

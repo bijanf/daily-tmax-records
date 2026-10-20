@@ -31,6 +31,7 @@ Themes recolour the whole scene:
     sand    Streusand     Brandenburg's sand, "the sandbox of the Holy Roman Empire"
     uv      Schwarzlicht  black light on the dance floor: ultraviolet, neon mint and magenta
     beton   Beton         Berlin concrete, black type, signal red
+    nacht   Berlin.Nacht  the city at night: near black, signal-red heat, ice-blue cold
 """
 
 from __future__ import annotations
@@ -127,6 +128,9 @@ THEMES = {
     "uv": Theme("Schwarzlicht", field="#12081F", ink="#CFB8FF", head="#F1EAFF", paper="#1C1030",
                 light="#281A42", track="#47366B", cold="#4FB3FF", hot="#FF2BD6",
                 levels=("#33264D", "#5E4A8C", "#9A80D9", "#CFB8FF"), accent="#3DFFB0", dots="#3A2A5C"),
+    "nacht": Theme("Berlin.Nacht", field="#0B0B0D", ink="#E9E9EC", head="#F5F5F7", paper="#141417",
+                   light="#1E1E22", track="#3A3A40", cold="#3FA9FF", hot="#FF3B30",
+                   levels=("#2A2A30", "#55555E", "#9A9AA5", "#E9E9EC"), accent="#FF3B30", dots="#26262C"),
     "beton": Theme("Beton", field="#B9B8B2", ink="#141414", head="#161616", paper="#F2F1EC",
                    light="#D8D7D1", track="#C6C5BE", cold="#2A5AA6", hot="#D7191C",
                    levels=("#E3E2DC", "#9C9B95", "#4B4A46", "#141414"), accent="#D7191C"),
@@ -750,50 +754,7 @@ class Desktop:
         return c.im
 
     def caption(self, c: Canvas, i: int, dt: float):
-        """Caption band of the story cut: scene counter, one bold line typed in word by word
-        ({braces} in the accent colour), one small line once the bold one is complete. Persian
-        runs right to left from the right margin."""
-        S, th, s, d = self.S, self.th, c.s, c.d
-        sc = S.scenes[i]
-        rtl = S.lang == "fa"
-        bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
-        start = RIGHT if rtl else LEFT
-        d.rectangle([0, 0, c.im.width, CAPTION * s], fill=th.field)
-        d.rectangle([LEFT * s, CAPTION * s, RIGHT * s, (CAPTION + 1) * s], fill=th.ink)
-        d.text((start * s, 262 * s), f"[{i + 1:02d}/{len(S.scenes):02d}] {S.os_name}", font=_font(MONO, 22 * s),
-               fill=th.head, anchor="rs" if rtl else "ls")
-        words = [(w, part.startswith("{")) for part in re.split(r"(\{[^}]*\})", sc.title) if part
-                 for w in part.strip("{}").split()]
-        shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
-        # two lines at full size; a longer title is set smaller rather than run into the small line
-        sizes = ((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70))
-        for px, lead in sizes:
-            big = _font(bold, px * s)
-            places, x, y, space = [], start, 350, big.getlength(" ") / s
-            for w, _ in words:
-                wl = big.getlength(w, direction=way) / s
-                if w[0] in ":;,.!?؟،":    # punctuation after an accent phrase sticks to it
-                    x += space if rtl else -space
-                elif (x < start and x - wl < LEFT) if rtl else (x > start and x + wl > RIGHT):
-                    x, y = start, y + lead
-                places.append((x - wl if rtl else x, y))
-                x = x - wl - space if rtl else x + wl + space
-            if y <= 350 + lead:
-                break
-        # the title grows while it is read, about its first corner, and each word pops in
-        grow = 0.85 + 0.15 * ease(prog(dt, 0.0, 3.0)) if np.isfinite(dt) else 1.0
-        top = 350 - px
-        for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
-            if k >= shown:
-                continue
-            pop = 0.6 + 0.4 * ease(prog(dt, 0.15 + 0.6 * k / len(words), 0.25)) if np.isfinite(dt) else 1.0
-            mid = start + (x + big.getlength(w, direction=way) / s / 2 - start) * grow
-            d.text((mid * s, (top + (y - top) * grow) * s), w, font=_font(bold, max(8, round(px * grow * pop * s))),
-                   fill=th.hot if accent else th.head, anchor="ms", direction=way)
-        y = top + (places[-1][1] - top) * grow
-        if sc.line and dt > 0.9:
-            d.text((start * s, (y + (72 if rtl else 66)) * s), sc.line, font=_font(text, 34 * s), fill=th.head,
-                   anchor="rs" if rtl else "ls", direction=way)
+        caption_band(c, self.th, self.S.scenes, i, dt, self.S.os_name, self.S.lang)
 
     def still(self, s: int, box, size) -> Image.Image:
         """The finished poster seen through a camera resting on one box (a carousel slide)."""
@@ -810,6 +771,54 @@ class Desktop:
         self.widget(c, t)
         self.badge(c, t)
         return c.im
+
+
+def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, lang: str = "en"):
+    """Caption band of the story cut: scene counter, one bold line typed in word by word
+    ({braces} in the hot colour, [brackets] in the cold one), one small line once the bold one is complete. Persian
+    runs right to left from the right margin."""
+    s, d = c.s, c.d
+    sc = scenes[i]
+    rtl = lang == "fa"
+    bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
+    start = RIGHT if rtl else LEFT
+    d.rectangle([0, 0, c.im.width, CAPTION * s], fill=th.field)
+    d.rectangle([LEFT * s, CAPTION * s, RIGHT * s, (CAPTION + 1) * s], fill=th.ink)
+    d.text((start * s, 262 * s), f"[{i + 1:02d}/{len(scenes):02d}] {label}", font=_font(MONO, 22 * s),
+           fill=th.head, anchor="rs" if rtl else "ls")
+    # {braces}: accent in the hot colour; [brackets]: in the cold colour
+    words = [(w, {"{": th.hot, "[": th.cold}.get(part[0])) for part in re.split(r"(\{[^}]*\}|\[[^]]*\])", sc.title)
+             if part for w in part.strip("{}[]").split()]
+    shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
+    # two lines at full size; a longer title is set smaller rather than run into the small line
+    sizes = ((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70))
+    for px, lead in sizes:
+        big = _font(bold, px * s)
+        places, x, y, space = [], start, 350, big.getlength(" ") / s
+        for w, _ in words:
+            wl = big.getlength(w, direction=way) / s
+            if w[0] in ":;,.!?؟،":    # punctuation after an accent phrase sticks to it
+                x += space if rtl else -space
+            elif (x < start and x - wl < LEFT) if rtl else (x > start and x + wl > RIGHT):
+                x, y = start, y + lead
+            places.append((x - wl if rtl else x, y))
+            x = x - wl - space if rtl else x + wl + space
+        if y <= 350 + lead:
+            break
+    # the title grows while it is read, about its first corner, and each word pops in
+    grow = 0.85 + 0.15 * ease(prog(dt, 0.0, 3.0)) if np.isfinite(dt) else 1.0
+    top = 350 - px
+    for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
+        if k >= shown:
+            continue
+        pop = 0.6 + 0.4 * ease(prog(dt, 0.15 + 0.6 * k / len(words), 0.25)) if np.isfinite(dt) else 1.0
+        mid = start + (x + big.getlength(w, direction=way) / s / 2 - start) * grow
+        d.text((mid * s, (top + (y - top) * grow) * s), w, font=_font(bold, max(8, round(px * grow * pop * s))),
+               fill=accent or th.head, anchor="ms", direction=way)
+    y = top + (places[-1][1] - top) * grow
+    if sc.line and dt > 0.9:
+        d.text((start * s, (y + (72 if rtl else 66)) * s), sc.line, font=_font(text, 34 * s), fill=th.head,
+               anchor="rs" if rtl else "ls", direction=way)
 
 
 def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: str | None = None) -> None:
