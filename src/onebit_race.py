@@ -9,7 +9,7 @@ camera does not. Four scenes, 20 bars of 128 BPM = 37.5 s, with onebit_audio's s
 
     outputs/onebit/social/europe_race_<theme>_reel.mp4, _cover.png, _music.wav
 
-    python -I src/onebit_race.py                 # Berlin.Nacht
+    python -I src/onebit_race.py                 # TS.Pink (matte)
     python -I src/onebit_race.py --theme beton
 """
 
@@ -122,30 +122,32 @@ class RaceFilm:
         dates = self.D[kind]
         n = int(np.searchsorted(dates, now, side="right"))
         fresh = int(np.searchsorted(dates, before, side="right"))   # records older than SPARK
-        c.text(x0 + 14, y0 + 92, f"{n:,}", GROTESK, 84, colour)
-        c.text(x0 + 16, y0 + 124, f"{kind} records since 2020", size=24)
-        gx, gy = x0 + (x1 - x0 - COLS * CELL) / 2, y0 + 150
+        c.text(x0 + 14, y0 + 104, f"{n:,}", GROTESK, 100, colour)
+        c.text(x0 + 16, y0 + 144, f"{kind} records since 2020", size=30)
+        gx, gy = x0 + (x1 - x0 - COLS * CELL) / 2, y0 + 172
         c.pixels(gx, gy, (self.cells >= 0) & (self.cells < fresh), colour)
         c.pixels(gx, gy, (self.cells >= fresh) & (self.cells < n), th.ink)       # just set: a white flash
         # what a stable climate gives: a dashed line after that many pixels
         ey = gy + self.D["expected"] / COLS * CELL
         for xx in np.arange(gx, gx + COLS * CELL, 10):
             c.fill(xx, ey, xx + 6, ey + 2, th.head)
-        c.text(gx + COLS * CELL, ey - 8, f"stable climate · {self.D['expected']:,.0f}", size=22, colour=th.head,
-               anchor="rs")
+        label = f"stable climate · {self.D['expected']:,.0f}"
+        lw = c.width(label, size=28)
+        c.fill(gx + COLS * CELL - lw - 8, ey - 34, gx + COLS * CELL + 2, ey - 2, th.paper)
+        c.text(gx + COLS * CELL, ey - 8, label, size=28, colour=th.head, anchor="rs")
 
     def date_strip(self, c: Canvas, now):
         th = self.th
         day = pd.Timestamp(now)
-        c.text(LEFT, 712, day.strftime("%d %b %Y").upper(), size=58, colour=th.head)
+        c.text(LEFT, 722, day.strftime("%d %b %Y").upper(), size=66, colour=th.head)
         years = range(2020, self.D["fy"] + 1)
         cw = (RIGHT - 560) / len(years)
         for i, yr in enumerate(years):
             cx = 560 + i * cw
-            c.frame(cx, 668, cx + cw - 6, 716)
+            c.frame(cx, 654, cx + cw - 6, 726)
             frac = np.clip((day.year - yr) + day.dayofyear / 366, 0, 1)
-            c.fill(cx + 3, 671, cx + 3 + (cw - 12) * frac, 713, th.ink)
-            c.text(cx + (cw - 6) / 2, 746, f"{yr}", size=20, colour=th.head, anchor="ms")
+            c.fill(cx + 3, 657, cx + 3 + (cw - 12) * frac, 723, th.ink)
+            c.text(cx + (cw - 6) / 2, 766, f"{yr}", size=34, colour=th.head, anchor="ms")
 
     def result(self, c: Canvas, t: float):
         x, y, w, h = RESULT
@@ -158,7 +160,7 @@ class RaceFilm:
         mid = (x0 + x1) / 2
         k = round(self.ratio * ease(prog(dt, self.open, 1.2)))
         c.text(mid, y0 + 150, f"{k} : 1", GROTESK, 140, self.th.hot, anchor="ms")
-        c.text(mid, y0 + 196, "heat : cold records", size=26, anchor="ms")
+        c.text(mid, y0 + 200, "heat : cold records", size=32, anchor="ms")
 
     def draw(self, s: int, t: float = np.inf, size=SIZES["reel"]):
         c = Canvas(s, self.th, 1.0, (0.0, 0.0), size)
@@ -171,9 +173,10 @@ class RaceFilm:
         for kind in ("heat", "cold"):
             self.window(c, kind, now, self.clock(t - SPARK))
         self.result(c, t)
-        c.text(LEFT, 1530, SOURCES, MONO, 14, self.th.head)
-        c.text(LEFT, 1552, f"{self.D['n']} European stations, each with 100+ years of daily data. "
-                           f"A record: the hottest (coldest) day ever measured on that calendar date.", MONO, 12,
+        c.text(LEFT, 1524, SOURCES, MONO, 20, self.th.head)
+        c.text(LEFT, 1554, f"{self.D['n']} European stations, each with 100+ years of daily data.", MONO, 18,
+               self.th.head)
+        c.text(LEFT, 1582, "A record: the hottest (coldest) day ever measured on that calendar date.", MONO, 18,
                self.th.head)
         caption_band(c, self.th, self.S.scenes, i, dt, self.S.os_name)
         return c.im
@@ -181,7 +184,7 @@ class RaceFilm:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--theme", default="nacht", choices=list(onebit.THEMES), help="colour theme")
+    ap.add_argument("--theme", default="pink", choices=list(onebit.THEMES), help="colour theme")
     args = ap.parse_args()
     film = RaceFilm(records(findings.compute()), onebit.THEMES[args.theme])
     (OUT / "social").mkdir(parents=True, exist_ok=True)
