@@ -76,7 +76,7 @@ class WaterFilm(SoilFilm):
             Scene(2, FULL, "Where did Europe's {summer water} go?",
                   f"{len(y)} summers of rain and evaporation, {y[0]}–{y[-1]}"),
             Scene(3, FULL, f"First, the planet: {{+{self.warm:.1f} °C}}",
-                  "global temperature since 1850–1900, 10-year mean"),
+                  "global temperature vs 1850–1900, average of 10 years"),
             Scene(7, FULL, "Summer water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
             Scene(3, FULL, "Same rain. But {hotter air takes more water.}",
                   "sun, heat and wind pull water out of soil and plants"),
@@ -182,7 +182,7 @@ class WaterFilm(SoilFilm):
         sel = (self.d["years"] >= lo) & (self.d["years"] <= hi)
         g = round(float(self.d["gmt"][sel].mean()), 1)
         c.text(x0 + 12, y0 + 96, (f"{g:+.1f}" if g else "0.0").replace("-", "−") + "°C", GROTESK, 100, th.hot)
-        c.text(x0 + 16, y0 + 136, "global temperature", size=30)
+        c.text(x0 + 16, y0 + 136, "Earth vs 1850–1900", size=30)
         c.text(x0 + 16, y0 + 170, f"{lo}–{str(hi)[2:]}", size=34)
 
     def map_window(self, c: Canvas, k: int, calm: float, t: float = np.inf):
