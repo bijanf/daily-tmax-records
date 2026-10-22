@@ -11,8 +11,9 @@ potential evapotranspiration at 0.5 deg, 1901-2025, the input of the SPEI drough
 (Vicente-Serrano et al. 2010). Changes are against 1951-1980, by cell and as Europe's
 area-weighted mean. The link to warming is the least-squares slope on global temperature
 (HadCRUT5 against 1850-1900) with a moving-block bootstrap, as in soil.py, for the balance and
-for each of its two parts. Europe is soil.py's: the European countries of Natural Earth
-inside 24.8 W-45 E, 34-71.5 N.
+for each of its two parts. Europe is soil.py's (the European countries of Natural Earth)
+inside the frame of the reel's map, 11 W-42 E, 34-71.5 N: without Iceland and the land east
+of 42 E.
 
 Check: ERA5 (Hersbach et al. 2020), 0.25 deg, 1940-2026, with the thirst computed here as the
 reference evapotranspiration ET0 of FAO-56 (Allen et al. 1998, eq. 6) from monthly means of
@@ -48,6 +49,7 @@ OUT = ROOT / "outputs"
 SEASON = (6, 7, 8)
 BASE = soil.BASE
 DECADE = soil.DECADE
+FRAME = (-11, 42)                           # longitudes of the reel's map: Portugal to 42 E, no Iceland
 SHORT = {"total_precipitation": "tp", "2m_temperature": "t2m", "2m_dewpoint_temperature": "d2m",
          "10m_wind_speed": "si10", "surface_net_solar_radiation": "ssr",
          "surface_net_thermal_radiation": "str", "surface_pressure": "sp"}
@@ -105,7 +107,7 @@ def balance(rain, thirst, years, lat1, lon1) -> dict:
     lat2, lon2 = np.meshgrid(lat1, lon1, indexing="ij")
     lat, lon = lat2.ravel(), lon2.ravel()
     r, e = rain.reshape(len(years), -1), thirst.reshape(len(years), -1)
-    ok = np.isfinite(r).all(0) & np.isfinite(e).all(0) & soil.europe(lat, lon)
+    ok = np.isfinite(r).all(0) & np.isfinite(e).all(0) & soil.europe(lat, lon) & (lon > FRAME[0]) & (lon < FRAME[1])
     g, months_last = soil.gmt()
     months_last = months_last if years[-1] == g.index[-1] else 12
     keep = np.isin(years, g.index)

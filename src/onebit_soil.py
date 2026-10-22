@@ -92,14 +92,13 @@ class SoilFilm:
         dots[1562 - 620:1644 - 620] = False                     # a clear band under the footnotes
         self.dots = dots
 
-    def layout(self, cells: np.ndarray, win, p: int = PITCH) -> np.ndarray:
+    def layout(self, cells: np.ndarray, win, p: int = PITCH, proj=None, extent=EXTENT, box=None) -> np.ndarray:
         """The halftone of a map window: Europe's cells pooled into lattice dots (area-weighted
         mean of a (window, cell) array, returned as (window, dot)), and the rest of the land as
-        faint dots."""
+        faint dots. box (x0, y0, w, h): where in the window the map goes; default all of it."""
         x, y, w, h = win
-        x0, y0 = x + 7, y + 29
-        mw, mh = w - 14, h - 36
-        land, xy = onebit.europe_raster(self.d["lon"], self.d["lat"], mw, mh, EXTENT)
+        x0, y0, mw, mh = box or (x + 7, y + 29, w - 14, h - 36)
+        land, xy = onebit.europe_raster(self.d["lon"], self.d["lat"], mw, mh, extent, proj)
         nx, ny = mw // p, mh // p
         i, j = np.floor(xy[:, 0] / p).astype(int), np.floor(xy[:, 1] / p).astype(int)
         inside = (i >= 0) & (i < nx) & (j >= 0) & (j < ny)

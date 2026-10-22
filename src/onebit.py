@@ -254,13 +254,14 @@ class Story:
     cut: str = ""                # name of the cut, in the file names ("one": one message per scene)
 
 
-def europe_raster(lon, lat, w: int, h: int, extent=EXTENT):
-    """Land mask of Europe (w x h px, Lambert conformal) and the pixel position of each station."""
+def europe_raster(lon, lat, w: int, h: int, extent=EXTENT, proj=None):
+    """Land mask of Europe (w x h px, Lambert conformal unless a cartopy projection is given)
+    and the pixel position of each station."""
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature
     import matplotlib.pyplot as plt
 
-    proj = ccrs.LambertConformal(central_longitude=22, central_latitude=53, standard_parallels=(40, 64))
+    proj = proj or ccrs.LambertConformal(central_longitude=22, central_latitude=53, standard_parallels=(40, 64))
     fig = plt.figure(figsize=(w / 100, h / 100), dpi=100, facecolor="white")
     ax = fig.add_axes([0, 0, 1, 1], projection=proj)
     ax.set_extent(extent, crs=ccrs.PlateCarree())

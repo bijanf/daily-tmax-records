@@ -19,7 +19,7 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `onebit/social/<story>_<theme>_reel.mp4`, `_cover.png`, `_slide1-5.png` | Instagram cut (`--social`): a 30 s 9:16 loop that opens on the poster, rebuilds it and tours every window with the camera (2 x 2 px dots, BT.709, silent audio track), its cover, and a 5-slide 4:5 carousel |
 | `onebit/europe_scoreboard[_<theme>].png`, `social/europe_scoreboard_*` | Europe's extremes scoreboard (`plot_onebit_extremes.py`, default theme `beton`): how often days ≥ 35 °C, hot nights, dry seasons, downpours and frost days happen in 2016–2025 against 1961–1990, the year of each station's warmest night, and Vienna's two wettest days (2024); numbers in `extremes_log.txt` (`extremes.py`) |
 | `onebit/social/europe_soil_<theme>_reel.mp4`, `_cover.png` | DRY SOIL, WARM PLANET (`onebit_soil.py`, default theme `feld` Tempelhof.Feld): 36 s reel, global temperature bars since 1950 and Europe as a halftone of dots, each the number of summers out of ten in soil drought, walking from 1951–60 to 2017–26; numbers in `soil_log.txt` (`soil.py`), inputs from `get_soil.py` |
-| `onebit/social/europe_water_<theme>_reel.mp4`, `_cover.png` | SAME RAIN, THIRSTIER AIR (`onebit_water.py`, default theme `kanal` Landwehr.Kanal): 39 s reel with an 8-bit soundtrack (`onebit_chip.py`): the temperature bars since 1901 fill the screen, Europe's summer water balance (rain minus Penman–Monteith evaporation, CRU TS) as a two-way halftone (red less, navy more than 1951–80) walks from 1901–10 to 2016–25, and a last window splits the change into rain and the air's thirst; numbers in `water_log.txt` (`water.py`), inputs from `get_water.py` |
+| `onebit/social/europe_water_<theme>_reel.mp4`, `_cover.png` | SAME RAIN, HOTTER AIR (`onebit_water.py`, default theme `kanal` Landwehr.Kanal): a still 39 s 1-bit desktop with an 8-bit soundtrack (`onebit_chip.py`): 25 five-year temperature bars since 1901, and Europe in Mercator as a halftone of square dots (solid red drier, hollow wetter than 1951–80) that steps five years per beat from 1901–10 to 2016–25; a plain-words box: litres less water per m², rain "same", evaporation "+13 %", buckets; numbers in `water_log.txt` (`water.py`), inputs from `get_water.py` |
 | `onebit/social/<story>_<theme>_music.wav` | the reel's soundtrack (`onebit_audio.py`): minimal techno synthesized from scratch, 64 beats per film so it loops with the picture, with the data sonified (station blips, grid chirps, race glides) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
@@ -102,12 +102,14 @@ python -I src/onebit_water.py                          # water reel with the 8-b
   ERA5-Land (10 → 27 %, +13 points per °C).
 
 - **Water deficit (`water.py`):** CRU TS 4.10, station-based rain and Penman–Monteith
-  potential evaporation, June–August, 0.5° cells of the same Europe, 1901–2025. Against
-  1951–1980, the summers of 2016–2025 had the same rain (203 → 200 mm) and a thirstier air
-  (335 → 377 mm), so a water balance 44 mm (44 litres per m²) lower; per +1 °C of global
-  temperature the balance falls 26 mm (95 %: 8 to 35) and the thirst rises 27 mm (15 to
-  34). Check: ERA5 with FAO-56 ET0 agrees from the 1960s on (2020s: −50 vs −49 mm), but its
-  rain of the 1940s and 1950s is 20–35 mm below the stations', so it is not the record.
+  potential evaporation, June–August, 0.5° cells of the same Europe inside the reel's map
+  frame (11 W–42 E, no Iceland), 1901–2025. Against 1951–1980, the summers of 2016–2025 had
+  the same rain (204 → 201 mm) and more evaporation (334 → 377 mm, +13 %), so a water
+  balance 45 mm (45 litres per m²) lower; per +1 °C of global temperature the balance falls
+  27 mm (95 %: 8 to 35) and evaporation rises 28 mm (15 to 34). Five of the six driest
+  summers since 1901 came after 2000. Check: ERA5 with FAO-56 ET0 agrees from the 1960s on
+  (2020s: −50 vs −49 mm), but its rain of the 1940s and 1950s is 20–35 mm below the
+  stations', so it is not the record.
 
 ## Data sources
 
