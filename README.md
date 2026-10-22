@@ -19,6 +19,7 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `onebit/social/<story>_<theme>_reel.mp4`, `_cover.png`, `_slide1-5.png` | Instagram cut (`--social`): a 30 s 9:16 loop that opens on the poster, rebuilds it and tours every window with the camera (2 x 2 px dots, BT.709, silent audio track), its cover, and a 5-slide 4:5 carousel |
 | `onebit/europe_scoreboard[_<theme>].png`, `social/europe_scoreboard_*` | Europe's extremes scoreboard (`plot_onebit_extremes.py`, default theme `beton`): how often days ≥ 35 °C, hot nights, dry seasons, downpours and frost days happen in 2016–2025 against 1961–1990, the year of each station's warmest night, and Vienna's two wettest days (2024); numbers in `extremes_log.txt` (`extremes.py`) |
 | `onebit/social/europe_soil_<theme>_reel.mp4`, `_cover.png` | DRY SOIL, WARM PLANET (`onebit_soil.py`, default theme `feld` Tempelhof.Feld): 36 s reel, global temperature bars since 1950 and Europe as a halftone of dots, each the number of summers out of ten in soil drought, walking from 1951–60 to 2017–26; numbers in `soil_log.txt` (`soil.py`), inputs from `get_soil.py` |
+| `onebit/social/europe_water_<theme>_reel.mp4`, `_cover.png` | SAME RAIN, THIRSTIER AIR (`onebit_water.py`, default theme `kanal` Landwehr.Kanal): 39 s reel with an 8-bit soundtrack (`onebit_chip.py`): the temperature bars since 1901 fill the screen, Europe's summer water balance (rain minus Penman–Monteith evaporation, CRU TS) as a two-way halftone (red less, navy more than 1951–80) walks from 1901–10 to 2016–25, and a last window splits the change into rain and the air's thirst; numbers in `water_log.txt` (`water.py`), inputs from `get_water.py` |
 | `onebit/social/<story>_<theme>_music.wav` | the reel's soundtrack (`onebit_audio.py`): minimal techno synthesized from scratch, 64 beats per film so it loops with the picture, with the data sonified (station blips, grid chirps, race glides) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
@@ -57,6 +58,9 @@ python -I src/plot_onebit_extremes.py --no-video --social   # scoreboard reel wi
 python -I src/get_soil.py                              # ERA5-Land soil water (needs a CDS key), HadCRUT5, CPC
 python -I src/soil.py > outputs/soil_log.txt           # soil drought vs global temperature, with three checks
 python -I src/onebit_soil.py                           # soil reel with soundtrack (--stills: frames only)
+python -I src/get_water.py                             # CRU TS 1901-2025; ERA5 monthly means (needs a CDS key)
+python -I src/water.py > outputs/water_log.txt         # summer water balance: rain, the air's thirst, the gap
+python -I src/onebit_water.py                          # water reel with the 8-bit soundtrack
 ```
 
 ## Data and method
@@ -97,6 +101,14 @@ python -I src/onebit_soil.py                           # soil reel with soundtra
   April–September (10 → 33 %), and the NOAA CPC soil moisture model instead of
   ERA5-Land (10 → 27 %, +13 points per °C).
 
+- **Water deficit (`water.py`):** CRU TS 4.10, station-based rain and Penman–Monteith
+  potential evaporation, June–August, 0.5° cells of the same Europe, 1901–2025. Against
+  1951–1980, the summers of 2016–2025 had the same rain (203 → 200 mm) and a thirstier air
+  (335 → 377 mm), so a water balance 44 mm (44 litres per m²) lower; per +1 °C of global
+  temperature the balance falls 26 mm (95 %: 8 to 35) and the thirst rises 27 mm (15 to
+  34). Check: ERA5 with FAO-56 ET0 agrees from the 1960s on (2020s: −50 vs −49 mm), but its
+  rain of the 1940s and 1950s is 20–35 mm below the stations', so it is not the record.
+
 ## Data sources
 
 NOAA NCEI GHCN-Daily (Menne et al. 2012, doi:10.1175/JTECH-D-11-00103.1), plus the
@@ -104,7 +116,9 @@ open daily data of DWD, SMHI, KNMI, GeoSphere Austria and MeteoSwiss for the lat
 weeks. These services ask to be credited; the figures name them. The soil story uses
 ERA5-Land (Muñoz-Sabater et al. 2021, doi:10.5194/essd-13-4349-2021; Copernicus Climate
 Change Service), HadCRUT5 (Morice et al. 2021, doi:10.1029/2019JD032361) and CPC soil
-moisture (Fan & van den Dool 2004, doi:10.1029/2003JD004345).
+moisture (Fan & van den Dool 2004, doi:10.1029/2003JD004345); the water story CRU TS (Harris et
+al. 2020, doi:10.1038/s41597-020-0453-3), ERA5 (Hersbach et al. 2020, doi:10.1002/qj.3803) and
+FAO-56 (Allen et al. 1998).
 
 ## Caveats
 

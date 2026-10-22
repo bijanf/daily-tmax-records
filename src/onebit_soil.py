@@ -81,7 +81,7 @@ class SoilFilm:
         self.gy, self.gv = y[keep], d["gmt"][keep]
         k0 = int(np.searchsorted(d["ends"], soil.BASE[0] + D - 1))
         self.ends, self.win_area = d["ends"][k0:], 100 * d["win_area"][k0:]
-        self.layout(d["win_cells"][k0:])
+        self.frac = self.layout(d["win_cells"][k0:] / D, MAP_WIN)       # (window, dot): share of summers in drought
         for x, y, w, h in (STATS, LEGEND):
             under = ((self.dot_xy[:, 0] + 6 > x) & (self.dot_xy[:, 0] - 6 < x + w)
                      & (self.dot_xy[:, 1] + 6 > y) & (self.dot_xy[:, 1] - 6 < y + h))
@@ -92,27 +92,29 @@ class SoilFilm:
         dots[1562 - 620:1644 - 620] = False                     # a clear band under the footnotes
         self.dots = dots
 
-    def layout(self, cells: np.ndarray):
-        """The halftone: Europe's cells pooled into lattice dots (area-weighted share of the ten
-        summers in drought, per window), and the rest of the land as faint dots."""
-        x, y, w, h = MAP_WIN
+    def layout(self, cells: np.ndarray, win, p: int = PITCH) -> np.ndarray:
+        """The halftone of a map window: Europe's cells pooled into lattice dots (area-weighted
+        mean of a (window, cell) array, returned as (window, dot)), and the rest of the land as
+        faint dots."""
+        x, y, w, h = win
         x0, y0 = x + 7, y + 29
         mw, mh = w - 14, h - 36
         land, xy = onebit.europe_raster(self.d["lon"], self.d["lat"], mw, mh, EXTENT)
-        nx, ny = mw // PITCH, mh // PITCH
-        i, j = np.floor(xy[:, 0] / PITCH).astype(int), np.floor(xy[:, 1] / PITCH).astype(int)
+        nx, ny = mw // p, mh // p
+        i, j = np.floor(xy[:, 0] / p).astype(int), np.floor(xy[:, 1] / p).astype(int)
         inside = (i >= 0) & (i < nx) & (j >= 0) & (j < ny)
         keys, dot = np.unique((j * nx + i)[inside], return_inverse=True)
         m = sparse.csr_matrix((self.d["w"][inside], (dot, np.flatnonzero(inside))), shape=(len(keys), len(i)))
         m = sparse.diags(1 / np.asarray(m.sum(1)).ravel()) @ m
-        self.frac = np.asarray((m @ cells.T).T) / soil.DECADE          # (window, dot)
-        centre = lambda k: np.c_[k % nx, k // nx] * PITCH + PITCH / 2 + [x0, y0]  # noqa: E731
+        centre = lambda k: np.c_[k % nx, k // nx] * p + p / 2 + [x0, y0]  # noqa: E731
         self.dot_xy = centre(keys)
         jj, ii = np.mgrid[0:ny, 0:nx]
-        other = land[jj * PITCH + PITCH // 2, ii * PITCH + PITCH // 2] & (jj >= ny // 8)   # no Greenland
+        other = land[jj * p + p // 2, ii * p + p // 2] & (jj >= ny // 8)   # no Greenland
         other = other.ravel()
         other[keys] = False
         self.other_xy = centre(np.flatnonzero(other))
+        self.pitch = p
+        return np.asarray((m @ cells.T).T)
 
     # ── time ──
 

@@ -50,7 +50,10 @@ python -I "$ROOT/src/extremes.py" > "$ROOT/outputs/extremes_log.txt"
 python -I "$ROOT/src/plot_onebit_extremes.py"
 python -I "$ROOT/src/composite.py" | tee "$ROOT/outputs/composite_log.txt"
 python -I "$ROOT/src/plot_records.py"
-# soil story last: ERA5-Land needs a Copernicus CDS key in ~/.cdsapirc
+# soil and water stories last: ERA5 and ERA5-Land need a Copernicus CDS key in ~/.cdsapirc
 python -I "$ROOT/src/get_soil.py"
 python -I "$ROOT/src/soil.py" > "$ROOT/outputs/soil_log.txt"
 python -I "$ROOT/src/onebit_soil.py"
+python -I "$ROOT/src/get_water.py"
+python -I "$ROOT/src/water.py" > "$ROOT/outputs/water_log.txt"
+python -I "$ROOT/src/onebit_water.py"

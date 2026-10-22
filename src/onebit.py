@@ -33,6 +33,7 @@ Themes recolour the whole scene:
     beton   Beton         Berlin concrete, black type, signal red
     nacht   Berlin.Nacht  the city at night: near black, signal-red heat, ice-blue cold
     feld    Tempelhof.Feld  the old airfield in a dry August: straw grass, rust-red earth
+    kanal   Landwehr.Kanal  the canal in Kreuzberg: grey-green water, rust, a navy barge
 """
 
 from __future__ import annotations
@@ -138,6 +139,9 @@ THEMES = {
     "feld": Theme("Tempelhof.Feld", field="#BDB487", ink="#1C1A12", head="#1F1C12", paper="#F7F4E6",
                   light="#E6E0C6", track="#CEC7A6", cold="#2C5A86", hot="#A8361D",
                   levels=("#E6E0C6", "#A79F78", "#59523A", "#1C1A12"), accent="#A8361D"),
+    "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
+                   light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
+                   levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
 }
 
 # pixel icons of the badge, one character per 2 x 2 logical pixels
@@ -826,16 +830,19 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
 
 
 def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: str | None = None) -> None:
-    """H.264 in BT.709 (what phones assume). audio: None, "silent" (an empty track) or "music"
-    (onebit_audio's techno, timed to the film; the WAV is kept beside the video)."""
+    """H.264 in BT.709 (what phones assume). audio: None, "silent" (an empty track), "music"
+    (onebit_audio's techno) or "chip" (onebit_chip's 8-bit tune), timed to the film; the WAV
+    is kept beside the video."""
     ow, oh = size
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}",
            "-r", str(FPS), "-i", "-"]
     if audio == "silent":
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
-    elif audio == "music":
+    elif audio in ("music", "chip"):
         import onebit_audio
-        wav = onebit_audio.write(desk, path.with_name(path.stem.removesuffix("_reel") + "_music.wav"))
+        import onebit_chip
+        engine = onebit_chip if audio == "chip" else onebit_audio
+        wav = engine.write(desk, path.with_name(path.stem.removesuffix("_reel") + "_music.wav"))
         cmd += ["-i", str(wav)]
         print("saved", wav)
     if audio:
