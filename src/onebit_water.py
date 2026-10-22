@@ -47,6 +47,7 @@ STATS = (71, 1090, 300, 210)        # the plain-words box, left of the map
 PITCH = 11
 STEPS = (10, 25, 50, 75)            # litres per m² (= mm): the four dot sizes above "about the same"
 PERIOD = 5                          # years per temperature bar; the map jumps as far per beat
+HATCH = np.add.outer(np.arange(400), np.arange(60)) // 2 % 2 == 0     # MacPaint-style diagonal fill
 BUCKET = ["...#####...", "..#.....#..", ".#.......#.", "###########", "###########", ".#########.",
           ".#########.", ".#########.", "..#######..", "..#######..", "..#######..", "...#####..."]
 HALF = ["...#####...", "..#.....#..", ".#.......#.", "###########", "#.........#", ".#.......#.",
@@ -76,7 +77,7 @@ class WaterFilm(SoilFilm):
                   f"{len(y)} summers of rain and evaporation, {y[0]}–{y[-1]}"),
             Scene(3, FULL, f"First, the planet: {{+{self.warm:.1f} °C}}",
                   "global temperature since 1850–1900, 10-year mean"),
-            Scene(7, FULL, "Summer water, {dot by dot}", "red square: drier than in 1951–80 · hollow: wetter"),
+            Scene(7, FULL, "Summer water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
             Scene(3, FULL, "Same rain. But {hotter air takes more water.}",
                   "sun, heat and wind pull water out of soil and plants"),
             Scene(3, FULL, f"At +{self.warm:.1f} °C, each m² is {{{-self.loss:.0f} litres drier}} every summer",
@@ -169,7 +170,12 @@ class WaterFilm(SoilFilm):
             xx = cx0 + i * bw
             top = base - self.bars[i] * scale
             inside = lo <= self.bar_years[i] and self.bar_years[i] + PERIOD - 1 <= hi
-            c.fill(xx + 2, min(top, base), xx + bw - 4, max(top, base) + 1, th.hot if inside else th.ink)
+            a, b = min(top, base), max(top, base) + 1
+            if th.mono and not inside:                           # two colours: the other bars are hatched
+                c.pixels(xx + 2, a, HATCH[:int(np.ceil(b - a)), :int(bw - 6)], th.ink)
+                c.frame(xx + 2, a, xx + bw - 4, b)
+            else:
+                c.fill(xx + 2, a, xx + bw - 4, b, th.hot if inside else th.ink)
         c.fill(cx0, base, cx1, base + 2, th.ink)
         c.text(cx0, floor + 38, f"{self.bar_years[0]}", size=34, colour=th.head)
         c.text(cx1, floor + 38, f"{self.bar_years[-1] + PERIOD - 1}", size=34, colour=th.head, anchor="rs")
@@ -184,8 +190,11 @@ class WaterFilm(SoilFilm):
         x0, y0, x1, y1 = c.window(*MAP_WIN, "Europe.Water")
         v = self.val[k] * (1 - calm)
         step = np.digitize(np.abs(v), STEPS)
-        for x, y in self.other_xy:
-            c.fill(x - 1, y - 1, x + 1, y + 1, th.levels[1])
+        for x, y in self.other_xy:                               # the rest of the land, faint
+            if th.mono:
+                c.fill(x, y, x + 1, y + 1, th.ink)
+            else:
+                c.fill(x - 1, y - 1, x + 1, y + 1, th.levels[1])
         for (x, y), s, vv in zip(self.dot_xy, step, v):
             r = 1 + s                                            # 2 to 10 px: a 1 px gap at the most
             if s and vv > 0:                                     # wetter: a hollow square
@@ -208,7 +217,10 @@ class WaterFilm(SoilFilm):
             c.text(x + 8, y + 40, "rain", size=34)
             c.text(x + 8, y + 96, "same" if abs(rain) < 0.03 else f"{100 * rain:+.0f} %", GROTESK, 60, th.ink)
             c.text(x + 8, y + 140, "evaporation", size=34)
-            c.text(x + 8, y + 196, f"{100 * evap:+.0f} %", GROTESK, 60, th.hot)
+            label = f"{100 * evap:+.0f} %"
+            if th.mono:                                          # inverse video instead of an accent colour
+                c.fill(x + 4, y + 148, x + 16 + c.width(label, GROTESK, 60), y + 210, th.ink)
+            c.text(x + 8, y + 196, label, GROTESK, 60, th.field if th.mono else th.hot)
             return
         litres = self.win_area[k]
         colour = th.hot if litres < 0 else th.ink

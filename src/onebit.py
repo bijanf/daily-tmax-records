@@ -34,6 +34,8 @@ Themes recolour the whole scene:
     nacht   Berlin.Nacht  the city at night: near black, signal-red heat, ice-blue cold
     feld    Tempelhof.Feld  the old airfield in a dry August: straw grass, rust-red earth
     kanal   Landwehr.Kanal  the canal in Kreuzberg: grey-green water, rust, a navy barge
+    pink1   TS.Pink.1bit    true 1-bit: the typesafe.ai pink and black, nothing else
+    gelb1   BVG.Gelb.1bit   true 1-bit: U-Bahn yellow and black, nothing else
 """
 
 from __future__ import annotations
@@ -100,6 +102,7 @@ class Theme:
     title: str = ""      # type in the big title bars; default: paper
     dots: str = ""       # dot grid; default: ink
     town: str = "Berlin"
+    mono: bool = False   # two colours only (field and ink): accents become inverse video
 
     def __post_init__(self):
         for role, default in (("accent", self.field), ("title", self.paper), ("dots", self.ink)):
@@ -139,6 +142,12 @@ THEMES = {
     "feld": Theme("Tempelhof.Feld", field="#BDB487", ink="#1C1A12", head="#1F1C12", paper="#F7F4E6",
                   light="#E6E0C6", track="#CEC7A6", cold="#2C5A86", hot="#A8361D",
                   levels=("#E6E0C6", "#A79F78", "#59523A", "#1C1A12"), accent="#A8361D"),
+    "pink1": Theme("TS.Pink.1bit", field="#F386A1", ink="#1E1E1E", head="#1E1E1E", paper="#F386A1",
+                   light="#F386A1", track="#1E1E1E", cold="#1E1E1E", hot="#1E1E1E",
+                   levels=("#F386A1", "#1E1E1E", "#1E1E1E", "#1E1E1E"), title="#F386A1", mono=True),
+    "gelb1": Theme("BVG.Gelb.1bit", field="#F7D117", ink="#111111", head="#111111", paper="#F7D117",
+                   light="#F7D117", track="#111111", cold="#111111", hot="#111111",
+                   levels=("#F7D117", "#111111", "#111111", "#111111"), title="#F7D117", mono=True),
     "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
                    light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
                    levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
@@ -822,8 +831,14 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
             continue
         pop = 0.6 + 0.4 * ease(prog(dt, 0.15 + 0.6 * k / len(words), 0.25)) if np.isfinite(dt) else 1.0
         mid = start + (x + big.getlength(w, direction=way) / s / 2 - start) * grow
-        d.text((mid * s, (top + (y - top) * grow) * s), w, font=_font(bold, max(8, round(px * grow * pop * s))),
-               fill=accent or th.head, anchor="ms", direction=way)
+        size = max(8, round(px * grow * pop * s))
+        base = (top + (y - top) * grow) * s
+        if accent and th.mono:
+            # two colours only: the accent is inverse video, a box of ink under field-coloured type
+            half = (_font(bold, size).getlength(w, direction=way) + space * grow * s) / 2
+            d.rectangle([mid * s - half, base - 0.84 * size, mid * s + half, base + 0.26 * size], fill=th.ink)
+            accent = th.field
+        d.text((mid * s, base), w, font=_font(bold, size), fill=accent or th.head, anchor="ms", direction=way)
     y = top + (places[-1][1] - top) * grow
     if sc.line and dt > 0.9:
         d.text((start * s, (y + (72 if rtl else 66)) * s), sc.line, font=_font(text, 34 * s), fill=th.head,
