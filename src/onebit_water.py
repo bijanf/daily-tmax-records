@@ -43,7 +43,7 @@ SOURCES = "Data: CRU TS 4.10 (UEA) · HadCRUT5 (Met Office)"
 GMT_WIN = (60, 628, 960, 300)       # x, y, w, h: both windows stand still all film long
 MAP_WIN = (60, 944, 960, 612)
 MAP_BOX = (390, 973, 620, 576)      # Europe in Mercator, the map everyone knows, right of the box
-STATS = (71, 1090, 300, 210)        # the plain-words box, left of the map
+STATS = (71, 1060, 300, 380)        # the plain-words box, left of the map (tall: the buckets)
 PITCH = 11
 STEPS = (10, 25, 50, 75)            # litres per m² (= mm): the four dot sizes above "about the same"
 PERIOD = 5                          # years per temperature bar; the map jumps as far per beat
@@ -229,9 +229,11 @@ class WaterFilm(SoilFilm):
         c.text(x + 8, y + 134, f"{'less' if litres < 0 else 'more'} water per m²", size=30)
         if scene == 4:
             dr = t - self.starts[4]
-            for j, icon in enumerate(self.icons):
+            for j, icon in enumerate(self.icons):                # big buckets, three to a row
                 if dr >= self.bucket_at(j):
-                    c.icon(x + 10 + j * 56, y + 150, icon, th.hot, cell=4)
+                    c.icon(x + 10 + (j % 3) * 92, y + 160 + (j // 3) * 96, icon, th.hot, cell=7)
+            if dr >= self.bucket_at(len(self.icons) - 1) + BEAT:
+                c.text(x + 8, y + 368, f"= {-self.loss / 10:.1f} buckets".replace(".0 ", " "), size=34)
             return
         hi = int(self.ends[k])
         c.text(x + 8, y + 166, f"summer {hi - 9}–{str(hi)[2:]}", size=30)
