@@ -60,7 +60,8 @@ python -I src/soil.py > outputs/soil_log.txt           # soil drought vs global 
 python -I src/onebit_soil.py                           # soil reel with soundtrack (--stills: frames only)
 python -I src/get_water.py                             # CRU TS 1901-2025; ERA5 monthly means (needs a CDS key)
 python -I src/water.py > outputs/water_log.txt         # summer water balance: rain, the air's thirst, the gap
-python -I src/onebit_water.py                          # water reel with the 8-bit soundtrack
+python -I src/onebit_water.py --theme gelb1           # water reel with the 8-bit soundtrack (38.6 s)
+python -I src/onebit_water.py --theme gelb1 --cut 20s # the same in 20 s
 ```
 
 ## Data and method

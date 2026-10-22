@@ -11,11 +11,13 @@ the ten-year window jumps five years per beat from 1901-10 to 2016-25 and the ma
 A small box on the map says it in plain words: litres less water per m², then rain "same"
 and evaporation "+12 %", then the litres as 10-litre buckets (a half-filled one for the rest). Five scenes, 18 bars of
 112 BPM = 38.6 s, with onebit_chip's 8-bit soundtrack: every bar and every step a note.
+The 20 s cut (--cut 20s): 9 bars of 108 BPM, everything stepping twice as fast, fewer words.
 
     outputs/onebit/social/europe_water_<theme>_reel.mp4, _cover.png, _music.wav
 
     python -I src/onebit_water.py                 # Landwehr.Kanal
     python -I src/onebit_water.py --theme feld
+    python -I src/onebit_water.py --cut 20s       # the 20 s cut: europe_water_<theme>_20s_reel.mp4
     python -I src/onebit_water.py --stills        # cover and seven frames, no video
 """
 
@@ -36,9 +38,10 @@ from onebit import (FOLLOW, FULL, GROTESK, LEFT, MONO, OUT, SIZES, SOCIAL_CRF, C
                     Timeline, caption_band)
 from onebit_soil import SoilFilm  # noqa: E402
 
-BPM = 112
-BEAT = 60 / BPM
-BAR = 4 * BEAT
+# two cuts: tempo, scene lengths (bars), beats before the bars rise and per bar, beats before the
+# map walks and per step (and per bucket), beats before the first bucket
+CUTS = {"long": dict(bpm=112, bars=(2, 3, 7, 3, 3), lead=2, rise=1 / 4, wait=1, step=1, drop=2),
+        "20s": dict(bpm=108, bars=(1.5, 1.5, 3, 1.5, 1.5), lead=1, rise=1 / 8, wait=0, step=1 / 2, drop=1)}
 SOURCES = "Data: CRU TS 4.10 (UEA) · HadCRUT5 (Met Office)"
 GMT_WIN = (60, 628, 960, 300)       # x, y, w, h: both windows stand still all film long
 MAP_WIN = (60, 944, 960, 612)
@@ -57,10 +60,11 @@ HALF = ["...#####...", "..#.....#..", ".#.......#.", "###########", "#.........#
 class WaterFilm(SoilFilm):
     """Draws the film; exposes L, S, bpm, melody(), hits and drips for onebit_chip."""
 
-    bpm = BPM
-
-    def __init__(self, d: dict, th: onebit.Theme):
-        self.d, self.th = d, th
+    def __init__(self, d: dict, th: onebit.Theme, cut: str = "long"):
+        self.d, self.th, self.cut = d, th, cut
+        self.pace = CUTS[cut]
+        self.bpm = self.pace["bpm"]
+        self.beat = 60 / self.bpm
         y, D = d["years"], water.DECADE
         base, last = (y >= water.BASE[0]) & (y <= water.BASE[1]), slice(-D, None)
         eu = d["eu"]
@@ -72,18 +76,20 @@ class WaterFilm(SoilFilm):
         self.icons = [BUCKET] * int(full) + ([HALF] if rest >= 2.5 else [])
         self.icons += [BUCKET] if rest >= 7.5 else []
         self.buckets = len(self.icons)
-        scenes = (
-            Scene(2, FULL, "Where did Europe's {summer water} go?",
-                  f"{len(y)} summers of rain and evaporation, {y[0]}–{y[-1]}"),
-            Scene(3, FULL, f"First, the planet: {{+{self.warm:.1f} °C}}",
-                  "global temperature vs 1850–1900, average of 10 years"),
-            Scene(7, FULL, "Summer water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
-            Scene(3, FULL, "Same rain. But {hotter air takes more water.}",
-                  "sun, heat and wind pull water out of soil and plants"),
-            Scene(3, FULL, f"At +{self.warm:.1f} °C, each m² is {{{-self.loss:.0f} litres drier}} every summer",
-                  FOLLOW["en"]),
-        )
-        starts = np.cumsum([0.0] + [sc.bars * BAR for sc in scenes])
+        if cut == "long":
+            words = (("Where did Europe's {summer water} go?", f"{len(y)} summers of rain and evaporation, {y[0]}–{y[-1]}"),
+                     (f"First, the planet: {{+{self.warm:.1f} °C}}", "global temperature vs 1850–1900, average of 10 years"),
+                     ("Summer water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
+                     ("Same rain. But {hotter air takes more water.}", "sun, heat and wind pull water out of soil and plants"),
+                     (f"At +{self.warm:.1f} °C, each m² is {{{-self.loss:.0f} litres drier}} every summer", FOLLOW["en"]))
+        else:                                                    # 20 s: a few words per scene
+            words = (("Where did Europe's {summer water} go?", f"{len(y)} summers of rain and evaporation"),
+                     (f"The planet: {{+{self.warm:.1f} °C}}", "global temperature vs 1850–1900"),
+                     ("Summer water, {dot by dot}", "solid square: drier than 1951–80 · hollow: wetter"),
+                     ("Same rain. {Hotter air.}", "hot air pulls more water out of soil and plants"),
+                     (f"{{{-self.loss:.0f} litres less}} per m², every summer", FOLLOW["en"]))
+        scenes = tuple(Scene(b, FULL, title, line) for b, (title, line) in zip(self.pace["bars"], words))
+        starts = np.cumsum([0.0] + [sc.bars * 4 * self.beat for sc in scenes])
         self.starts = starts
         self.L = Timeline(0, 0, 0, 0, 0, end=float(starts[-1]), camera=((0.0, FULL),),
                           scenes=tuple(float(t) for t in starts[:-1]))
@@ -119,14 +125,16 @@ class WaterFilm(SoilFilm):
         n = len(self.bars)
         if not np.isfinite(t) or not self.starts[1] <= t < self.starts[2]:
             return n
-        return int(np.clip(np.floor((t - self.starts[1] - 2 * BEAT) / (BEAT / 4)) + 1, 0, n))
+        lead, rise = self.pace["lead"] * self.beat, self.pace["rise"] * self.beat
+        return int(np.clip(np.floor((t - self.starts[1] - lead) / rise) + 1, 0, n))
 
     def window_at(self, t: float) -> int:
         """Which ten-summer window the map shows: one step of five years per beat in scene 3."""
         n = len(self.ends) - 1
         if not np.isfinite(t) or not self.starts[2] <= t < self.starts[3]:
             return n
-        return int(np.clip(np.floor((t - self.starts[2]) / BEAT) - 1, 0, n))
+        wait, step = self.pace["wait"] * self.beat, self.pace["step"] * self.beat
+        return int(np.clip(np.floor((t - self.starts[2] - wait) / step), 0, n))
 
     def calm(self, t: float) -> float:
         """1 in scene 2: every dot at rest while the planet has the stage."""
@@ -136,19 +144,21 @@ class WaterFilm(SoilFilm):
         """(time, step, length, gain): each bar a note as high as the planet's temperature; each
         step of the map a note as low as Europe's summer water; each bucket a falling note."""
         out = []
-        t0 = self.starts[1] + 2 * BEAT
+        b, P = self.beat, self.pace
+        t0 = self.starts[1] + P["lead"] * b
         for k, g in enumerate(self.bars):
-            out.append((t0 + k * BEAT / 4, int(round(6 * max(g, 0))), 0.12, 0.35 + 0.25 * k / len(self.bars)))
+            out.append((t0 + k * P["rise"] * b, int(round(6 * max(g, 0))), 0.12, 0.35 + 0.25 * k / len(self.bars)))
         for k in range(1, len(self.ends)):
             v = self.win_area[k]
-            out.append((self.starts[2] + (k + 1) * BEAT, 4 + int(round(v / 7)), 0.2, min(0.7, 0.35 + abs(v) / 80)))
+            out.append((self.starts[2] + (P["wait"] + k * P["step"]) * b, 4 + int(round(v / 7)), 0.2,
+                        min(0.7, 0.35 + abs(v) / 80)))
         for j in range(self.buckets):
             out.append((self.starts[4] + self.bucket_at(j), 4 - j, 0.2, 0.7))
         return out
 
     def bucket_at(self, j: int) -> float:
-        """Seconds into scene 5 when bucket j drops in: one per beat."""
-        return 2 * BEAT + j * BEAT
+        """Seconds into scene 5 when bucket j drops in: one per step of the walk."""
+        return (self.pace["drop"] + j * self.pace["step"]) * self.beat
 
     # ── drawing ──
 
@@ -232,7 +242,7 @@ class WaterFilm(SoilFilm):
             for j, icon in enumerate(self.icons):                # big buckets, three to a row
                 if dr >= self.bucket_at(j):
                     c.icon(x + 10 + (j % 3) * 92, y + 160 + (j // 3) * 96, icon, th.hot, cell=7)
-            if dr >= self.bucket_at(len(self.icons) - 1) + BEAT:
+            if dr >= self.bucket_at(len(self.icons) - 1) + self.beat:
                 c.text(x + 8, y + 368, f"= {-self.loss / 10:.1f} buckets".replace(".0 ", " "), size=34)
             return
         hi = int(self.ends[k])
@@ -255,16 +265,17 @@ class WaterFilm(SoilFilm):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--theme", default="kanal", choices=list(onebit.THEMES), help="colour theme")
+    ap.add_argument("--cut", default="long", choices=list(CUTS), help="long (38.6 s) or 20s")
     ap.add_argument("--stills", action="store_true", help="cover and seven frames only, no video")
     args = ap.parse_args()
-    film = WaterFilm(water.compute(), onebit.THEMES[args.theme])
+    film = WaterFilm(water.compute(), onebit.THEMES[args.theme], args.cut)
     (OUT / "social").mkdir(parents=True, exist_ok=True)
-    base = OUT / "social" / f"europe_water_{args.theme}"
+    base = OUT / "social" / (f"europe_water_{args.theme}" + ("" if args.cut == "long" else f"_{args.cut}"))
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
         st = film.starts
-        for t in (st[1] + 1.5, st[1] + 5.0, st[2] + 3, st[2] + 9, st[3] + 3, st[4] + 1.5, st[4] + 5):
+        for t in (st[1] + 1.0, st[2] - 0.3, st[2] + 2, (st[2] + st[3]) / 2, st[3] + 1.5, st[4] + 0.8, st[5] - 0.2):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
         print("saved", f"{base}_t*.png")
         return
