@@ -1,24 +1,27 @@
-"""SAME RAIN, HOTTER AIR: 125 summers of Europe's water, dot by dot, as the world warms.
+"""SAME RAIN, HOTTER AIR: a region's water, dot by dot, as the world warms (Europe, Iran).
 
-The water balance of each summer (June to August), 1901-2025: rain minus what the air pulls
-out of the ground (Penman-Monteith potential evapotranspiration), from CRU TS; numbers in
-water.py. A still 1-bit desktop: two windows that never move, ink and one accent colour, and
-the data stepping on the beat like an old computer. On top the planet's temperature in 25
-chunky bars of five years each; below, Europe in Mercator (the map of the phone's maps app) as a halftone of square dots: a solid red
-square where the summers of a ten-year window held less water than in 1951-1980, a hollow
-one where more, the bigger the more litres. The bars stand up one per sixteenth note, then
-the ten-year window jumps five years per beat from 1901-10 to 2016-25 and the map follows.
-A small box on the map says it in plain words: litres less water per m², then rain "same"
-and evaporation "+12 %", then the litres as 10-litre buckets (a half-filled one for the rest). Five scenes, 18 bars of
-112 BPM = 38.6 s, with onebit_chip's 8-bit soundtrack: every bar and every step a note.
-The 20 s cut (--cut 20s): 9 bars of 108 BPM, everything stepping twice as fast, fewer words.
+The water balance of each season: rain minus what the air pulls out of the ground
+(Penman-Monteith potential evapotranspiration), from CRU TS; numbers in water.py. Europe:
+summers (June to August), 1901-2025. Iran: water years (October to September), 1951-2025.
+A still 1-bit desktop: two windows that never move, ink and one accent colour (or two colours
+only, with --theme pink1, gelb1 or firuzeh), and the data stepping on the beat like an old
+computer. On top the planet's temperature in chunky bars of five years each; below, the region
+in Mercator (the map of the phone's maps app) as a halftone of square dots: a solid square
+where the seasons of a ten-year window held less water than in 1951-1980, a hollow one where
+more, the bigger the more litres. The bars stand up one per sixteenth note, then the ten-year
+window jumps five years per beat and the map follows. A small box beside the map says it in
+plain words: litres less water per m², then rain and evaporation, then the litres as 10-litre
+buckets (a half-filled one for the rest). Five scenes, 18 bars of 112 BPM = 38.6 s, with
+onebit_chip's 8-bit soundtrack: every bar and every step a note. The 20 s cut (--cut 20s): 9
+bars of 108 BPM, everything stepping twice as fast, fewer words. --lang fa: Persian, right to
+left, in Vazirmatn with Persian digits.
 
-    outputs/onebit/social/europe_water_<theme>_reel.mp4, _cover.png, _music.wav
+    outputs/onebit/social/<region>_water_<theme>[_20s][_fa]_reel.mp4, _cover.png, _music.wav
 
-    python -I src/onebit_water.py                 # Landwehr.Kanal
-    python -I src/onebit_water.py --theme feld
-    python -I src/onebit_water.py --cut 20s       # the 20 s cut: europe_water_<theme>_20s_reel.mp4
-    python -I src/onebit_water.py --stills        # cover and seven frames, no video
+    python -I src/onebit_water.py --theme gelb1                    # Europe, BVG.Gelb.1bit
+    python -I src/onebit_water.py --theme gelb1 --cut 20s          # the 20 s cut
+    python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 20s
+    python -I src/onebit_water.py --stills                         # cover and seven frames, no video
 """
 
 from __future__ import annotations
@@ -34,34 +37,83 @@ import numpy as np  # noqa: E402
 
 import onebit  # noqa: E402
 import water  # noqa: E402
-from onebit import (FOLLOW, FULL, GROTESK, LEFT, MONO, OUT, SIZES, SOCIAL_CRF, Canvas, Scene,  # noqa: E402
-                    Timeline, caption_band)
+from onebit import (FA_BOLD, FA_TEXT, FOLLOW, FULL, GROTESK, LEFT, MONO, OUT, PIXEL, SIZES, SOCIAL_CRF,  # noqa: E402
+                    Canvas, Scene, Timeline, caption_band, fa)
 from onebit_soil import SoilFilm  # noqa: E402
 
 # two cuts: tempo, scene lengths (bars), beats before the bars rise and per bar, beats before the
 # map walks and per step (and per bucket), beats before the first bucket
 CUTS = {"long": dict(bpm=112, bars=(2, 3, 7, 3, 3), lead=2, rise=1 / 4, wait=1, step=1, drop=2),
         "20s": dict(bpm=108, bars=(1.5, 1.5, 3, 1.5, 1.5), lead=1, rise=1 / 8, wait=0, step=1 / 2, drop=1)}
+# the map of each region: its frame (water.REGIONS), halftone pitch (CRU's 0.5 deg cells need
+# wider dots over a small country), the litres of the four dot sizes, and how the "why" box
+# counts: per cent, or litres when both rain and evaporation moved
+MAPS = {"europe": dict(title="Europe.Water", os="EU.WATER.VS.PLANET", pitch=11, steps=(10, 25, 50, 75), why="%"),
+        "iran": dict(title="Iran.Water", os="IR.WATER.VS.PLANET", pitch=20, steps=(25, 50, 100, 150), why="litres")}
 SOURCES = "Data: CRU TS 4.10 (UEA) · HadCRUT5 (Met Office)"
 GMT_WIN = (60, 628, 960, 300)       # x, y, w, h: both windows stand still all film long
 MAP_WIN = (60, 944, 960, 612)
-MAP_BOX = (390, 973, 620, 576)      # Europe in Mercator, the map everyone knows, right of the box
+MAP_BOX = (390, 973, 620, 576)      # the region in Mercator, the map everyone knows, right of the box
 STATS = (71, 1060, 300, 380)        # the plain-words box, left of the map (tall: the buckets)
-PITCH = 11
-STEPS = (10, 25, 50, 75)            # litres per m² (= mm): the four dot sizes above "about the same"
 PERIOD = 5                          # years per temperature bar; the map jumps as far per beat
-HATCH = np.add.outer(np.arange(400), np.arange(60)) // 2 % 2 == 0     # MacPaint-style diagonal fill
+HATCH = np.add.outer(np.arange(1000), np.arange(60)) // 2 % 2 == 0    # MacPaint-style diagonal fill
 BUCKET = ["...#####...", "..#.....#..", ".#.......#.", "###########", "###########", ".#########.",
           ".#########.", ".#########.", "..#######..", "..#######..", "..#######..", "...#####..."]
 HALF = ["...#####...", "..#.....#..", ".#.......#.", "###########", "#.........#", ".#.......#.",
         ".#.......#.", ".#########.", "..#######..", "..#######..", "..#######..", "...#####..."]
+FOLLOW_FA = "برای داده‌های اقلیمی بیشتر، فالو کنید"
+
+
+def captions(region: str, lang: str, cut: str, n: int, y0: int, y1: int, warm: float, loss: float) -> tuple:
+    """(title, line) of the five scenes; {braces} mark the accent."""
+    w, L = f"{warm:.1f}", f"{-loss:.0f}"
+    if (region, lang) == ("europe", "en"):
+        if cut == "long":
+            return (("Where did Europe's {summer water} go?", f"{n} summers of rain and evaporation, {y0}–{y1}"),
+                    (f"First, the planet: {{+{w} °C}}", "global temperature vs 1850–1900, average of 10 years"),
+                    ("Summer water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
+                    ("Same rain. But {hotter air takes more water.}", "sun, heat and wind pull water out of soil and plants"),
+                    (f"At +{w} °C, each m² is {{{L} litres drier}} every summer", FOLLOW["en"]))
+        return (("Where did Europe's {summer water} go?", f"{n} summers of rain and evaporation"),
+                (f"The planet: {{+{w} °C}}", "global temperature vs 1850–1900"),
+                ("Summer water, {dot by dot}", "solid square: drier than 1951–80 · hollow: wetter"),
+                ("Same rain. {Hotter air.}", "hot air pulls more water out of soil and plants"),
+                (f"{{{L} litres less}} per m², every summer", FOLLOW["en"]))
+    if (region, lang) == ("iran", "en"):
+        if cut == "long":
+            return (("Where did Iran's {water} go?", f"{n} water years of rain and evaporation, {y0}–{y1}"),
+                    (f"First, the planet: {{+{w} °C}}", "global temperature vs 1850–1900, average of 10 years"),
+                    ("Iran's water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
+                    ("Less rain. And {hotter air takes more water.}", "sun, heat and wind pull water out of soil and plants"),
+                    (f"At +{w} °C, each m² of Iran is {{{L} litres drier}} every year", "Follow for more climate data in 1-bit"))
+        return (("Where did Iran's {water} go?", f"{n} years of rain and evaporation"),
+                (f"The planet: {{+{w} °C}}", "global temperature vs 1850–1900"),
+                ("Iran's water, {dot by dot}", "solid square: drier than 1951–80 · hollow: wetter"),
+                ("Less rain. {Hotter air.}", "hot air pulls more water out of soil and plants"),
+                (f"{{{L} litres less}} per m², every year", "Follow for more climate data in 1-bit"))
+    if (region, lang) == ("iran", "fa"):
+        if cut == "long":
+            return (("آبِ ایران {کجا رفت؟}", f"{fa(n)} سال آبی باران و تبخیر، {fa(y0)} تا {fa(y1)}"),
+                    (f"اول، کرهٔ زمین: {{{fa(w)} درجه}} گرم‌تر", "دمای میانگین جهان نسبت به ۱۸۵۰ تا ۱۹۰۰، میانگین ده ساله"),
+                    ("آبِ ایران، {نقطه به نقطه}", "مربع پر: کم‌آب‌تر از ۱۹۵۱ تا ۱۹۸۰ · مربع توخالی: پرآب‌تر"),
+                    ("باران {کمتر}، تبخیر {بیشتر}", "هوای گرم‌تر آب بیشتری از خاک و گیاه بیرون می‌کشد"),
+                    (f"{{{fa(L)} لیتر}} آب کمتر، هر سال، در هر متر مربعِ ایران", FOLLOW_FA))
+        return (("آبِ ایران {کجا رفت؟}", f"{fa(n)} سال باران و تبخیر"),
+                (f"زمین: {{{fa(w)} درجه}} گرم‌تر", "نسبت به ۱۸۵۰ تا ۱۹۰۰"),
+                ("آبِ ایران، {نقطه به نقطه}", "مربع پر: کم‌آب‌تر · مربع توخالی: پرآب‌تر"),
+                ("باران {کمتر}، تبخیر {بیشتر}", "هوای گرم‌تر آب بیشتری می‌کشد"),
+                (f"هر سال {{{fa(L)} لیتر}} آب کمتر در هر متر مربع", FOLLOW_FA))
+    raise ValueError(f"no words for {region} in {lang}")
 
 
 class WaterFilm(SoilFilm):
     """Draws the film; exposes L, S, bpm, melody(), hits and drips for onebit_chip."""
 
-    def __init__(self, d: dict, th: onebit.Theme, cut: str = "long"):
-        self.d, self.th, self.cut = d, th, cut
+    def __init__(self, d: dict, th: onebit.Theme, cut: str = "long", lang: str = "en"):
+        self.d, self.th, self.cut, self.lang = d, th, cut, lang
+        self.region = d["region"]
+        self.map = MAPS[self.region]
+        self.fa = lang == "fa"
         self.pace = CUTS[cut]
         self.bpm = self.pace["bpm"]
         self.beat = 60 / self.bpm
@@ -76,24 +128,13 @@ class WaterFilm(SoilFilm):
         self.icons = [BUCKET] * int(full) + ([HALF] if rest >= 2.5 else [])
         self.icons += [BUCKET] if rest >= 7.5 else []
         self.buckets = len(self.icons)
-        if cut == "long":
-            words = (("Where did Europe's {summer water} go?", f"{len(y)} summers of rain and evaporation, {y[0]}–{y[-1]}"),
-                     (f"First, the planet: {{+{self.warm:.1f} °C}}", "global temperature vs 1850–1900, average of 10 years"),
-                     ("Summer water, {dot by dot}", "solid square: drier than in 1951–80 · hollow: wetter"),
-                     ("Same rain. But {hotter air takes more water.}", "sun, heat and wind pull water out of soil and plants"),
-                     (f"At +{self.warm:.1f} °C, each m² is {{{-self.loss:.0f} litres drier}} every summer", FOLLOW["en"]))
-        else:                                                    # 20 s: a few words per scene
-            words = (("Where did Europe's {summer water} go?", f"{len(y)} summers of rain and evaporation"),
-                     (f"The planet: {{+{self.warm:.1f} °C}}", "global temperature vs 1850–1900"),
-                     ("Summer water, {dot by dot}", "solid square: drier than 1951–80 · hollow: wetter"),
-                     ("Same rain. {Hotter air.}", "hot air pulls more water out of soil and plants"),
-                     (f"{{{-self.loss:.0f} litres less}} per m², every summer", FOLLOW["en"]))
+        words = captions(self.region, lang, cut, len(y), y[0], y[-1], self.warm, self.loss)
         scenes = tuple(Scene(b, FULL, title, line) for b, (title, line) in zip(self.pace["bars"], words))
         starts = np.cumsum([0.0] + [sc.bars * 4 * self.beat for sc in scenes])
         self.starts = starts
         self.L = Timeline(0, 0, 0, 0, 0, end=float(starts[-1]), camera=((0.0, FULL),),
                           scenes=tuple(float(t) for t in starts[:-1]))
-        self.S = SimpleNamespace(scenes=scenes, os_name="EU.WATER.VS.PLANET", lang="en", race=[])
+        self.S = SimpleNamespace(scenes=scenes, os_name=self.map["os"], lang=lang, race=[])
         self.open = 0.0
         self.hits = [float(starts[4]) + 0.3]
         self.drips = [(float(starts[3]) + 0.5, float(starts[3]) + 2.0)]
@@ -103,20 +144,37 @@ class WaterFilm(SoilFilm):
         self.bars = np.array([d["gmt"][self.period == p].mean() for p in range(n)])
         self.bar_years = y[0] + PERIOD * np.arange(n)
         keep = (d["ends"] - y[0] + 1) % PERIOD == 0
-        self.ends = d["ends"][keep]                              # 1910, 1915, ..., 2025
-        self.win_area = d["win_eu"]["balance"][keep]             # Europe's change, litres per m²
+        self.ends = d["ends"][keep]                              # Europe 1910, 1915, ..., 2025; Iran 1960, ...
+        self.win_area = d["win_eu"]["balance"][keep]             # the region's change, litres per m²
         import cartopy.crs as ccrs
-        self.val = self.layout(d["win_cells"][keep], MAP_WIN, PITCH, ccrs.Mercator(), list(water.FRAME) + [34.5, 71.5],
-                               MAP_BOX)
+        lon0, lon1, lat0, lat1 = water.REGIONS[self.region]["frame"]
+        europe = self.region == "europe"
+        self.val = self.layout(d["win_cells"][keep], MAP_WIN, self.map["pitch"], ccrs.Mercator(),
+                               [lon0, lon1, 34.5 if europe else lat0, lat1], MAP_BOX, skip_top=europe)
         x, yy, w, h = STATS
         under = ((self.dot_xy[:, 0] + 7 > x) & (self.dot_xy[:, 0] - 7 < x + w)
                  & (self.dot_xy[:, 1] + 7 > yy) & (self.dot_xy[:, 1] - 7 < yy + h))
         if under.any():
-            print(f"warning: {under.sum()} dots of Europe under the label box")
+            print(f"warning: {under.sum()} dots of the map under the label box")
         dots = np.zeros((1920 - 620, 1080), bool)
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
         dots[1562 - 620:1620 - 620] = False
         self.dots = dots
+
+    # ── words in two scripts ──
+
+    def small(self, c: Canvas, x, y, s, size=30, colour=None, anchor="ls"):
+        """A line of the pixel font, or of Vazirmatn right to left in Persian."""
+        if self.fa:
+            return c.text(x, y, fa(s), FA_TEXT, size - 2, colour, anchor, "rtl")
+        return c.text(x, y, s, PIXEL, size, colour, anchor)
+
+    def big(self, c: Canvas, x, y, s, size, colour=None, anchor="ls"):
+        """Numbers in the grotesk, or in Vazirmatn with Persian digits."""
+        return c.text(x, y, fa(s) if self.fa else s, FA_BOLD if self.fa else GROTESK, size, colour, anchor)
+
+    def years(self, lo: int, hi: int) -> str:
+        return f"{lo} تا {hi}" if self.fa else f"{lo}–{str(hi)[2:]}"
 
     # ── time: everything steps, nothing glides ──
 
@@ -129,7 +187,7 @@ class WaterFilm(SoilFilm):
         return int(np.clip(np.floor((t - self.starts[1] - lead) / rise) + 1, 0, n))
 
     def window_at(self, t: float) -> int:
-        """Which ten-summer window the map shows: one step of five years per beat in scene 3."""
+        """Which ten-year window the map shows: one step of five years per beat in scene 3."""
         n = len(self.ends) - 1
         if not np.isfinite(t) or not self.starts[2] <= t < self.starts[3]:
             return n
@@ -142,14 +200,15 @@ class WaterFilm(SoilFilm):
 
     def melody(self):
         """(time, step, length, gain): each bar a note as high as the planet's temperature; each
-        step of the map a note as low as Europe's summer water; each bucket a falling note."""
+        step of the map a note as low as the region's water; each bucket a falling note."""
         out = []
         b, P = self.beat, self.pace
+        unit = self.map["steps"][-1] / 75                        # Europe 1: its dots' litres set the scale
         t0 = self.starts[1] + P["lead"] * b
         for k, g in enumerate(self.bars):
             out.append((t0 + k * P["rise"] * b, int(round(6 * max(g, 0))), 0.12, 0.35 + 0.25 * k / len(self.bars)))
         for k in range(1, len(self.ends)):
-            v = self.win_area[k]
+            v = self.win_area[k] / unit
             out.append((self.starts[2] + (P["wait"] + k * P["step"]) * b, 4 + int(round(v / 7)), 0.2,
                         min(0.7, 0.35 + abs(v) / 80)))
         for j in range(self.buckets):
@@ -157,8 +216,9 @@ class WaterFilm(SoilFilm):
         return out
 
     def bucket_at(self, j: int) -> float:
-        """Seconds into scene 5 when bucket j drops in: one per step of the walk."""
-        return (self.pace["drop"] + j * self.pace["step"]) * self.beat
+        """Seconds into scene 5 when bucket j drops in: one per step of the walk, two when many."""
+        step = self.pace["step"] * (0.5 if self.buckets > 6 else 1)
+        return (self.pace["drop"] + j * step) * self.beat
 
     # ── drawing ──
 
@@ -187,26 +247,32 @@ class WaterFilm(SoilFilm):
             else:
                 c.fill(xx + 2, a, xx + bw - 4, b, th.hot if inside else th.ink)
         c.fill(cx0, base, cx1, base + 2, th.ink)
-        c.text(cx0, floor + 38, f"{self.bar_years[0]}", size=34, colour=th.head)
-        c.text(cx1, floor + 38, f"{self.bar_years[-1] + PERIOD - 1}", size=34, colour=th.head, anchor="rs")
+        first, last = f"{self.bar_years[0]}", f"{self.bar_years[-1] + PERIOD - 1}"
+        if self.fa:
+            self.big(c, cx0, floor + 38, first, 30, th.head)
+            self.big(c, cx1, floor + 38, last, 30, th.head, "rs")
+        else:
+            c.text(cx0, floor + 38, first, size=34, colour=th.head)
+            c.text(cx1, floor + 38, last, size=34, colour=th.head, anchor="rs")
         sel = (self.d["years"] >= lo) & (self.d["years"] <= hi)
         g = round(float(self.d["gmt"][sel].mean()), 1)
-        c.text(x0 + 12, y0 + 96, (f"{g:+.1f}" if g else "0.0").replace("-", "−") + "°C", GROTESK, 100, th.hot)
-        c.text(x0 + 16, y0 + 136, "Earth vs 1850–1900", size=30)
-        c.text(x0 + 16, y0 + 170, f"{lo}–{str(hi)[2:]}", size=34)
+        self.big(c, x0 + 12, y0 + 96, (f"{g:+.1f}" if g else "0.0").replace("-", "−") + "°C", 100, th.hot)
+        self.small(c, x0 + 16, y0 + 136, "زمین نسبت به ۱۸۵۰ تا ۱۹۰۰" if self.fa else "Earth vs 1850–1900")
+        self.small(c, x0 + 16, y0 + 170, self.years(lo, hi), 34)
 
     def map_window(self, c: Canvas, k: int, calm: float, t: float = np.inf):
         th = self.th
-        x0, y0, x1, y1 = c.window(*MAP_WIN, "Europe.Water")
+        x0, y0, x1, y1 = c.window(*MAP_WIN, self.map["title"])
         v = self.val[k] * (1 - calm)
-        step = np.digitize(np.abs(v), STEPS)
+        step = np.digitize(np.abs(v), self.map["steps"])
+        grow = (self.map["pitch"] - 3) / 8                       # Europe 1: one pixel per size step
         for x, y in self.other_xy:                               # the rest of the land, faint
             if th.mono:
                 c.fill(x, y, x + 1, y + 1, th.ink)
             else:
                 c.fill(x - 1, y - 1, x + 1, y + 1, th.levels[1])
         for (x, y), s, vv in zip(self.dot_xy, step, v):
-            r = 1 + s                                            # 2 to 10 px: a 1 px gap at the most
+            r = 1 + s * grow                                     # a 1 px gap at the most
             if s and vv > 0:                                     # wetter: a hollow square
                 c.frame(x - r, y - r, x + r, y + r)
             else:
@@ -214,38 +280,70 @@ class WaterFilm(SoilFilm):
         self.stats(c, t, k, calm)
 
     def stats(self, c: Canvas, t: float, k: int, calm: float):
-        """The plain-words box: litres per m², then rain and evaporation, then buckets."""
-        th = self.th
+        """The plain-words box: litres per m², then rain and evaporation, then buckets. In
+        Persian everything sits on the right edge of the box."""
+        th, F = self.th, self.fa
         x, y, w, h = STATS
         c.fill(x, y, x + w, y + h, th.paper)
         scene = self.scene(t) if np.isfinite(t) else 0
         if calm:
             return
+        edge, anchor = (x + w - 8, "rs") if F else (x + 8, "ls")
         if scene == 3:
-            rain = self.new["rain"] / self.old["rain"] - 1
-            evap = self.new["thirst"] / self.old["thirst"] - 1
-            c.text(x + 8, y + 40, "rain", size=34)
-            c.text(x + 8, y + 96, "same" if abs(rain) < 0.03 else f"{100 * rain:+.0f} %", GROTESK, 60, th.ink)
-            c.text(x + 8, y + 140, "evaporation", size=34)
-            label = f"{100 * evap:+.0f} %"
-            if th.mono:                                          # inverse video instead of an accent colour
-                c.fill(x + 4, y + 148, x + 16 + c.width(label, GROTESK, 60), y + 210, th.ink)
-            c.text(x + 8, y + 196, label, GROTESK, 60, th.field if th.mono else th.hot)
+            rows = (("rain", "باران", "rain", False), ("evaporation", "تبخیر", "thirst", True))
+            for j, (en, pe, key, accent) in enumerate(rows):
+                change = self.new[key] - self.old[key]
+                rel = self.new[key] / self.old[key] - 1
+                if abs(rel) < 0.03:
+                    label = "تقریباً همان" if F else "same"
+                elif self.map["why"] == "%":
+                    label = f"{100 * rel:+.0f} %"
+                elif F:
+                    label = f"{abs(change):.0f} لیتر {'بیشتر' if change > 0 else 'کمتر'}"
+                else:
+                    label = f"{abs(change):.0f} L {'more' if change > 0 else 'less'}"
+                self.small(c, edge, y + 40 + j * 100, pe if F else en, 34, anchor=anchor)
+                size = 44 if self.map["why"] == "litres" else 60
+                if F:
+                    lw = c.width(fa(label), FA_BOLD, size, "rtl")
+                else:
+                    lw = c.width(label, GROTESK, size)
+                lx = edge - lw if F else edge
+                if accent and th.mono:                           # inverse video instead of an accent colour
+                    c.fill(lx - 4, y + 104 + j * 100 - size, lx + lw + 4, y + 106 + j * 100 + 0.14 * size, th.ink)
+                colour = (th.field if th.mono else th.hot) if accent else th.ink
+                if F:
+                    c.text(edge, y + 96 + j * 100, fa(label), FA_BOLD, size, colour, "rs", "rtl")
+                else:
+                    c.text(edge, y + 96 + j * 100, label, GROTESK, size, colour)
             return
         litres = self.win_area[k]
         colour = th.hot if litres < 0 else th.ink
-        nw = c.text(x + 4, y + 100, f"{abs(litres):.0f}", GROTESK, 110, colour)
-        c.text(x + 12 + nw, y + 100, "litre" if round(abs(litres)) == 1 else "litres", GROTESK, 44, colour)
-        c.text(x + 8, y + 134, f"{'less' if litres < 0 else 'more'} water per m²", size=30)
+        less = litres < 0
+        if F:
+            nw = self.big(c, edge, y + 100, f"{abs(litres):.0f}", 110, colour, "rs")
+            c.text(edge - nw - 12, y + 100, "لیتر", FA_BOLD, 44, colour, "rs", "rtl")
+            self.small(c, edge, y + 134, f"آب {'کمتر' if less else 'بیشتر'} در هر متر مربع", anchor=anchor)
+        else:
+            nw = c.text(x + 4, y + 100, f"{abs(litres):.0f}", GROTESK, 110, colour)
+            c.text(x + 12 + nw, y + 100, "litre" if round(abs(litres)) == 1 else "litres", GROTESK, 44, colour)
+            c.text(x + 8, y + 134, f"{'less' if less else 'more'} water per m²", size=30)
         if scene == 4:
             dr = t - self.starts[4]
-            for j, icon in enumerate(self.icons):                # big buckets, three to a row
+            per, cell, dx, dy = (3, 7, 92, 96) if self.buckets <= 6 else (4, 5, 70, 70)
+            for j, icon in enumerate(self.icons):                # big buckets; from the right in Persian
                 if dr >= self.bucket_at(j):
-                    c.icon(x + 10 + (j % 3) * 92, y + 160 + (j // 3) * 96, icon, th.hot, cell=7)
+                    col = per - 1 - j % per if F else j % per
+                    c.icon(x + 10 + col * dx, y + 160 + (j // per) * dy, icon, th.hot, cell=cell)
             return
         hi = int(self.ends[k])
-        c.text(x + 8, y + 166, f"summer {hi - 9}–{str(hi)[2:]}", size=30)
-        c.text(x + 8, y + 198, "vs 1951–80", size=30)
+        unit = water.REGIONS[self.region]["unit"]
+        if F:
+            self.small(c, edge, y + 166, f"سال‌های آبی {self.years(hi - 9, hi)}", anchor=anchor)
+            self.small(c, edge, y + 198, "نسبت به ۱۹۵۱ تا ۱۹۸۰", anchor=anchor)
+        else:
+            c.text(x + 8, y + 166, f"{unit}{'s' if unit != 'summer' else ''} {hi - 9}–{str(hi)[2:]}", size=30)
+            c.text(x + 8, y + 198, "vs 1951–80", size=30)
 
     def draw(self, s: int, t: float = np.inf, size=SIZES["reel"]):
         c = Canvas(s, self.th, 1.0, (0.0, 0.0), size)
@@ -256,19 +354,22 @@ class WaterFilm(SoilFilm):
         self.gmt_window(c, t, k)
         self.map_window(c, k, self.calm(t), t)
         c.text(LEFT, 1596, SOURCES, MONO, 20, self.th.head)
-        caption_band(c, self.th, self.S.scenes, i, dt, self.S.os_name)
+        caption_band(c, self.th, self.S.scenes, i, dt, self.S.os_name, self.lang)
         return c.im
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--region", default="europe", choices=list(MAPS))
+    ap.add_argument("--lang", default="en", choices=("en", "fa"))
     ap.add_argument("--theme", default="kanal", choices=list(onebit.THEMES), help="colour theme")
     ap.add_argument("--cut", default="long", choices=list(CUTS), help="long (38.6 s) or 20s")
     ap.add_argument("--stills", action="store_true", help="cover and seven frames only, no video")
     args = ap.parse_args()
-    film = WaterFilm(water.compute(), onebit.THEMES[args.theme], args.cut)
+    film = WaterFilm(water.compute(args.region), onebit.THEMES[args.theme], args.cut, args.lang)
     (OUT / "social").mkdir(parents=True, exist_ok=True)
-    base = OUT / "social" / (f"europe_water_{args.theme}" + ("" if args.cut == "long" else f"_{args.cut}"))
+    tag = ("" if args.cut == "long" else f"_{args.cut}") + ("" if args.lang == "en" else f"_{args.lang}")
+    base = OUT / "social" / f"{args.region}_water_{args.theme}{tag}"
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:

@@ -36,6 +36,7 @@ Themes recolour the whole scene:
     kanal   Landwehr.Kanal  the canal in Kreuzberg: grey-green water, rust, a navy barge
     pink1   TS.Pink.1bit    true 1-bit: the typesafe.ai pink and black, nothing else
     gelb1   BVG.Gelb.1bit   true 1-bit: U-Bahn yellow and black, nothing else
+    firuzeh Firuzeh.1bit    true 1-bit: Persian turquoise (firuzeh) and black
 """
 
 from __future__ import annotations
@@ -148,6 +149,10 @@ THEMES = {
     "gelb1": Theme("BVG.Gelb.1bit", field="#F7D117", ink="#111111", head="#111111", paper="#F7D117",
                    light="#F7D117", track="#111111", cold="#111111", hot="#111111",
                    levels=("#F7D117", "#111111", "#111111", "#111111"), title="#F7D117", mono=True),
+    "firuzeh": Theme("Firuzeh.1bit", field="#4AAFA5", ink="#141414", head="#141414", paper="#4AAFA5",
+                     light="#4AAFA5", track="#141414", cold="#141414", hot="#141414",
+                     levels=("#4AAFA5", "#141414", "#141414", "#141414"), title="#4AAFA5", mono=True,
+                     town="Tehran"),
     "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
                    light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
                    levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
@@ -379,13 +384,14 @@ class Canvas:
         for box in ((x0, y0, x1, y0 + 1), (x0, y1 - 1, x1, y1), (x0, y0, x0 + 1, y1), (x1 - 1, y0, x1, y1)):
             self.fill(*box, colour or self.th.ink)
 
-    def text(self, x, y, s, path=PIXEL, size=22, colour=None, anchor="ls"):
+    def text(self, x, y, s, path=PIXEL, size=22, colour=None, anchor="ls", direction=None):
+        """direction "rtl" for Persian (shaped by raqm); returns the width in logical pixels."""
         self.d.text(((x - self.ox) * self.k, (y - self.oy) * self.k), s, font=self.font(path, size),
-                    fill=colour or self.th.ink, anchor=anchor)
-        return self.width(s, path, size)
+                    fill=colour or self.th.ink, anchor=anchor, direction=direction)
+        return self.width(s, path, size, direction)
 
-    def width(self, s, path=PIXEL, size=22) -> float:
-        return self.font(path, size).getlength(s) / self.k
+    def width(self, s, path=PIXEL, size=22, direction=None) -> float:
+        return self.font(path, size).getlength(s, direction=direction) / self.k
 
     def chip(self, x, y, s, size=22, fg=None, bg=None, pad=3, path=PIXEL):
         """Inverse label: text on a solid box; (x, y) is the baseline start. Returns the box width."""

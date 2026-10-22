@@ -62,6 +62,8 @@ python -I src/get_water.py                             # CRU TS 1901-2025; ERA5 
 python -I src/water.py > outputs/water_log.txt         # summer water balance: rain, the air's thirst, the gap
 python -I src/onebit_water.py --theme gelb1           # water reel with the 8-bit soundtrack (38.6 s)
 python -I src/onebit_water.py --theme gelb1 --cut 20s # the same in 20 s
+python -I src/water.py --region iran > outputs/water_iran_log.txt   # Iran, water years Oct-Sep, from 1951
+python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 20s   # Iran reel in Persian
 ```
 
 ## Data and method
@@ -111,6 +113,16 @@ python -I src/onebit_water.py --theme gelb1 --cut 20s # the same in 20 s
   summers since 1901 came after 2000. Check: ERA5 with FAO-56 ET0 agrees from the 1960s on
   (2020s: −50 vs −49 mm), but its rain of the 1940s and 1950s is 20–35 mm below the
   stations', so it is not the record.
+
+- **Iran (`water.py --region iran`):** the same balance per water year (October to
+  September, Iran's rain falls October to May), from 1951, when CRU TS has stations within
+  reach of every cell of the country (before 1941 about three cells in four). Against
+  1951–1980, the water years 2016–2025 had less rain (237 → 206 mm) and more evaporation
+  (1509 → 1572 mm): 93 mm (93 litres per m²) less water every year, drier on all of Iran's
+  area; −93 mm per +1 °C of global temperature (95 %: −127 to −65). The six driest water
+  years since 1902 all came after 1999. CRU TS has fewer Iranian stations after 2010 (86 %
+  of cells in reach in the 2020s) and falls back on the long-term mean where none reports,
+  which damps rather than inflates the recent change.
 
 ## Data sources
 

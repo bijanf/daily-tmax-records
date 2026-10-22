@@ -92,7 +92,8 @@ class SoilFilm:
         dots[1562 - 620:1644 - 620] = False                     # a clear band under the footnotes
         self.dots = dots
 
-    def layout(self, cells: np.ndarray, win, p: int = PITCH, proj=None, extent=EXTENT, box=None) -> np.ndarray:
+    def layout(self, cells: np.ndarray, win, p: int = PITCH, proj=None, extent=EXTENT, box=None,
+               skip_top: bool = True) -> np.ndarray:
         """The halftone of a map window: Europe's cells pooled into lattice dots (area-weighted
         mean of a (window, cell) array, returned as (window, dot)), and the rest of the land as
         faint dots. box (x0, y0, w, h): where in the window the map goes; default all of it."""
@@ -108,7 +109,7 @@ class SoilFilm:
         centre = lambda k: np.c_[k % nx, k // nx] * p + p / 2 + [x0, y0]  # noqa: E731
         self.dot_xy = centre(keys)
         jj, ii = np.mgrid[0:ny, 0:nx]
-        other = land[jj * p + p // 2, ii * p + p // 2] & (jj >= ny // 8)   # no Greenland
+        other = land[jj * p + p // 2, ii * p + p // 2] & ((jj >= ny // 8) | (not skip_top))   # skip_top: no Greenland
         other = other.ravel()
         other[keys] = False
         self.other_xy = centre(np.flatnonzero(other))
