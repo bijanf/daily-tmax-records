@@ -18,6 +18,7 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `onebit/europe_drought[_<theme>].png`, `.mp4` | the same desktop for drought (`plot_onebit_drought.py`, default theme `sand` Streusand): stations whose driest growing season (March–August, rain minus Hargreaves evaporation) on record fell in the 2020s, against rain alone and a stable climate; numbers in `drought_log.txt` (`drought.py`) |
 | `onebit/social/<story>_<theme>_reel.mp4`, `_cover.png`, `_slide1-5.png` | Instagram cut (`--social`): a 30 s 9:16 loop that opens on the poster, rebuilds it and tours every window with the camera (2 x 2 px dots, BT.709, silent audio track), its cover, and a 5-slide 4:5 carousel |
 | `onebit/europe_scoreboard[_<theme>].png`, `social/europe_scoreboard_*` | Europe's extremes scoreboard (`plot_onebit_extremes.py`, default theme `beton`): how often days ≥ 35 °C, hot nights, dry seasons, downpours and frost days happen in 2016–2025 against 1961–1990, the year of each station's warmest night, and Vienna's two wettest days (2024); numbers in `extremes_log.txt` (`extremes.py`) |
+| `onebit/social/europe_soil_<theme>_reel.mp4`, `_cover.png` | DRY SOIL, WARM PLANET (`onebit_soil.py`, default theme `feld` Tempelhof.Feld): 36 s reel, global temperature bars since 1950 and Europe as a halftone of dots, each the number of summers out of ten in soil drought, walking from 1951–60 to 2017–26; numbers in `soil_log.txt` (`soil.py`), inputs from `get_soil.py` |
 | `onebit/social/<story>_<theme>_music.wav` | the reel's soundtrack (`onebit_audio.py`): minimal techno synthesized from scratch, 64 beats per film so it loops with the picture, with the data sonified (station blips, grid chirps, race glides) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
@@ -53,6 +54,9 @@ python -I src/plot_onebit_drought.py --web           # drought desktop: poster, 
 python -I src/plot_onebit_drought.py --theme uv --no-video --social   # Instagram: 30 s reel loop, cover, carousel
 python -I src/extremes.py > outputs/extremes_log.txt   # extremes scoreboard numbers
 python -I src/plot_onebit_extremes.py --no-video --social   # scoreboard reel with soundtrack
+python -I src/get_soil.py                              # ERA5-Land soil water (needs a CDS key), HadCRUT5, CPC
+python -I src/soil.py > outputs/soil_log.txt           # soil drought vs global temperature, with three checks
+python -I src/onebit_soil.py                           # soil reel with soundtrack (--stills: frames only)
 ```
 
 ## Data and method
@@ -83,11 +87,24 @@ python -I src/plot_onebit_extremes.py --no-video --social   # scoreboard reel wi
   stations and days linked) 200,000 times never gives a 7-year group above 9.4 : 1,
   against 23 : 1 for 2020–2026 (p < 5 × 10⁻⁶; `findings.py`, section 6).
 
+- **Soil drought (`soil.py`):** ERA5-Land monthly soil water, layers 0–7, 7–28 and
+  28–100 cm weighted by depth, mean of June–August, 0.1° cells of European countries
+  (Natural Earth) west of 45 E. A summer is a soil drought where it is drier than nine
+  in ten summers of 1951–1980 at that cell. In 1951–1980 that puts 10 % of Europe in
+  drought in an average summer; in 2017–2026, 32 %. The slope on global temperature
+  (HadCRUT5, against 1850–1900) is +16 points of Europe per +1 °C (95 %: +9 to +21,
+  moving-block bootstrap). Checks in `soil_log.txt`: the 20th percentile (20 → 46 %),
+  April–September (10 → 33 %), and the NOAA CPC soil moisture model instead of
+  ERA5-Land (10 → 27 %, +13 points per °C).
+
 ## Data sources
 
 NOAA NCEI GHCN-Daily (Menne et al. 2012, doi:10.1175/JTECH-D-11-00103.1), plus the
 open daily data of DWD, SMHI, KNMI, GeoSphere Austria and MeteoSwiss for the latest
-weeks. These services ask to be credited; the figures name them.
+weeks. These services ask to be credited; the figures name them. The soil story uses
+ERA5-Land (Muñoz-Sabater et al. 2021, doi:10.5194/essd-13-4349-2021; Copernicus Climate
+Change Service), HadCRUT5 (Morice et al. 2021, doi:10.1029/2019JD032361) and CPC soil
+moisture (Fan & van den Dool 2004, doi:10.1029/2003JD004345).
 
 ## Caveats
 

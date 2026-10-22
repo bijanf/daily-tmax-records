@@ -32,6 +32,7 @@ Themes recolour the whole scene:
     uv      Schwarzlicht  black light on the dance floor: ultraviolet, neon mint and magenta
     beton   Beton         Berlin concrete, black type, signal red
     nacht   Berlin.Nacht  the city at night: near black, signal-red heat, ice-blue cold
+    feld    Tempelhof.Feld  the old airfield in a dry August: straw grass, rust-red earth
 """
 
 from __future__ import annotations
@@ -134,6 +135,9 @@ THEMES = {
     "beton": Theme("Beton", field="#B9B8B2", ink="#141414", head="#161616", paper="#F2F1EC",
                    light="#D8D7D1", track="#C6C5BE", cold="#2A5AA6", hot="#D7191C",
                    levels=("#E3E2DC", "#9C9B95", "#4B4A46", "#141414"), accent="#D7191C"),
+    "feld": Theme("Tempelhof.Feld", field="#BDB487", ink="#1C1A12", head="#1F1C12", paper="#F7F4E6",
+                  light="#E6E0C6", track="#CEC7A6", cold="#2C5A86", hot="#A8361D",
+                  levels=("#E6E0C6", "#A79F78", "#59523A", "#1C1A12"), accent="#A8361D"),
 }
 
 # pixel icons of the badge, one character per 2 x 2 logical pixels
@@ -246,7 +250,7 @@ class Story:
     cut: str = ""                # name of the cut, in the file names ("one": one message per scene)
 
 
-def europe_raster(lon, lat, w: int, h: int):
+def europe_raster(lon, lat, w: int, h: int, extent=EXTENT):
     """Land mask of Europe (w x h px, Lambert conformal) and the pixel position of each station."""
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature
@@ -255,7 +259,7 @@ def europe_raster(lon, lat, w: int, h: int):
     proj = ccrs.LambertConformal(central_longitude=22, central_latitude=53, standard_parallels=(40, 64))
     fig = plt.figure(figsize=(w / 100, h / 100), dpi=100, facecolor="white")
     ax = fig.add_axes([0, 0, 1, 1], projection=proj)
-    ax.set_extent(EXTENT, crs=ccrs.PlateCarree())
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
     ax.spines["geo"].set_visible(False)
     ax.add_feature(cfeature.NaturalEarthFeature("physical", "land", "50m"), facecolor="black",
                    edgecolor="none", antialiased=False)
