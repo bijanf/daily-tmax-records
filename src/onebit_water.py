@@ -242,8 +242,6 @@ class WaterFilm(SoilFilm):
             for j, icon in enumerate(self.icons):                # big buckets, three to a row
                 if dr >= self.bucket_at(j):
                     c.icon(x + 10 + (j % 3) * 92, y + 160 + (j // 3) * 96, icon, th.hot, cell=7)
-            if dr >= self.bucket_at(len(self.icons) - 1) + self.beat:
-                c.text(x + 8, y + 368, f"= {-self.loss / 10:.1f} buckets".replace(".0 ", " "), size=34)
             return
         hi = int(self.ends[k])
         c.text(x + 8, y + 166, f"summer {hi - 9}–{str(hi)[2:]}", size=30)
