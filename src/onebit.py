@@ -797,10 +797,12 @@ class Desktop:
         return c.im
 
 
-def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, lang: str = "en"):
+def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, lang: str = "en",
+                 scale: float = 1.0):
     """Caption band of the story cut: scene counter, one bold line typed in word by word
     ({braces} in the hot colour, [brackets] in the cold one), one small line once the bold one is complete. Persian
-    runs right to left from the right margin."""
+    runs right to left from the right margin. scale > 1 sets the bold line that much bigger and
+    the small line half as much again (1.2: 20 % and 30 %)."""
     s, d = c.s, c.d
     sc = scenes[i]
     rtl = lang == "fa"
@@ -816,9 +818,12 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
     shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
     # two lines at full size; a longer title is set smaller rather than run into the small line
     sizes = ((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70))
+    sizes = tuple((round(px * scale), round(lead * scale)) for px, lead in sizes)
+    line = round(34 * (1 + 1.5 * (scale - 1)))
+    first = 350 + round((scale - 1) * 60)                  # a bigger title sits lower, clear of the counter
     for px, lead in sizes:
         big = _font(bold, px * s)
-        places, x, y, space = [], start, 350, big.getlength(" ") / s
+        places, x, y, space = [], start, first, big.getlength(" ") / s
         for w, _ in words:
             wl = big.getlength(w, direction=way) / s
             if w[0] in ":;,.!?؟،":    # punctuation after an accent phrase sticks to it
@@ -827,11 +832,11 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
                 x, y = start, y + lead
             places.append((x - wl if rtl else x, y))
             x = x - wl - space if rtl else x + wl + space
-        if y <= 350 + lead:
+        if y <= first + lead:
             break
     # the title grows while it is read, about its first corner, and each word pops in
     grow = 0.85 + 0.15 * ease(prog(dt, 0.0, 3.0)) if np.isfinite(dt) else 1.0
-    top = 350 - px
+    top = first - px
     for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
         if k >= shown:
             continue
@@ -847,7 +852,7 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
         d.text((mid * s, base), w, font=_font(bold, size), fill=accent or th.head, anchor="ms", direction=way)
     y = top + (places[-1][1] - top) * grow
     if sc.line and dt > 0.9:
-        d.text((start * s, (y + (72 if rtl else 66)) * s), sc.line, font=_font(text, 34 * s), fill=th.head,
+        d.text((start * s, (y + (72 if rtl else 66) * scale) * s), sc.line, font=_font(text, line * s), fill=th.head,
                anchor="rs" if rtl else "ls", direction=way)
 
 

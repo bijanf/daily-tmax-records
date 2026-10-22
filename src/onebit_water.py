@@ -13,8 +13,9 @@ window jumps five years per beat and the map follows. A small box beside the map
 plain words: litres less water per m², then rain and evaporation, then the litres as 10-litre
 buckets (a half-filled one for the rest). Five scenes, 18 bars of 112 BPM = 38.6 s, with
 onebit_chip's 8-bit soundtrack: every bar and every step a note. The 20 s cut (--cut 20s): 9
-bars of 108 BPM, everything stepping twice as fast, fewer words. --lang fa: Persian, right to
-left, in Vazirmatn with Persian digits.
+bars of 108 BPM, everything stepping twice as fast, fewer words; the 25 s cut (--cut 25s): 10
+bars of 96 BPM, calmer, with captions a fifth bigger. --lang fa: Persian, right to left, in
+Vazirmatn with Persian digits.
 
     outputs/onebit/social/<region>_water_<theme>[_20s][_fa]_reel.mp4, _cover.png, _music.wav
 
@@ -41,10 +42,11 @@ from onebit import (FA_BOLD, FA_TEXT, FOLLOW, FULL, GROTESK, LEFT, MONO, OUT, PI
                     Canvas, Scene, Timeline, caption_band, fa)
 from onebit_soil import SoilFilm  # noqa: E402
 
-# two cuts: tempo, scene lengths (bars), beats before the bars rise and per bar, beats before the
-# map walks and per step (and per bucket), beats before the first bucket
-CUTS = {"long": dict(bpm=112, bars=(2, 3, 7, 3, 3), lead=2, rise=1 / 4, wait=1, step=1, drop=2),
-        "20s": dict(bpm=108, bars=(1.5, 1.5, 3, 1.5, 1.5), lead=1, rise=1 / 8, wait=0, step=1 / 2, drop=1)}
+# the cuts: tempo, scene lengths (bars), beats before the bars rise and per bar, beats before the
+# map walks and per step (and per bucket), beats before the first bucket, caption size
+CUTS = {"long": dict(bpm=112, bars=(2, 3, 7, 3, 3), lead=2, rise=1 / 4, wait=1, step=1, drop=2, caption=1.0),
+        "20s": dict(bpm=108, bars=(1.5, 1.5, 3, 1.5, 1.5), lead=1, rise=1 / 8, wait=0, step=1 / 2, drop=1, caption=1.0),
+        "25s": dict(bpm=96, bars=(2, 2, 3, 1.5, 1.5), lead=1, rise=1 / 4, wait=1, step=1 / 2, drop=1, caption=1.2)}
 # the map of each region: its frame (water.REGIONS), halftone pitch (CRU's 0.5 deg cells need
 # wider dots over a small country), the litres of the four dot sizes, and how the "why" box
 # counts: per cent, or litres when both rain and evaporation moved
@@ -354,7 +356,7 @@ class WaterFilm(SoilFilm):
         self.gmt_window(c, t, k)
         self.map_window(c, k, self.calm(t), t)
         c.text(LEFT, 1596, SOURCES, MONO, 20, self.th.head)
-        caption_band(c, self.th, self.S.scenes, i, dt, self.S.os_name, self.lang)
+        caption_band(c, self.th, self.S.scenes, i, dt, self.S.os_name, self.lang, self.pace["caption"])
         return c.im
 
 
@@ -363,7 +365,7 @@ def main() -> None:
     ap.add_argument("--region", default="europe", choices=list(MAPS))
     ap.add_argument("--lang", default="en", choices=("en", "fa"))
     ap.add_argument("--theme", default="kanal", choices=list(onebit.THEMES), help="colour theme")
-    ap.add_argument("--cut", default="long", choices=list(CUTS), help="long (38.6 s) or 20s")
+    ap.add_argument("--cut", default="long", choices=list(CUTS), help="long (38.6 s), 20s or 25s")
     ap.add_argument("--stills", action="store_true", help="cover and seven frames only, no video")
     args = ap.parse_args()
     film = WaterFilm(water.compute(args.region), onebit.THEMES[args.theme], args.cut, args.lang)

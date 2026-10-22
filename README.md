@@ -63,7 +63,7 @@ python -I src/water.py > outputs/water_log.txt         # summer water balance: r
 python -I src/onebit_water.py --theme gelb1           # water reel with the 8-bit soundtrack (38.6 s)
 python -I src/onebit_water.py --theme gelb1 --cut 20s # the same in 20 s
 python -I src/water.py --region iran > outputs/water_iran_log.txt   # Iran, water years Oct-Sep, from 1951
-python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 20s   # Iran reel in Persian
+python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 25s   # Iran reel in Persian, 25 s, big captions
 ```
 
 ## Data and method
@@ -122,7 +122,9 @@ python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 20s 
   area; −93 mm per +1 °C of global temperature (95 %: −127 to −65). The six driest water
   years since 1902 all came after 1999. CRU TS has fewer Iranian stations after 2010 (86 %
   of cells in reach in the 2020s) and falls back on the long-term mean where none reports,
-  which damps rather than inflates the recent change.
+  which damps rather than inflates the recent change. ERA5 with FAO-56 ET0 (the check) finds
+  more: rain −18 mm, evaporation +117 mm, a balance 135 mm lower (2017–2026), drier on 99 %
+  of the area, every one of its six driest water years after 1999 (2025 the driest).
 
 ## Data sources
 
