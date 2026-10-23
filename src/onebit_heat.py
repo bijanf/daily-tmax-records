@@ -22,7 +22,9 @@ Model estimates for cities only, not counted deaths. Estimates of 2022 for all o
 larger, so the comparison holds only within these 854 cities.
 
 A still 1-bit desktop: two windows that never move. On top 504 squares, one per hundred deaths
-(rounded): hollow for a death, solid for a death the warming added. Below, the count, then the
+(rounded): hollow for a death, solid for a death the warming added; once the squares have
+turned, the chart says it in one line beside them: 65 % human-made warming, 35 % would have
+died anyway (the same summer in a climate without the warming). Below, the count, then the
 five countries with the most deaths, then all of summer 2022 against the warming's share of
 2026. The first scene shows the finished picture under the question, so the last frame loops
 into the first. Five scenes, 11 bars of 96 BPM = 27.5 s, with onebit_bell's bells and clock:
@@ -56,7 +58,7 @@ TOTAL, WARMING, Y2022, CITIES = 50_391, 32_619, 29_480, 854
 COUNTRIES = (("Italy", 13_303), ("France", 7_268), ("Spain", 6_824), ("Germany", 6_340), ("UK", 4_354))
 SHARE = round(100 * WARMING / TOTAL)            # 65 %: a little under two in three
 PER = 100                                       # deaths per square
-COLS, ROWS = 28, 18                             # 504 squares
+COLS, ROWS = 24, 21                             # 504 squares, leaving room for the labels
 SQUARES, SOLID = round(TOTAL / PER), round(WARMING / PER)
 assert SQUARES == COLS * ROWS and WARMING > Y2022
 
@@ -65,15 +67,16 @@ assert SQUARES == COLS * ROWS and WARMING > Y2022
 PACE = dict(bpm=96, bars=(2, 2, 2, 2, 3), lead=1, row=1 / 4, wait=1, turn=1 / 4, country=1, caption=1.2)
 SCENES = (("How many people did {this summer’s heat} kill?", f"a model estimate for {CITIES} European cities"),
           (f"An estimated {{{TOTAL:,}}} heat deaths", f"each square: {PER} deaths (rounded)"),
-          ("{Almost 2 in 3} deaths from human-made warming", f"solid square: {PER} deaths added by warming"),
+          ("Almost {2 in 3} deaths: human-made warming", "the other 1 in 3 would have died anyway"),
           ("Most deaths: {Italy}", "estimated heat deaths, June–August 2026"),
           ("Warming alone: more than {all of summer 2022}", "Follow for more climate data in 1-bit"))
 SOURCES = "Estimates: Barnes et al., Imperial College London · LSHTM, 2026"
 TOLL_WIN = (60, 628, 900, 594)      # x, y, w, h: both windows stand still all film long, clear of
 COUNT_WIN = (60, 1236, 900, 290)    # the app's buttons on the right and its caption at the bottom
 FOOTER = 1560                       # baseline of the source line
-PITCH, SQ, STROKE = 30, 23, 3       # the squares: grid pitch, side, outline of a hollow one
-GRID = (93, 669)                    # top-left square: the grid centred in the toll window
+PITCH, SQ, STROKE = 26, 20, 3       # the squares: grid pitch, side, outline of a hollow one
+GRID = (85, 666)                    # top-left square
+BRACKET, LABEL = 723, 745           # x of the brackets and the labels right of the grid
 HATCH = np.add.outer(np.arange(80), np.arange(1200)) // 3 % 2 == 0      # MacPaint-style diagonal fill
 
 
@@ -152,14 +155,33 @@ class HeatFilm:
         for k in range(rows * COLS):
             r, q = divmod(k, COLS)
             self.square(c, GRID[0] + q * PITCH, GRID[1] + r * PITCH, k < solid)
+        if rows == ROWS and solid == SOLID:
+            self.split(c)
 
-    def legend(self, c: Canvas, x, y, solid: bool):
-        """What a square means, in the corner of the count window."""
-        self.square(c, x, y - SQ + 4, False)
-        c.text(x + SQ + 12, y, f"{PER} deaths", size=36)
-        if solid:
-            self.square(c, x, y + 46 - SQ + 4, True)
-            c.text(x + SQ + 12, y + 46, f"{PER} added by warming", size=36)
+    def split(self, c: Canvas):
+        """The message beside the squares: a bracket along the full solid rows with the warming's
+        share in inverse video, one along the full hollow rows with the rest."""
+        th = self.th
+        full = SOLID // COLS                             # rows all solid; the next row is mixed
+        top, mid = GRID[1], GRID[1] + full * PITCH - (PITCH - SQ)
+        low, bottom = GRID[1] + (full + 1) * PITCH, GRID[1] + (ROWS - 1) * PITCH + SQ
+        for a, b in ((top, mid), (low, bottom)):
+            c.fill(BRACKET, a, BRACKET + 4, b, th.ink)
+            c.fill(BRACKET - 10, a, BRACKET + 4, a + 4, th.ink)
+            c.fill(BRACKET - 10, b - 4, BRACKET + 4, b, th.ink)
+        y = (top + mid) / 2
+        c.chip(LABEL, y, f"{SHARE} %", 64, fg=th.field, bg=th.ink, pad=6, path=GROTESK)
+        c.text(LABEL, y + 50, "human-made", size=36)
+        c.text(LABEL, y + 84, "warming", size=36)
+        y = (low + bottom) / 2 - 10
+        c.text(LABEL + 6, y, f"{100 - SHARE} %", GROTESK, 64, th.ink)
+        c.text(LABEL, y + 50, "would have", size=36)
+        c.text(LABEL, y + 84, "died anyway", size=36)
+
+    def legend(self, c: Canvas, x, y):
+        """What a square means, in the corner of the count window (the chart names the split)."""
+        self.square(c, x, y - SQ + 2, False)
+        c.text(x + SQ + 12, y, f"= {PER} deaths", size=36)
 
     def count_window(self, c: Canvas, t: float):
         th = self.th
@@ -176,7 +198,7 @@ class HeatFilm:
             c.text(x0 + 14, y0 + 116, f"{n:,}", GROTESK, 110, th.ink)
             c.text(x0 + 20, y0 + 170, label, size=40)
             c.text(x0 + 20, y0 + 214, sub, size=36)
-            self.legend(c, x1 - 390, y0 + 60, i != 1)
+            self.legend(c, x1 - 300, y0 + 60)
             return
         if i == 3:                                       # the five countries, one per beat
             shown = self.steps(t, 3, PACE["lead"], PACE["country"], len(COUNTRIES))

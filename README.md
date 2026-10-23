@@ -66,6 +66,9 @@ python -I src/onebit_water.py --theme gelb1 --cut 20s # the same in 20 s
 python -I src/water.py --region iran > outputs/water_iran_log.txt   # Iran, water years Oct-Sep, from 1951
 python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 25s   # Iran reel in Persian, 25 s, big captions
 python -I src/onebit_heat.py                           # heat-deaths reel with the bell soundtrack (27.5 s; --stills: frames only)
+python -I src/onebit_hook.py IMG.mov outputs/onebit/social/eu_heat_toll_ziegel1_reel.mp4 --theme ziegel1 \
+    --cut 2.08-4.45:"50,000" --cut 4.78-6.00:"{heat} deaths"   # a face-to-camera hook in front of a reel:
+                                                       # captions, raw and 1-bit, voice and music at one loudness
 ```
 
 ## Data and method

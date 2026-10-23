@@ -3,7 +3,9 @@
 Cuts the spoken phrases out of a phone video (dropping the silence around them), burns the
 words in as captions (a light chip, {braces} in the hot colour, [brackets] in the cold one,
 words appearing in step with each phrase), optionally dithers the face to 1 bit in the
-theme's colours, switches the screen off like an old monitor, and joins the reel after it.
+theme's colours, switches the screen off like an old monitor, and joins the reel after it. The
+voice is set to -12 LUFS and the reel's sound to the voice's loudness (only ever turned down),
+so the music does not jump in louder than the words.
 
     python -I src/onebit_hook.py IMG_6378.mov outputs/onebit/social/europe_race_beton_reel.mp4 \\
         --cut 1.40-4.60:"Europe is breaking {heat} records." \\
@@ -27,7 +29,7 @@ import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw  # noqa: E402
 
 import onebit  # noqa: E402
-from onebit import BOLD, FPS, SOCIAL_CRF, _font, dither, ease, prog, smooth  # noqa: E402
+from onebit import BOLD, FPS, SOCIAL_CRF, _font, dither, smooth  # noqa: E402
 
 W, H = 1080, 1920
 OFF = 0.35          # seconds of the screen switching off at the end of the hook
@@ -54,7 +56,8 @@ def one_bit(rgb: np.ndarray, th: onebit.Theme, dot: int = 2) -> np.ndarray:
 
 
 def caption(im: Image.Image, text: str, p: float, th: onebit.Theme):
-    """The phrase on a light chip in the upper third; words appear as p runs from 0 to 1."""
+    """The phrase on a light chip in the upper third; words appear as p runs from 0 to 1. In a
+    two-colour theme the accents are inverse video, as in the reel's caption band."""
     d = ImageDraw.Draw(im)
     words = [(w, {"{": th.hot, "[": th.cold}.get(part[0])) for part in re.split(r"(\{[^}]*\}|\[[^]]*\])", text)
              if part for w in part.strip("{}[]").split()]
@@ -78,6 +81,10 @@ def caption(im: Image.Image, text: str, p: float, th: onebit.Theme):
         x = (W - (sum(wl for _, _, wl in ln) + space * (len(ln) - 1))) / 2
         for w, colour, wl in ln:
             if k < shown:
+                if colour and th.mono:                   # two colours only: the accent in inverse video
+                    y = top + j * lead
+                    d.rectangle([x - 8, y - 66, x + wl + 8, y + 20], fill=th.ink)
+                    colour = th.field
                 d.text((x, top + j * lead), w, font=font, fill=colour or th.ink, anchor="ls")
             x += wl + space
             k += 1
@@ -111,7 +118,7 @@ def hook(src: Path, cuts, th: onebit.Theme, dithered: bool, out: Path) -> float:
     voice = tmp / "voice.wav"
     total = sum(t1 - t0 for t0, t1, _ in cuts) + OFF     # padded with silence to the hook's length
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(tmp / "list.txt"),
-                    "-af", f"loudnorm=I=-14:TP=-1.5:LRA=7,apad=whole_dur={total:.3f}", "-ar", "48000", str(voice)],
+                    "-af", f"loudnorm=I=-12:TP=-1.5:LRA=7,apad=whole_dur={total:.3f}", "-ar", "48000", str(voice)],
                    check=True)
     video = []
     for t0, t1, text in cuts:
@@ -136,10 +143,19 @@ def hook(src: Path, cuts, th: onebit.Theme, dithered: bool, out: Path) -> float:
     return seconds
 
 
+def loudness(path: Path) -> float:
+    """Integrated loudness of a file's sound in LUFS (EBU R128)."""
+    err = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-vn", "-af", "ebur128", "-f", "null",
+                          "-"], capture_output=True, text=True, check=True).stderr
+    return float(re.findall(r"I:\s+(-?[\d.]+) LUFS", err)[-1])
+
+
 def join(first: Path, second: Path, out: Path) -> None:
-    """The hook, then the reel, re-encoded as one file."""
+    """The hook, then the reel, re-encoded as one file; the reel's sound no louder than the voice."""
+    gain = min(0.0, loudness(first) - loudness(second))
+    print(f"reel sound {gain:+.1f} dB to meet the voice")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(first), "-i", str(second), "-filter_complex",
-                    "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]", "-map", "[v]", "-map", "[a]",
+                    f"[1:a]volume={gain:.2f}dB[b];[0:v][0:a][1:v][b]concat=n=2:v=1:a=1[v][a]", "-map", "[v]", "-map", "[a]",
                     "-c:v", "libx264", "-preset", "slow", "-crf", str(SOCIAL_CRF), "-profile:v", "high",
                     "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
                     "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out)], check=True)
