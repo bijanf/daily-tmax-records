@@ -38,6 +38,7 @@ Themes recolour the whole scene:
     gelb1   BVG.Gelb.1bit   true 1-bit: U-Bahn yellow and black, nothing else
     firuzeh Firuzeh.1bit    true 1-bit: Persian turquoise (firuzeh) and black
     ziegel1 Ziegel.1bit     true 1-bit: the terracotta brick of Kreuzberg's old factories and black
+    luft1   Berliner.Luft.1bit  true 1-bit: the pale blue of the air over Berlin, and black
 """
 
 from __future__ import annotations
@@ -157,6 +158,9 @@ THEMES = {
     "ziegel1": Theme("Ziegel.1bit", field="#D9805F", ink="#161010", head="#161010", paper="#D9805F",
                      light="#D9805F", track="#161010", cold="#161010", hot="#161010",
                      levels=("#D9805F", "#161010", "#161010", "#161010"), title="#D9805F", mono=True),
+    "luft1": Theme("Berliner.Luft.1bit", field="#93B4D4", ink="#111418", head="#111418", paper="#93B4D4",
+                   light="#93B4D4", track="#111418", cold="#111418", hot="#111418",
+                   levels=("#93B4D4", "#111418", "#111418", "#111418"), title="#93B4D4", mono=True),
     "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
                    light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
                    levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
@@ -808,31 +812,56 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
     runs right to left from the right margin. scale > 1 sets the bold line that much bigger and
     the small line half as much again (1.2: 20 % and 30 %)."""
     s, d = c.s, c.d
-    sc = scenes[i]
     rtl = lang == "fa"
-    bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
-    start = RIGHT if rtl else LEFT
     d.rectangle([0, 0, c.im.width, CAPTION * s], fill=th.field)
     d.rectangle([LEFT * s, CAPTION * s, RIGHT * s, (CAPTION + 1) * s], fill=th.ink)
-    d.text((start * s, 262 * s), f"[{i + 1:02d}/{len(scenes):02d}] {label}", font=_font(MONO, 22 * s),
-           fill=th.head, anchor="rs" if rtl else "ls")
-    # {braces}: accent in the hot colour; [brackets]: in the cold colour
-    words = [(w, {"{": th.hot, "[": th.cold}.get(part[0])) for part in re.split(r"(\{[^}]*\}|\[[^]]*\])", sc.title)
-             if part for w in part.strip("{}[]").split()]
-    shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
+    d.text(((RIGHT if rtl else LEFT) * s, 262 * s), f"[{i + 1:02d}/{len(scenes):02d}] {label}",
+           font=_font(MONO, 22 * s), fill=th.head, anchor="rs" if rtl else "ls")
+    title(c, th, scenes[i], dt, lang, scale)
+
+
+def words_of(text: str, th: Theme) -> list:
+    """The words of a title with their accent: {braces} in the hot colour, [brackets] in the cold."""
+    return [(w, {"{": th.hot, "[": th.cold}.get(part[0])) for part in re.split(r"(\{[^}]*\}|\[[^]]*\])", text)
+            if part for w in part.strip("{}[]").split()]
+
+
+def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: float = 1.0, left=LEFT,
+          right=RIGHT, first=None, appear=None, sizes=None):
+    """The bold line of a scene between x = left and right, its first baseline at y = first, typed
+    in word by word, and its small line once the bold one is complete. A word "//" breaks the
+    line there. appear: the time (s into the scene) each word comes in; by default all within
+    0.6 s. sizes: (px, leading) of the bold line at full size and at the smaller size it falls back
+    to beyond two lines."""
+    s, d = c.s, c.d
+    rtl = lang == "fa"
+    bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
+    start = right if rtl else left
+    words, breaks = [], set()
+    for w, accent in words_of(sc.title, th):
+        if w == "//":
+            breaks.add(len(words))
+        else:
+            words.append((w, accent))
+    if appear is None:              # all words within 0.6 s, counted as the caption band always has
+        appear = [0.15 + 0.6 * k / len(words) for k in range(len(words))]
+        shown = int(np.ceil(len(words) * prog(dt, 0.15, 0.6))) if np.isfinite(dt) else len(words)
+    else:
+        shown = sum(dt > a for a in appear) if np.isfinite(dt) else len(words)
     # two lines at full size; a longer title is set smaller rather than run into the small line
-    sizes = ((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70))
+    sizes = sizes or (((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70)))
     sizes = tuple((round(px * scale), round(lead * scale)) for px, lead in sizes)
     line = round(34 * (1 + 1.5 * (scale - 1)))
-    first = 350 + round((scale - 1) * 60)                  # a bigger title sits lower, clear of the counter
+    if first is None:
+        first = 350 + round((scale - 1) * 60)              # a bigger title sits lower, clear of the counter
     for px, lead in sizes:
         big = _font(bold, px * s)
         places, x, y, space = [], start, first, big.getlength(" ") / s
-        for w, _ in words:
+        for k, (w, _) in enumerate(words):
             wl = big.getlength(w, direction=way) / s
             if w[0] in ":;,.!?؟،":    # punctuation after an accent phrase sticks to it
                 x += space if rtl else -space
-            elif (x < start and x - wl < LEFT) if rtl else (x > start and x + wl > RIGHT):
+            elif k in breaks or ((x < start and x - wl < left) if rtl else (x > start and x + wl > right)):
                 x, y = start, y + lead
             places.append((x - wl if rtl else x, y))
             x = x - wl - space if rtl else x + wl + space
@@ -844,7 +873,7 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
     for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
         if k >= shown:
             continue
-        pop = 0.6 + 0.4 * ease(prog(dt, 0.15 + 0.6 * k / len(words), 0.25)) if np.isfinite(dt) else 1.0
+        pop = 0.6 + 0.4 * ease(prog(dt, appear[k], 0.25)) if np.isfinite(dt) else 1.0
         mid = start + (x + big.getlength(w, direction=way) / s / 2 - start) * grow
         size = max(8, round(px * grow * pop * s))
         base = (top + (y - top) * grow) * s
@@ -862,18 +891,20 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
 
 def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: str | None = None) -> None:
     """H.264 in BT.709 (what phones assume). audio: None, "silent" (an empty track), "music"
-    (onebit_audio's techno), "chip" (onebit_chip's 8-bit tune) or "bell" (onebit_bell's slow
-    bells and clock), timed to the film; the WAV is kept beside the video."""
+    (onebit_audio's techno), "chip" (onebit_chip's 8-bit tune), "bell" (onebit_bell's slow
+    bells and clock) or "steam" (onebit_steam's engine and steam organ), timed to the film; the
+    WAV is kept beside the video."""
     ow, oh = size
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}",
            "-r", str(FPS), "-i", "-"]
     if audio == "silent":
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
-    elif audio in ("music", "chip", "bell"):
+    elif audio in ("music", "chip", "bell", "steam"):
         import onebit_audio
         import onebit_bell
         import onebit_chip
-        engine = {"music": onebit_audio, "chip": onebit_chip, "bell": onebit_bell}[audio]
+        import onebit_steam
+        engine = {"music": onebit_audio, "chip": onebit_chip, "bell": onebit_bell, "steam": onebit_steam}[audio]
         wav = engine.write(desk, path.with_name(path.stem.removesuffix("_reel") + "_music.wav"))
         cmd += ["-i", str(wav)]
         print("saved", wav)
