@@ -5,7 +5,9 @@ that ask for quiet: two-operator FM bells (the tubular bells of the early digita
 in A minor, an electric piano holding one chord per bar (Am, F, C, G), a low drone on A and E
 that swells scene by scene, a clock that ticks every beat, and from the second scene a soft
 double pulse on the first beat of each bar, like a slow heart. A heavy bell tolls at the turns
-of the story. Every tail wraps round to the start, so the track loops with the picture.
+of the story. The close comes home: the last two bars play G and A minor, the tune falls to A
+and rings out, the clock and the heart stop and the drone dies away. Every tail wraps round to
+the start, so the track loops with the picture.
 
 Sounds of the story: each caption word a soft typewriter tick; `desk.melody()` gives the data
 as bell notes (time, step on the scale with 0 the tonic, length, gain), echoed three
@@ -25,7 +27,7 @@ RNG = np.random.default_rng(23)
 SCALE = (0, 2, 3, 5, 7, 8, 10)              # natural minor
 TONIC = 69                                  # A4: the bells sit above the piano
 CHORDS = ((45, 52, 57, 60), (41, 48, 53, 57), (48, 55, 60, 64), (43, 50, 55, 59))   # Am, F, C, G
-MOTIF = (4, 2, 0, -1, 0, -3)                # the close, in quarter notes: falling home to A
+MOTIF = (4, 2, 0, -1)                       # the close, in quarter notes (E C A G), then home to A
 
 
 def hz(note: float) -> float:
@@ -91,12 +93,12 @@ def toll(note=45, length=5.0):
     return _fade((out + strike) * 0.35, 0.001, 0.3)
 
 
-def drone(length):
-    """A and E, low, breathing slowly."""
+def drone(length, release=0.5):
+    """A and E, low, breathing slowly; `release` seconds to die away."""
     n = int(length * SR)
     t = _t(n)
     x = sum(g * np.sin(2 * np.pi * hz(note) * t) for note, g in ((33, 0.6), (40, 0.35), (45, 0.2)))
-    return _fade(x * (0.75 + 0.25 * np.sin(2 * np.pi * t / 6.0)) * 0.5, 0.5, 0.5)
+    return _fade(x * (0.75 + 0.25 * np.sin(2 * np.pi * t / 6.0)) * 0.5, 0.5, release)
 
 
 def tick(high=True):
@@ -152,26 +154,30 @@ def soundtrack(desk) -> np.ndarray:
     m = Mixer(end)
     hb = heart()
     swell = (0.25, 0.35, 0.45, 0.45, 0.4)
-    for i in range(len(starts) - 1):
-        m.add(drone(starts[i + 1] - starts[i] + 1.0), starts[i], swell[min(i, len(swell) - 1)])
+    last = len(starts) - 2
+    for i in range(last + 1):                           # the last scene's drone dies away over its last bar
+        length, release = (starts[i + 1] - starts[i] + 1.0, 0.5) if i < last else (end - starts[i], bar)
+        m.add(drone(length, release), starts[i], swell[min(i, len(swell) - 1)])
     nbar = int(round(end / bar))
     for b in range(nbar):
         t0 = b * bar
-        chord = CHORDS[b % len(CHORDS)]
-        m.add(piano(chord, bar * 1.6), t0, 0.55, pan=-0.2)
-        for j in range(4):
-            m.add(tick(j % 2 == 0), t0 + j * spb, 0.5 if t0 >= sec(1) else 0.3, pan=0.35)
-        if t0 >= sec(1):
-            m.add(hb, t0, 0.8)
+        final, cadence = b == nbar - 1, b == nbar - 2
+        chord = CHORDS[0] if final else CHORDS[3] if cadence else CHORDS[b % len(CHORDS)]
+        m.add(piano(chord, bar * (2.4 if final else 1.6)), t0, 0.55, pan=-0.2)
+        if not final:                                    # in the last bar the clock and the heart stop
+            for j in range(4):
+                m.add(tick(j % 2 == 0), t0 + j * spb, 0.5 if t0 >= sec(1) else 0.3, pan=0.35)
+            if t0 >= sec(1):
+                m.add(hb, t0, 0.8)
         if sec(3) <= t0 < sec(4):                        # the countries: the chord rings out in eighths
             for j in range(8):
                 m.add(bell(chord[j % 4] + 24, 0.8, tau=0.4), t0 + j * 2 * s16, 0.15, pan=0.5 - 0.15 * (j % 4))
-        if t0 >= sec(4):                                 # the close: the tune falls home to A
-            k = int(round((t0 - sec(4)) / bar))
-            for j in range(4):
-                idx = 4 * k + j
-                if idx < len(MOTIF):
-                    m.add(bell(step_note(MOTIF[idx]), 2.0, tau=0.8), t0 + j * spb, 0.45, pan=-0.1)
+        if cadence and t0 >= sec(4):                     # the close: the tune falls toward home...
+            for j, st in enumerate(MOTIF):
+                m.add(bell(step_note(st), 2.0, tau=0.8), t0 + j * spb, 0.45, pan=-0.1)
+        if final:                                        # ...and lands on A, two octaves ringing out
+            m.add(bell(step_note(0), 4.0, tau=1.6), t0, 0.6, pan=-0.1)
+            m.add(bell(step_note(-7), 4.0, tau=1.8), t0, 0.35, pan=0.2)
 
     # the data as bells, quantised to sixteenths, echoed three sixteenths later on the other side
     if hasattr(desk, "melody"):

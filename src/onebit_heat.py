@@ -14,12 +14,13 @@ higher.
 A still 1-bit desktop: two windows that never move. On top 504 squares, one per hundred people:
 a hollow square for a death, a solid one for a death the warming added. Below, the count, then
 the five countries hit hardest, then all of 2022 against the warming's share of 2026. Five
-scenes, 10 bars of 96 BPM = 25 s, with onebit_bell's bells and clock: each row of squares a
-bell, a toll when the squares turn solid and when the warming's share passes 2022.
+scenes, 11 bars of 96 BPM = 27.5 s, with onebit_bell's bells and clock: each row of squares a
+bell, a toll when the squares turn solid and when the warming's share passes 2022. The last
+scene holds the answer for three bars while the music comes home to A minor and goes quiet.
 
     outputs/onebit/social/eu_heat_toll_<theme>_reel.mp4, _cover.png, _music.wav
 
-    python -I src/onebit_heat.py                  # Ziegel.1bit, 25 s
+    python -I src/onebit_heat.py                  # Ziegel.1bit, 27.5 s
     python -I src/onebit_heat.py --stills         # cover and seven frames, no video
 """
 
@@ -49,7 +50,7 @@ assert SQUARES == COLS * ROWS
 
 # tempo, scene lengths (bars), beats before the rows fill and per row, before the squares turn
 # solid and per row, before the countries and per country, caption size
-PACE = dict(bpm=96, bars=(2, 2.5, 2, 2, 1.5), lead=1, row=1 / 4, wait=1, turn=1 / 4, country=1, caption=1.2)
+PACE = dict(bpm=96, bars=(2, 2, 2, 2, 3), lead=1, row=1 / 4, wait=1, turn=1 / 4, country=1, caption=1.2)
 SCENES = (("How many people did {this summer's heat} kill?", "an estimate for 854 European cities"),
           ("{50,391} deaths in one summer", "each square: 100 people"),
           ("{2 in 3} from human-made warming", "solid square: deaths the warming added"),
