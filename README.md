@@ -20,6 +20,7 @@ TMAX ever measured on that day, 90-degree label = the year that set the record.
 | `onebit/europe_scoreboard[_<theme>].png`, `social/europe_scoreboard_*` | Europe's extremes scoreboard (`plot_onebit_extremes.py`, default theme `beton`): how often days ≥ 35 °C, hot nights, dry seasons, downpours and frost days happen in 2016–2025 against 1961–1990, the year of each station's warmest night, and Vienna's two wettest days (2024); numbers in `extremes_log.txt` (`extremes.py`) |
 | `onebit/social/europe_soil_<theme>_reel.mp4`, `_cover.png` | DRY SOIL, WARM PLANET (`onebit_soil.py`, default theme `feld` Tempelhof.Feld): 36 s reel, global temperature bars since 1950 and Europe as a halftone of dots, each the number of summers out of ten in soil drought, walking from 1951–60 to 2017–26; numbers in `soil_log.txt` (`soil.py`), inputs from `get_soil.py` |
 | `onebit/social/europe_water_<theme>_reel.mp4`, `_cover.png` | SAME RAIN, HOTTER AIR (`onebit_water.py`, default theme `kanal` Landwehr.Kanal; `--theme pink1` or `gelb1` for true two-colour 1-bit, accents in inverse video): a still 39 s 1-bit desktop with an 8-bit soundtrack (`onebit_chip.py`): 25 five-year temperature bars since 1901, and Europe in Mercator as a halftone of square dots (solid red drier, hollow wetter than 1951–80) that steps five years per beat from 1901–10 to 2016–25; a plain-words box: litres less water per m², rain "same", evaporation "+13 %", buckets; numbers in `water_log.txt` (`water.py`), inputs from `get_water.py` |
+| `onebit/social/eu_heat_toll_<theme>_reel.mp4`, `_cover.png` | HEAT'S TOLL (`onebit_heat.py`, default theme `ziegel1` Ziegel.1bit): a still 27.5 s two-colour desktop with slow bells (`onebit_bell.py`): the heat deaths of 854 European cities in June–August 2026 as 504 squares of 100 deaths, solid where human-made warming added them, the five countries with the most deaths, and summer 2022 against the warming's share of 2026. Published estimates of Imperial College London and LSHTM, not computed here (see Data sources) |
 | `onebit/social/<story>_<theme>_music.wav` | the reel's soundtrack (`onebit_audio.py`): minimal techno synthesized from scratch, 64 beats per film so it loops with the picture, with the data sonified (station blips, grid chirps, race glides) |
 | `stations/index.html` | every station in a sortable, filterable table with thumbnails (open locally) |
 | `stations/station_index.csv` | per-station summary: years, data end, records in the 2020s vs expected, top year, hottest record |
@@ -64,6 +65,7 @@ python -I src/onebit_water.py --theme gelb1           # water reel with the 8-bi
 python -I src/onebit_water.py --theme gelb1 --cut 20s # the same in 20 s
 python -I src/water.py --region iran > outputs/water_iran_log.txt   # Iran, water years Oct-Sep, from 1951
 python -I src/onebit_water.py --region iran --lang fa --theme firuzeh --cut 25s   # Iran reel in Persian, 25 s, big captions
+python -I src/onebit_heat.py                           # heat-deaths reel with the bell soundtrack (27.5 s; --stills: frames only)
 ```
 
 ## Data and method
@@ -135,7 +137,12 @@ ERA5-Land (Muñoz-Sabater et al. 2021, doi:10.5194/essd-13-4349-2021; Copernicus
 Change Service), HadCRUT5 (Morice et al. 2021, doi:10.1029/2019JD032361) and CPC soil
 moisture (Fan & van den Dool 2004, doi:10.1029/2003JD004345); the water story CRU TS (Harris et
 al. 2020, doi:10.1038/s41597-020-0453-3), ERA5 (Hersbach et al. 2020, doi:10.1002/qj.3803) and
-FAO-56 (Allen et al. 1998).
+FAO-56 (Allen et al. 1998). The heat-deaths reel draws published numbers, not ours: Barnes et
+al., "Heat-related urban mortality attributable to human-induced climate change in Europe in
+summer 2026" (Imperial College London and LSHTM, Grantham Institute report, 23 October 2026,
+accepted in Nature Health, https://spiral.imperial.ac.uk/handle/10044/1/147042), with the
+attributable count and the national totals as reported by RTÉ News on 23 October 2026, and
+summer 2022 from Barnes et al., Nature Health (2026), doi:10.1038/s44360-026-00209-8.
 
 ## Caveats
 
@@ -148,6 +155,12 @@ FAO-56 (Allen et al. 1998).
   A blanket spike test was tried and rejected: it would delete over 10,000
   genuine records.
 - The latest days can still change as late reports arrive.
+- The heat deaths are model estimates for 854 cities (observed temperatures through
+  temperature-mortality curves), not counted deaths. The authors call them conservative
+  (cities only, June to August); a researcher of Spain's MoMo monitoring notes the method may
+  also run high (MoMo: 5,807 heat deaths in all of Spain, 15 May to 30 September; the study:
+  6,824 in 44 Spanish cities, June to August). Summer 2022 is compared within the same 854
+  cities: estimates of 2022 for all of Europe are larger.
 
 ## Prior art (searched 18 Oct 2026)
 

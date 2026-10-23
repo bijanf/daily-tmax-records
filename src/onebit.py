@@ -37,7 +37,7 @@ Themes recolour the whole scene:
     pink1   TS.Pink.1bit    true 1-bit: the typesafe.ai pink and black, nothing else
     gelb1   BVG.Gelb.1bit   true 1-bit: U-Bahn yellow and black, nothing else
     firuzeh Firuzeh.1bit    true 1-bit: Persian turquoise (firuzeh) and black
-    ziegel1 Ziegel.1bit     true 1-bit: the red brick of Kreuzberg's old factories and black
+    ziegel1 Ziegel.1bit     true 1-bit: the terracotta brick of Kreuzberg's old factories and black
 """
 
 from __future__ import annotations

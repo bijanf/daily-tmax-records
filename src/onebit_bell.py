@@ -5,9 +5,11 @@ that ask for quiet: two-operator FM bells (the tubular bells of the early digita
 in A minor, an electric piano holding one chord per bar (Am, F, C, G), a low drone on A and E
 that swells scene by scene, a clock that ticks every beat, and from the second scene a soft
 double pulse on the first beat of each bar, like a slow heart. A heavy bell tolls at the turns
-of the story. The close comes home: the last two bars play G and A minor, the tune falls to A
-and rings out, the clock and the heart stop and the drone dies away. Every tail wraps round to
-the start, so the track loops with the picture.
+of the story. The close comes home: the last two bars play G and A minor and the tune falls to
+A; in the last bar the clock and the heart stop, the bells ring out and the drone dies away, and
+the track fades to silence over its last 1.2 s. Unlike the techno and the chiptune, no tail
+wraps round: the track starts clean, so a first listen begins on the question, and the loop
+starts again from silence.
 
 Sounds of the story: each caption word a soft typewriter tick; `desk.melody()` gives the data
 as bell notes (time, step on the scale with 0 the tonic, length, gain), echoed three
@@ -149,6 +151,9 @@ def soundtrack(desk) -> np.ndarray:
     spb = 60 / bpm
     bar, s16 = 4 * spb, spb / 4
     end = desk.L.end
+    assert abs(end / bar - round(end / bar)) < 1e-6, "the film must last a whole number of bars"
+    global RNG
+    RNG = np.random.default_rng(23)                    # the same track on every render
     starts = list(desk.L.scenes) + [end]
     sec = lambda i: starts[min(i, len(starts) - 1)]  # noqa: E731
     m = Mixer(end)
@@ -163,7 +168,8 @@ def soundtrack(desk) -> np.ndarray:
         t0 = b * bar
         final, cadence = b == nbar - 1, b == nbar - 2
         chord = CHORDS[0] if final else CHORDS[3] if cadence else CHORDS[b % len(CHORDS)]
-        m.add(piano(chord, bar * (2.4 if final else 1.6)), t0, 0.55, pan=-0.2)
+        length = bar * (2.4 if final else 1.0 if cadence else 1.6)   # the G stops at the bar line
+        m.add(piano(chord, length), t0, 0.55, pan=-0.2)
         if not final:                                    # in the last bar the clock and the heart stop
             for j in range(4):
                 m.add(tick(j % 2 == 0), t0 + j * spb, 0.5 if t0 >= sec(1) else 0.3, pan=0.35)
@@ -175,7 +181,7 @@ def soundtrack(desk) -> np.ndarray:
         if cadence and t0 >= sec(4):                     # the close: the tune falls toward home...
             for j, st in enumerate(MOTIF):
                 m.add(bell(step_note(st), 2.0, tau=0.8), t0 + j * spb, 0.45, pan=-0.1)
-        if final:                                        # ...and lands on A, two octaves ringing out
+        if final:                                        # ...and lands on A, two bells an octave apart
             m.add(bell(step_note(0), 4.0, tau=1.6), t0, 0.6, pan=-0.1)
             m.add(bell(step_note(-7), 4.0, tau=1.8), t0, 0.35, pan=0.2)
 
@@ -197,13 +203,13 @@ def soundtrack(desk) -> np.ndarray:
             m.add(key(), t0 + 0.15 + 0.6 * j / len(words), 0.6, pan=RNG.uniform(-0.3, 0.3))
     for t in getattr(desk, "hits", []):
         m.add(toll(), t, 0.9)
-    # clean the ends, wrap the tails round, saturate gently, -1.5 dBFS
-    mix = _filter(_filter(m.out, "low", 12000), "high", 28)
-    out = mix[:m.n0].copy()
-    tail = mix[m.n0:]
-    out[:len(tail)] += tail[:m.n0]
+    # clean the ends, cut the tails, fade in 20 ms and out 1.2 s, saturate gently, -3 dBFS
+    out = _filter(_filter(m.out, "low", 12000), "high", 28)[:m.n0].copy()
+    na, nr = int(0.02 * SR), int(1.2 * SR)
+    out[:na] *= np.linspace(0, 1, na)[:, None]
+    out[-nr:] *= np.linspace(1, 0, nr)[:, None] ** 2
     out = np.tanh(3.0 * out / np.abs(out).max()) / np.tanh(3.0)      # about as loud as the other reels
-    return (out / np.abs(out).max() * 10 ** (-1.5 / 20)).astype(np.float32)      # AAC overshoots: keep 1.5 dB
+    return (out / np.abs(out).max() * 10 ** (-3 / 20)).astype(np.float32)      # AAC overshoots: keep 3 dB
 
 
 def write(desk, path: Path) -> Path:
