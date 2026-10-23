@@ -37,6 +37,7 @@ Themes recolour the whole scene:
     pink1   TS.Pink.1bit    true 1-bit: the typesafe.ai pink and black, nothing else
     gelb1   BVG.Gelb.1bit   true 1-bit: U-Bahn yellow and black, nothing else
     firuzeh Firuzeh.1bit    true 1-bit: Persian turquoise (firuzeh) and black
+    ziegel1 Ziegel.1bit     true 1-bit: the red brick of Kreuzberg's old factories and black
 """
 
 from __future__ import annotations
@@ -153,6 +154,9 @@ THEMES = {
                      light="#4AAFA5", track="#141414", cold="#141414", hot="#141414",
                      levels=("#4AAFA5", "#141414", "#141414", "#141414"), title="#4AAFA5", mono=True,
                      town="Tehran"),
+    "ziegel1": Theme("Ziegel.1bit", field="#D9805F", ink="#161010", head="#161010", paper="#D9805F",
+                     light="#D9805F", track="#161010", cold="#161010", hot="#161010",
+                     levels=("#D9805F", "#161010", "#161010", "#161010"), title="#D9805F", mono=True),
     "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
                    light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
                    levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
@@ -858,17 +862,18 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
 
 def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: str | None = None) -> None:
     """H.264 in BT.709 (what phones assume). audio: None, "silent" (an empty track), "music"
-    (onebit_audio's techno) or "chip" (onebit_chip's 8-bit tune), timed to the film; the WAV
-    is kept beside the video."""
+    (onebit_audio's techno), "chip" (onebit_chip's 8-bit tune) or "bell" (onebit_bell's slow
+    bells and clock), timed to the film; the WAV is kept beside the video."""
     ow, oh = size
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}",
            "-r", str(FPS), "-i", "-"]
     if audio == "silent":
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
-    elif audio in ("music", "chip"):
+    elif audio in ("music", "chip", "bell"):
         import onebit_audio
+        import onebit_bell
         import onebit_chip
-        engine = onebit_chip if audio == "chip" else onebit_audio
+        engine = {"music": onebit_audio, "chip": onebit_chip, "bell": onebit_bell}[audio]
         wav = engine.write(desk, path.with_name(path.stem.removesuffix("_reel") + "_music.wav"))
         cmd += ["-i", str(wav)]
         print("saved", wav)
