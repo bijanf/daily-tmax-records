@@ -14,11 +14,12 @@ Measured data only, no causes claimed. Each number has its source on screen and 
   screen gives the range, "over the same years", without claiming it as the cause.
 
 A slow, still slide. One window that never moves; its top holds the scene's bold line and, big
-enough for a phone, its small line. Below it a map of Iran (Mercator, border dotted, five cities
+enough for a phone, its small line. Below it a map of Iran (Mercator, border dotted, four cities
 tagged), a colour bar, and a row of ten snowflakes, a rounded picture of the snow of 1951-1980.
 First the map shows where snow fell then; then, one every two beats, three flakes fade, and the
 map turns once: each snowy place takes the colour of how much of its snow is gone (under 25 %,
-25-50 %, over 50 %). Three scenes, 7 bars of 60 BPM = 28 s, with onebit_atari's slow Atari tune: a
+25-50 %, over 50 %). One bold line per scene, nothing else to read but the map; the periods
+stand in the source lines. Three scenes, 10 bars of 60 BPM = 40 s, with onebit_atari's slow tune: a
 plip and a falling note for each flake that fades. Persian (--lang fa, the default) mirrors the
 type, the bar and the row. Themes: kashi in full colour (COLOURS), the 1-bit themes in patterns.
 
@@ -47,15 +48,15 @@ from onebit import (FA_BOLD, FA_TEXT, FULL, GROTESK, OUT, PIXEL, SIZES, SOCIAL_C
                     Scene, Timeline, fa, title, words_of)
 from onebit_snow import FLAKE, highland_map, mercator_y  # noqa: E402
 
-PACE = dict(bpm=60, bars=(2, 3, 2), lead=2, per=2)   # beats before the fade, beats per flake
+PACE = dict(bpm=60, bars=(3, 4, 3), lead=3, per=3)   # beats before the fade, beats per flake: slow
 THEN, NOW, WARM = (1951, 1980), (2017, 2026), (2016, 2025)   # CRU TS 4.10 ends in 2025
 SNOWY = 20.0                                     # mm a year in 1951-80: a place that had snow
 CLASSES = (25, 50)                               # % lost: the map's three steps
 EXTENT = (43.5, 63.8, 24.8, 40.2)                # W, E, S, N: Iran
 CITIES = {"en": (("Tehran", 51.39, 35.69), ("Tabriz", 46.29, 38.08), ("Mashhad", 59.61, 36.30),
-                 ("Isfahan", 51.67, 32.65), ("Shiraz", 52.53, 29.59)),
+                 ("Shiraz", 52.53, 29.59)),
           "fa": (("تهران", 51.39, 35.69), ("تبریز", 46.29, 38.08), ("مشهد", 59.61, 36.30),
-                 ("اصفهان", 51.67, 32.65), ("شیراز", 52.53, 29.59))}
+                 ("شیراز", 52.53, 29.59))}
 WIN = (60, 196, 900, 1356)
 BAR = 40
 LEFT, RIGHT = 96, 924
@@ -75,26 +76,30 @@ FOOTER = 1592
 COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C7612F", "#93351F"))}
 
 
+def span(years, lang: str = "fa") -> str:
+    """A period in full years, one format everywhere: «۱۹۵۱ تا ۱۹۸۰», 1951–1980."""
+    return f"{fa(years[0])} تا {fa(years[1])}" if lang == "fa" else f"{years[0]}–{years[1]}"
+
+
 def words(lang: str, lost: float, cru: float, era: float) -> dict:
     pct = f"{100 * lost:.0f}"
     if lang == "fa":
         return dict(scenes=(("برفِ ایران {چقدر کم شده؟}", ""),
-                            (f"بارشِ برفِ ایران // {{{fa(pct)}٪ کم شده است}}", "و در هیچ منطقهٔ برفی، برف بیشتر نشده"),
-                            (f"در همین سال‌ها، زمستان‌ها // {{{fa(f'{cru:.1f}')} تا {fa(f'{era:.1f}')} درجه}} گرم‌تر شده‌اند",
-                             f"زمستان‌های {fa(1951)} تا {fa(80)} در برابر {fa(2016)} تا {fa(25)}")),
+                            (f"بارشِ برفِ ایران // {{{fa(pct)}٪ کم شده است}}", ""),
+                            (f"در همین سال‌ها، زمستان‌ها // {{{fa(f'{cru:.1f}')} تا {fa(f'{era:.1f}')} درجه}} گرم‌تر شده‌اند", "")),
                     follow="برای داده‌های اقلیمی بیشتر، فالو کنید",
-                    snowy="مناطقِ برفی، ۱۹۵۱ تا ۱۹۸۰", head="کاهشِ برفِ هر جا نسبت به ۱۹۵۱ تا ۱۹۸۰",
+                    snowy="مناطقِ برفی، ۱۹۵۱ تا ۱۹۸۰", head="کاهشِ برف نسبت به ۱۹۵۱ تا ۱۹۸۰",
                     steps=("زیر ۲۵٪", "۲۵ تا ۵۰٪", "بیش از ۵۰٪"),
                     sources=("منبع: ERA5 ماهانه (کوپرنیکوس / ECMWF) و CRU TS 4.10 (دانشگاه ایست‌آنگلیا)",
-                             "محاسبهٔ ما · سال آبی: اکتبر تا سپتامبر"))
+                             f"برف: سال‌های آبی {span(THEN)} و {span(NOW)} · زمستان: {span(THEN)} و {span(WARM)}"))
     return dict(scenes=(("How much has {Iran's snow} shrunk?", ""),
-                        (f"Snowfall in Iran // {{is down {pct} %}}", "and no snowy place got more"),
-                        (f"Over the same years, winters // {{warmed {cru:.1f} to {era:.1f} °C}}", "Nov–Mar, 1951–80 vs 2016–25")),
+                        (f"Snowfall in Iran // {{is down {pct} %}}", ""),
+                        (f"Over the same years, winters // {{warmed {cru:.1f} to {era:.1f} °C}}", "")),
                 follow="Follow for more climate data in 1-bit",
-                snowy="snowy places, 1951–80", head="snow lost per place, vs 1951–80",
+                snowy="snowy places, 1951–1980", head="snow lost since 1951–1980",
                 steps=("under 25 %", "25–50 %", "over 50 %"),
                 sources=("Data: ERA5 monthly (Copernicus / ECMWF), CRU TS 4.10 (Univ. of East Anglia)",
-                         "Our calculation · water year: October to September"))
+                         f"Snow (water years) {span(THEN, 'en')} vs {span(NOW, 'en')} · winters {span(THEN, 'en')} vs {span(WARM, 'en')}"))
 
 
 def screens(h: int, w: int) -> dict:
@@ -325,8 +330,8 @@ class IranSnowFilm:
             if self.fa:
                 c.text(WIN[0] + WIN[2], FOOTER + 34 * k, line, FA_TEXT, 26, self.th.head, "rs", "rtl")
             else:
-                c.text(WIN[0], FOOTER + 34 * k, line, TEXT, 24, self.th.head)
-            assert c.width(line, FA_TEXT if self.fa else TEXT, 26 if self.fa else 24,
+                c.text(WIN[0], FOOTER + 34 * k, line, TEXT, 22, self.th.head)
+            assert c.width(line, FA_TEXT if self.fa else TEXT, 26 if self.fa else 22,
                            "rtl" if self.fa else None) <= WIN[2], line
         return c.im
 
@@ -336,6 +341,7 @@ def main() -> None:
     ap.add_argument("--theme", default="kabud1", choices=list(onebit.THEMES), help="colour theme")
     ap.add_argument("--lang", default="fa", choices=("en", "fa"))
     ap.add_argument("--stills", action="store_true", help="cover and frames only, no video")
+    ap.add_argument("--no-music", action="store_true", help="a silent audio track: music is added in the app")
     args = ap.parse_args()
     film = IranSnowFilm(onebit.THEMES[args.theme], args.lang, COLOURS.get(args.theme))
     (OUT / "social").mkdir(parents=True, exist_ok=True)
@@ -348,7 +354,7 @@ def main() -> None:
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
         print("saved", f"{base}_t*.png")
         return
-    onebit.video(film, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="atari")
+    onebit.video(film, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="silent" if args.no_music else "atari")
 
 
 if __name__ == "__main__":

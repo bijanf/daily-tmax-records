@@ -10,9 +10,10 @@ bass has the chip's buzzy 31-step pattern but true pitch: the chip's own bass no
 cents off, sour under the chords. Volumes move in the chip's 16 steps, so notes fade in
 stairs. On top of the chip, only a soft low-pass and an echo, to make it gentle.
 
-The music: A minor pentatonic at a slow tempo (`desk.bpm`, default 60). A bass on the first beat
-of each bar (A, A, C, G, ...), broken chords in eighths very low, a tune of long notes, and the
-quiet hiss of the noise channel like snow falling. `desk.melody()` adds the data as tune notes
+The music: A minor pentatonic at a slow tempo (`desk.bpm`, default 60). Each bar's chord (Am,
+Am, C, G) held as a soft pad that melts into the next, a bass humming under it, the chord broken
+in quiet quarters, a tune of long notes, and the hiss of the noise channel like snow falling.
+Nothing thumps: the loudness stays level from bar to bar. `desk.melody()` adds the data as tune notes
 (time, step on the scale with 0 the tonic, length, gain); `desk.blips` are falling plips (a flake
 that turns into a drop). The last bar holds A minor, the hiss fades and the track fades to
 silence over its last 2 s. Like the bells and the steam, the track starts clean.
@@ -71,15 +72,26 @@ def square(note, length, attack=0.02, tau=0.8, gain=1.0):
     return _fade(wave_ * env * 0.25 * gain, 0.002, 0.03)
 
 
-def buzz(note, length, tau=1.5):
-    """The bass: the chip's 31-step pattern (high 18 steps, low 13), buzzy and warm."""
+def buzz(note, length, attack=0.2, tau=8.0):
+    """The bass: the chip's 31-step pattern (high 18 steps, low 13), filtered warm and held
+    through the bar, so it hums instead of thumping."""
     n = int(length * SR)
     t = _t(n)
     f = hz(note)        # tuned true: the chip's bass notes sit 40-60 cents off, sour under the chords
     phase = (f * t) % 1.0
     x = np.where(phase < 18 / 31, 1.0, -1.0)
-    env = stairs(np.minimum(1, t / 0.03) * np.exp(-t / tau))
-    return _fade(_filter(x * env * 0.3, "low", 1800), 0.003, 0.1)
+    env = stairs(np.minimum(1, t / attack) * np.exp(-t / tau))
+    return _fade(_filter(x * env * 0.3, "low", 700), 0.003, 0.6)
+
+
+def pad(chord, length, attack=0.8, release=1.0):
+    """The chord of the bar held on soft chip squares: slow in, slow out, longer than the bar so
+    that one chord melts into the next and the music never pumps."""
+    n = int(length * SR)
+    t = _t(n)
+    x = sum(np.sign(np.sin(2 * np.pi * tia(note) * t + k)) for k, note in enumerate(chord)) / len(chord)
+    env = np.minimum(1, t / attack) * np.minimum(1, np.clip(length - t, 0, None) / release)
+    return _filter(x * stairs(env) * 0.25, "low", 1400)
 
 
 def hiss(length, rng):
@@ -136,14 +148,14 @@ def soundtrack(desk) -> np.ndarray:
         t0 = b * bar
         final = b == nbar - 1
         chord = CHORDS[0] if final else CHORDS[b % len(CHORDS)]
-        m.add(buzz(BASS[0] if final else BASS[b % len(BASS)], bar * (1.5 if final else 1.0)), t0, 0.7)
-        for j in range(4 if final else 8):           # broken chord in eighths, very low; the last bar slows
-            note = chord[(0, 1, 2, 1)[j % 4]]
-            step = spb / 2 if not final else spb
-            m.add(square(note, step * 1.6, tau=0.35), t0 + j * step, 0.35, pan=0.3 - 0.2 * (j % 2))
+        hold = bar * (1.5 if final else 1.0) + 1.0        # each bar's pad and bass overlap the next
+        m.add(pad(chord, hold), t0 - (0.5 if b else 0.0), 0.9, pan=-0.1)
+        m.add(buzz(BASS[0] if final else BASS[b % len(BASS)], hold), t0, 0.5)
+        for j in range(2 if final else 4):           # the broken chord in quarters, quietly
+            m.add(square(chord[(0, 1, 2, 1)[j]], spb * 1.8, tau=0.7), t0 + j * spb, 0.2, pan=0.3 - 0.2 * (j % 2))
         if final:
-            m.add(square(step_note(0), bar * 1.4, tau=2.0), t0, 0.5)
-            m.add(square(step_note(-5), bar * 1.4, tau=2.2), t0, 0.35, pan=-0.2)
+            m.add(square(step_note(0), bar * 1.4, tau=2.0), t0, 0.4)
+            m.add(square(step_note(-5), bar * 1.4, tau=2.2), t0, 0.3, pan=-0.2)
     if hasattr(desk, "melody"):
         for t, st, length, gain in desk.melody():
             m.add(square(step_note(st), max(length, 0.6), tau=max(length, 0.6) * 0.6), t, gain, pan=-0.15)
@@ -151,9 +163,9 @@ def soundtrack(desk) -> np.ndarray:
         m.add(plip(), t, 0.8, pan=rng.uniform(-0.4, 0.4))
     for i, t0 in enumerate(starts[:-1]):
         for a in desk.appear(i):
-            m.add(pip(), t0 + a, 1.0, pan=rng.uniform(-0.3, 0.3))
+            m.add(pip(), t0 + a, 0.5, pan=rng.uniform(-0.3, 0.3))
     # soft: low-pass the chip, an echo of a dotted eighth, fade in 20 ms and out 2 s, -3 dBFS
-    out = echo(_filter(m.out, "low", 5000), 0.75 * spb)
+    out = echo(_filter(m.out, "low", 3500), 0.75 * spb)
     out = _filter(out, "high", 40)[:m.n0].copy()
     na, nr = int(0.02 * SR), int(2.0 * SR)
     out[:na] *= np.linspace(0, 1, na)[:, None]
