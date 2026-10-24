@@ -40,6 +40,8 @@ Themes recolour the whole scene:
     ziegel1 Ziegel.1bit     true 1-bit: the terracotta brick of Kreuzberg's old factories and black
     luft1   Berliner.Luft.1bit  true 1-bit: the pale blue of the air over Berlin, and black
     schnee1 Schnee.1bit     true 1-bit: the original desktop's paper white, like old snow, and black
+    kabud1  Kabud.1bit      true 1-bit: kabud, the dusty slate blue of a winter sky over Tehran, and ink
+    grau1   Grau.1bit       black, grey and white: white field, black ink, grey dot grid
 """
 
 from __future__ import annotations
@@ -165,6 +167,14 @@ THEMES = {
     "schnee1": Theme("Schnee.1bit", field="#E4E2DA", ink="#17171A", head="#17171A", paper="#E4E2DA",
                      light="#E4E2DA", track="#17171A", cold="#17171A", hot="#17171A",
                      levels=("#E4E2DA", "#17171A", "#17171A", "#17171A"), title="#E4E2DA", mono=True),
+    "kabud1": Theme("Kabud.1bit", field="#7E9DB9", ink="#0E1828", head="#0E1828", paper="#7E9DB9",
+                    light="#7E9DB9", track="#0E1828", cold="#0E1828", hot="#0E1828",
+                    levels=("#7E9DB9", "#0E1828", "#0E1828", "#0E1828"), title="#7E9DB9", mono=True,
+                    town="Tehran"),
+    "grau1": Theme("Grau.1bit", field="#EEEEEB", ink="#141414", head="#141414", paper="#EEEEEB",
+                   light="#EEEEEB", track="#141414", cold="#141414", hot="#141414",
+                   levels=("#EEEEEB", "#141414", "#141414", "#141414"), title="#EEEEEB", dots="#8E8E8C",
+                   mono=True),
     "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
                    light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
                    levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
@@ -831,13 +841,15 @@ def words_of(text: str, th: Theme) -> list:
 
 
 def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: float = 1.0, left=LEFT,
-          right=RIGHT, first=None, appear=None, sizes=None, motion: bool = True, line_at: float = 0.9):
+          right=RIGHT, first=None, appear=None, sizes=None, motion: bool = True, line_at: float = 0.9,
+          small: int | None = None):
     """The bold line of a scene between x = left and right, its first baseline at y = first, typed
     in word by word, and its small line once the bold one is complete. A word "//" breaks the
     line there. appear: the time (s into the scene) each word comes in; by default all within
     0.6 s. sizes: (px, leading) of the bold line at full size and at the smaller size it falls back
     to beyond two lines. motion False: the words just appear, without growing or popping in.
-    line_at: when the small line comes in (s into the scene)."""
+    line_at: when the small line comes in (s into the scene). small: its size in px (default 34,
+    grown with scale), set a little further below the bold line when bigger."""
     s, d = c.s, c.d
     rtl = lang == "fa"
     bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
@@ -856,7 +868,7 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
     # two lines at full size; a longer title is set smaller rather than run into the small line
     sizes = sizes or (((70, 96), (58, 80)) if rtl else ((76, 86), (62, 70)))
     sizes = tuple((round(px * scale), round(lead * scale)) for px, lead in sizes)
-    line = round(34 * (1 + 1.5 * (scale - 1)))
+    line = small or round(34 * (1 + 1.5 * (scale - 1)))
     if first is None:
         first = 350 + round((scale - 1) * 60)              # a bigger title sits lower, clear of the counter
     for px, lead in sizes:
@@ -890,7 +902,8 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
         d.text((mid * s, base), w, font=_font(bold, size), fill=accent or th.head, anchor="ms", direction=way)
     y = top + (places[-1][1] - top) * grow
     if sc.line and dt > line_at:
-        d.text((start * s, (y + (72 if rtl else 66) * scale) * s), sc.line, font=_font(text, line * s), fill=th.head,
+        gap = (72 if rtl else 66) * scale + (line - 34 if small else 0)
+        d.text((start * s, (y + gap) * s), sc.line, font=_font(text, line * s), fill=th.head,
                anchor="rs" if rtl else "ls", direction=way)
 
 
