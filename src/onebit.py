@@ -39,6 +39,7 @@ Themes recolour the whole scene:
     firuzeh Firuzeh.1bit    true 1-bit: Persian turquoise (firuzeh) and black
     ziegel1 Ziegel.1bit     true 1-bit: the terracotta brick of Kreuzberg's old factories and black
     luft1   Berliner.Luft.1bit  true 1-bit: the pale blue of the air over Berlin, and black
+    schnee1 Schnee.1bit     true 1-bit: the original desktop's paper white, like old snow, and black
 """
 
 from __future__ import annotations
@@ -161,6 +162,9 @@ THEMES = {
     "luft1": Theme("Berliner.Luft.1bit", field="#93B4D4", ink="#111418", head="#111418", paper="#93B4D4",
                    light="#93B4D4", track="#111418", cold="#111418", hot="#111418",
                    levels=("#93B4D4", "#111418", "#111418", "#111418"), title="#93B4D4", mono=True),
+    "schnee1": Theme("Schnee.1bit", field="#E4E2DA", ink="#17171A", head="#17171A", paper="#E4E2DA",
+                     light="#E4E2DA", track="#17171A", cold="#17171A", hot="#17171A",
+                     levels=("#E4E2DA", "#17171A", "#17171A", "#17171A"), title="#E4E2DA", mono=True),
     "kanal": Theme("Landwehr.Kanal", field="#8FA8A6", ink="#121A1A", head="#122020", paper="#F4F6F3",
                    light="#DCE3E0", track="#C2CDC9", cold="#22507E", hot="#A3312A",
                    levels=("#DCE3E0", "#8FA19D", "#46524F", "#121A1A"), accent="#A3312A"),
@@ -827,12 +831,13 @@ def words_of(text: str, th: Theme) -> list:
 
 
 def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: float = 1.0, left=LEFT,
-          right=RIGHT, first=None, appear=None, sizes=None):
+          right=RIGHT, first=None, appear=None, sizes=None, motion: bool = True, line_at: float = 0.9):
     """The bold line of a scene between x = left and right, its first baseline at y = first, typed
     in word by word, and its small line once the bold one is complete. A word "//" breaks the
     line there. appear: the time (s into the scene) each word comes in; by default all within
     0.6 s. sizes: (px, leading) of the bold line at full size and at the smaller size it falls back
-    to beyond two lines."""
+    to beyond two lines. motion False: the words just appear, without growing or popping in.
+    line_at: when the small line comes in (s into the scene)."""
     s, d = c.s, c.d
     rtl = lang == "fa"
     bold, text, way = (FA_BOLD, FA_TEXT, "rtl") if rtl else (BOLD, TEXT, None)
@@ -868,12 +873,12 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
         if y <= first + lead:
             break
     # the title grows while it is read, about its first corner, and each word pops in
-    grow = 0.85 + 0.15 * ease(prog(dt, 0.0, 3.0)) if np.isfinite(dt) else 1.0
+    grow = 0.85 + 0.15 * ease(prog(dt, 0.0, 3.0)) if np.isfinite(dt) and motion else 1.0
     top = first - px
     for k, ((w, accent), (x, y)) in enumerate(zip(words, places)):
         if k >= shown:
             continue
-        pop = 0.6 + 0.4 * ease(prog(dt, appear[k], 0.25)) if np.isfinite(dt) else 1.0
+        pop = 0.6 + 0.4 * ease(prog(dt, appear[k], 0.25)) if np.isfinite(dt) and motion else 1.0
         mid = start + (x + big.getlength(w, direction=way) / s / 2 - start) * grow
         size = max(8, round(px * grow * pop * s))
         base = (top + (y - top) * grow) * s
@@ -884,7 +889,7 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
             accent = th.field
         d.text((mid * s, base), w, font=_font(bold, size), fill=accent or th.head, anchor="ms", direction=way)
     y = top + (places[-1][1] - top) * grow
-    if sc.line and dt > 0.9:
+    if sc.line and dt > line_at:
         d.text((start * s, (y + (72 if rtl else 66) * scale) * s), sc.line, font=_font(text, line * s), fill=th.head,
                anchor="rs" if rtl else "ls", direction=way)
 
@@ -892,19 +897,21 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
 def video(desk: Desktop, path: Path, crf: int = CRF, size=(W, H), audio: str | None = None) -> None:
     """H.264 in BT.709 (what phones assume). audio: None, "silent" (an empty track), "music"
     (onebit_audio's techno), "chip" (onebit_chip's 8-bit tune), "bell" (onebit_bell's slow
-    bells and clock) or "steam" (onebit_steam's engine and steam organ), timed to the film; the
-    WAV is kept beside the video."""
+    bells and clock), "steam" (onebit_steam's engine and steam organ) or "atari" (onebit_atari's
+    slow tune on the Atari 2600's sound chip), timed to the film; the WAV is kept beside the video."""
     ow, oh = size
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}",
            "-r", str(FPS), "-i", "-"]
     if audio == "silent":
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
-    elif audio in ("music", "chip", "bell", "steam"):
+    elif audio in ("music", "chip", "bell", "steam", "atari"):
+        import onebit_atari
         import onebit_audio
         import onebit_bell
         import onebit_chip
         import onebit_steam
-        engine = {"music": onebit_audio, "chip": onebit_chip, "bell": onebit_bell, "steam": onebit_steam}[audio]
+        engine = {"music": onebit_audio, "chip": onebit_chip, "bell": onebit_bell, "steam": onebit_steam,
+                  "atari": onebit_atari}[audio]
         wav = engine.write(desk, path.with_name(path.stem.removesuffix("_reel") + "_music.wav"))
         cmd += ["-i", str(wav)]
         print("saved", wav)
