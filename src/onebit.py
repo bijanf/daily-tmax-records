@@ -42,6 +42,7 @@ Themes recolour the whole scene:
     schnee1 Schnee.1bit     true 1-bit: the original desktop's paper white, like old snow, and black
     kabud1  Kabud.1bit      true 1-bit: kabud, the dusty slate blue of a winter sky over Tehran, and ink
     grau1   Grau.1bit       black, grey and white: white field, black ink, grey dot grid
+    kashi   Kashi           in colour: cream, navy type, Persian turquoise accents (kashi, the tiles)
 """
 
 from __future__ import annotations
@@ -108,10 +109,11 @@ class Theme:
     title: str = ""      # type in the big title bars; default: paper
     dots: str = ""       # dot grid; default: ink
     town: str = "Berlin"
-    mono: bool = False   # two colours only (field and ink): accents become inverse video
+    mono: bool = False   # accents in inverse video: type in the field colour on a box (ink, or mark)
+    mark: str = ""       # box under an inverse-video accent; default: ink
 
     def __post_init__(self):
-        for role, default in (("accent", self.field), ("title", self.paper), ("dots", self.ink)):
+        for role, default in (("accent", self.field), ("title", self.paper), ("dots", self.ink), ("mark", self.ink)):
             if not getattr(self, role):
                 object.__setattr__(self, role, default)
 
@@ -171,6 +173,10 @@ THEMES = {
                     light="#7E9DB9", track="#0E1828", cold="#0E1828", hot="#0E1828",
                     levels=("#7E9DB9", "#0E1828", "#0E1828", "#0E1828"), title="#7E9DB9", mono=True,
                     town="Tehran"),
+    "kashi": Theme("Kashi", field="#F6F1E7", ink="#1F2A44", head="#1F2A44", paper="#F6F1E7",
+                   light="#F6F1E7", track="#1F2A44", cold="#2A9D96", hot="#2A9D96",
+                   levels=("#F6F1E7", "#1F2A44", "#1F2A44", "#1F2A44"), title="#F6F1E7", dots="#DDD3C1",
+                   mono=True, mark="#238C86", town="Tehran"),
     "grau1": Theme("Grau.1bit", field="#EEEEEB", ink="#141414", head="#141414", paper="#EEEEEB",
                    light="#EEEEEB", track="#141414", cold="#141414", hot="#141414",
                    levels=("#EEEEEB", "#141414", "#141414", "#141414"), title="#EEEEEB", dots="#8E8E8C",
@@ -897,7 +903,7 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
         if accent and th.mono:
             # two colours only: the accent is inverse video, a box of ink under field-coloured type
             half = (_font(bold, size).getlength(w, direction=way) + space * grow * s) / 2
-            d.rectangle([mid * s - half, base - 0.84 * size, mid * s + half, base + 0.26 * size], fill=th.ink)
+            d.rectangle([mid * s - half, base - 0.84 * size, mid * s + half, base + 0.26 * size], fill=th.mark)
             accent = th.field
         d.text((mid * s, base), w, font=_font(bold, size), fill=accent or th.head, anchor="ms", direction=way)
     y = top + (places[-1][1] - top) * grow

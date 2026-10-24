@@ -1,34 +1,31 @@
-"""IRAN'S SNOW: 29 % less of it, nowhere more, in winters about 2 °C warmer.
+"""IRAN'S SNOW: 29 % less of it, and no snowy place got more; winters 1.6 to 2.4 °C warmer.
 
-Three facts, each from its own source, shown side by side and not as one chain (no study
-attributes Iran's snow loss to people; part of it is the drought's lack of precipitation):
-- Iran's snowfall, ERA5 (snow.py, land inside Iran's borders, water years October to
-  September): 58 mm a year in 1951-1980, 41 mm in 2017-2026, 29 % less. In ERA5 about three
-  quarters of it is a smaller snow share of the precipitation (19.9 -> 15.3 %), the rest less
-  precipitation (-6 %; CRU TS: -13 %). Of the 1,182 cells that had at least 20 mm of snow a
-  year, none gained; the median lost 35 %. The 1940s are left out: ERA5 is too dry then.
-- Iran's winters (November-March) warmed between 1951-1980 and 2016-2025: +1.6 °C at the
-  stations of CRU TS 4.10, +2.4 °C in ERA5 (snow.cru_winter, snow.series).
-- Human-caused warming made Iran's five-year drought (to mid-2025, 60-month SPEI) about 50
-  times more likely: probability ratio 53.7, 95 % range 9.7 to 815, "due to the planet warming
-  by 1.3 °C"; water use and management lie outside the statistics. World Weather Attribution,
-  21 November 2025, a rapid study from observations only:
-  https://www.worldweatherattribution.org/human-induced-climate-change-compounded-by-socio-economic-water-stressors-increased-severity-of-5-year-drought-in-iran-and-euphrates-and-tigris-basin/
+Measured data only, no causes claimed. Each number has its source on screen and in the caption:
+- Snowfall in Iran, ERA5 monthly means (snow.py; doi:10.24381/cds.f17050d7, Hersbach et al.
+  2020): land inside Iran's borders, water years October to September (a water year is named
+  by its September: 1951 = October 1950 to September 1951), cos-latitude weights. 1951-1980:
+  58 mm a year, 2017-2026: 41 mm, 29 % less. About 80 % of it is a smaller snow share of the
+  precipitation (19.9 -> 15.3 %), the rest less precipitation (-6 %; CRU TS: -13 %). Of the
+  1,182 cells with at least 20 mm of snow a year in 1951-80 none gained (median -35 %); 22 of the
+  low-snow cells below that did, which is why the screen says "no snowy place". The 1940s are
+  left out (ERA5 is inhomogeneous then). The last months of 2026 are preliminary ERA5T.
+- Iran's winters (November-March), 1951-1980 against 2016-2025: +1.6 °C in CRU TS 4.10 (gridded
+  from stations, University of East Anglia), +2.4 °C in ERA5 (snow.cru_winter, snow.series). The
+  screen gives the range, "over the same years", without claiming it as the cause.
 
-A slow, still 1-bit slide. One window that never moves; its top holds the scene's bold line and,
-big enough for a phone, its small line. Below it a map of Iran (Mercator, its border dotted,
-five cities tagged) and a row of ten big snowflakes for the snow of 1951-1980. First the map
-shows where snow fell then; then, one every two beats, three flakes fade to dots, and the map
-turns once: each snowy place darkens by how much of its snow is gone (under 25 %, 25-50 %,
-over 50 %; legend under the map). Nothing else moves.
-
-Four scenes, 10 bars of 60 BPM = 40 s, with onebit_atari's slow Atari tune: a plip and a falling
-note for each flake that fades. Persian (--lang fa) mirrors the type and the row.
+A slow, still slide. One window that never moves; its top holds the scene's bold line and, big
+enough for a phone, its small line. Below it a map of Iran (Mercator, border dotted, five cities
+tagged), a colour bar, and a row of ten snowflakes, a rounded picture of the snow of 1951-1980.
+First the map shows where snow fell then; then, one every two beats, three flakes fade, and the
+map turns once: each snowy place takes the colour of how much of its snow is gone (under 25 %,
+25-50 %, over 50 %). Three scenes, 7 bars of 60 BPM = 28 s, with onebit_atari's slow Atari tune: a
+plip and a falling note for each flake that fades. Persian (--lang fa, the default) mirrors the
+type, the bar and the row. Themes: kashi in full colour (COLOURS), the 1-bit themes in patterns.
 
     outputs/onebit/social/iran_snow_<theme>[_fa]_reel.mp4, _cover.png, _music.wav
 
-    python -I src/onebit_iran_snow.py --lang fa       # Kabud.1bit, Persian
-    python -I src/onebit_iran_snow.py --lang fa --stills
+    python -I src/onebit_iran_snow.py --theme kashi            # colour, Persian
+    python -I src/onebit_iran_snow.py --theme kashi --stills
 """
 
 from __future__ import annotations
@@ -46,13 +43,12 @@ from scipy import ndimage  # noqa: E402
 
 import onebit  # noqa: E402
 import snow  # noqa: E402
-from onebit import (FA_BOLD, FA_TEXT, FULL, GROTESK, MONO, OUT, PIXEL, SIZES, SOCIAL_CRF, TEXT, Canvas,  # noqa: E402
+from onebit import (FA_BOLD, FA_TEXT, FULL, GROTESK, OUT, PIXEL, SIZES, SOCIAL_CRF, TEXT, Canvas,  # noqa: E402
                     Scene, Timeline, fa, title, words_of)
 from onebit_snow import FLAKE, highland_map, mercator_y  # noqa: E402
 
-PACE = dict(bpm=60, bars=(2, 3, 2, 3), lead=2, per=2)   # beats before the fade, beats per flake
+PACE = dict(bpm=60, bars=(2, 3, 2), lead=2, per=2)   # beats before the fade, beats per flake
 THEN, NOW, WARM = (1951, 1980), (2017, 2026), (2016, 2025)   # CRU TS 4.10 ends in 2025
-DROUGHT = 50                                     # WWA 2025: probability ratio 53.7 (9.7-815)
 SNOWY = 20.0                                     # mm a year in 1951-80: a place that had snow
 CLASSES = (25, 50)                               # % lost: the map's three steps
 EXTENT = (43.5, 63.8, 24.8, 40.2)                # W, E, S, N: Iran
@@ -65,32 +61,40 @@ BAR = 40
 LEFT, RIGHT = 96, 924
 RULE = 560
 SMALL = 48                                       # px of the small line: readable on a phone
-MAP_W = 620
+MAP_W = 760
 MAP_H = round(MAP_W * (mercator_y(EXTENT[3]) - mercator_y(EXTENT[2])) / np.deg2rad(EXTENT[1] - EXTENT[0]))
 MAP = ((LEFT + RIGHT - MAP_W) // 2, 584, MAP_W, MAP_H)
-LEGEND = MAP[1] + MAP_H + 40                     # baseline of the legend's heading; its steps below
-ROW, PITCH, CELL = 1356, 82, 7                   # the flakes: centre line, pitch, sprite pixel
+LEGEND = MAP[1] + MAP_H + 44                     # baseline of the colour bar's heading; the bar below
+BOX_H = 46                                       # height of the colour bar
+ROW, PITCH, CELL = LEGEND + 178, 78, 6          # the flakes: centre line, pitch, sprite pixel
+ERA = (MAP[0] + MAP_W - 6, MAP[1] + 64)          # the years: in the map's empty corner over Turkmenistan
 FOOTER = 1592
-SOURCE = "Data: ERA5 · CRU TS 4.10 · World Weather Attribution 2025"
+# themes in full colour (by their key), checked with the dataviz validator: the loss is an
+# ordinal ramp of one warm hue (light end 2.06:1 on the cream), snow a soft blue, and the land
+# without snow a cool grey, so that even the lightest step stands apart from it
+COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C7612F", "#93351F"))}
 
 
-def words(lang: str, lost: int, loss: float, cru: float, era: float) -> dict:
-    warm = (cru + era) / 2
+def words(lang: str, lost: float, cru: float, era: float) -> dict:
+    pct = f"{100 * lost:.0f}"
     if lang == "fa":
-        return dict(scenes=(("برفِ ایران {کجا رفت؟}", f"برف در ایران، {fa(1951)} تا {fa(2026)}"),
-                            (f"از هر ۱۰ دانهٔ برف، // {{{fa(lost)} دانه کم شده است}}", f"{fa(f'{100 * loss:.0f}%')} برفِ کمتر، و هیچ‌جا بیشتر نشده"),
-                            (f"زمستان‌های ایران حالا // {{حدود {fa(f'{warm:.0f}')} درجه}} گرم‌تر است", f"ایستگاه‌ها {fa(f'{cru:.1f}')} و ERA5 {fa(f'{era:.1f}')} درجه"),
-                            (f"خشکسالیِ ۵ سالهٔ ایران: // احتمالش {{حدود {fa(DROUGHT)} برابر}} شد", "به‌دلیلِ گرمایشِ انسان‌ساز (WWA)")),
+        return dict(scenes=(("برفِ ایران {چقدر کم شده؟}", ""),
+                            (f"بارشِ برفِ ایران // {{{fa(pct)}٪ کم شده است}}", "و در هیچ منطقهٔ برفی، برف بیشتر نشده"),
+                            (f"در همین سال‌ها، زمستان‌ها // {{{fa(f'{cru:.1f}')} تا {fa(f'{era:.1f}')} درجه}} گرم‌تر شده‌اند",
+                             f"زمستان‌های {fa(1951)} تا {fa(80)} در برابر {fa(2016)} تا {fa(25)}")),
                     follow="برای داده‌های اقلیمی بیشتر، فالو کنید",
-                    snowy="جاهای برف‌گیر، ۱۹۵۱ تا ۱۹۸۰", head="برفِ کم‌شده",
-                    steps=("زیر ۲۵٪", "۲۵ تا ۵۰٪", "بیش از ۵۰٪"))
-    return dict(scenes=(("Where did {Iran's snow} go?", "snow in Iran, 1951–2026"),
-                        (f"Of every 10 snowflakes, // {{{lost} are gone}}", f"{100 * loss:.0f} % less snow, and nowhere more"),
-                        (f"Iran's winters are // {{about {warm:.0f} °C}} warmer", f"stations +{cru:.1f} °C, ERA5 +{era:.1f} °C"),
-                        (f"Iran's 5-year drought: // about {{{DROUGHT}×}} more likely", "due to human-caused warming")),
+                    snowy="مناطقِ برفی، ۱۹۵۱ تا ۱۹۸۰", head="کاهشِ برفِ هر جا نسبت به ۱۹۵۱ تا ۱۹۸۰",
+                    steps=("زیر ۲۵٪", "۲۵ تا ۵۰٪", "بیش از ۵۰٪"),
+                    sources=("منبع: ERA5 ماهانه (کوپرنیکوس / ECMWF) و CRU TS 4.10 (دانشگاه ایست‌آنگلیا)",
+                             "محاسبهٔ ما · سال آبی: اکتبر تا سپتامبر"))
+    return dict(scenes=(("How much has {Iran's snow} shrunk?", ""),
+                        (f"Snowfall in Iran // {{is down {pct} %}}", "and no snowy place got more"),
+                        (f"Over the same years, winters // {{warmed {cru:.1f} to {era:.1f} °C}}", "Nov–Mar, 1951–80 vs 2016–25")),
                 follow="Follow for more climate data in 1-bit",
-                snowy="snowy places, 1951–80", head="snow lost",
-                steps=("under 25 %", "25–50 %", "over 50 %"))
+                snowy="snowy places, 1951–80", head="snow lost per place, vs 1951–80",
+                steps=("under 25 %", "25–50 %", "over 50 %"),
+                sources=("Data: ERA5 monthly (Copernicus / ECMWF), CRU TS 4.10 (Univ. of East Anglia)",
+                         "Our calculation · water year: October to September"))
 
 
 def screens(h: int, w: int) -> dict:
@@ -106,8 +110,9 @@ def screens(h: int, w: int) -> dict:
 class IranSnowFilm:
     """Draws the film; exposes L, S, bpm, appear(), melody() and blips for onebit_atari."""
 
-    def __init__(self, th: onebit.Theme, lang: str = "en"):
-        self.th, self.lang, self.fa = th, lang, lang == "fa"
+    def __init__(self, th: onebit.Theme, lang: str = "en", colour: dict | None = None):
+        """colour: a COLOURS entry for full colour; None draws a 1-bit theme in patterns."""
+        self.th, self.lang, self.fa, self.colour = th, lang, lang == "fa", colour
         s = snow.series(0.0, "Iran")
         then, now = s.loc[THEN[0]:THEN[1], "snow"], s.loc[NOW[0]:NOW[1], "snow"]
         assert len(then) == 30 and len(now) == 10, "complete water years only"
@@ -116,7 +121,7 @@ class IranSnowFilm:
         era = float(s.loc[WARM[0]:WARM[1], "cold_t2m"].mean() - s.loc[THEN[0]:THEN[1], "cold_t2m"].mean())   # 2.4 °C
         cru = snow.cru_winter("Iran", *THEN, *WARM)            # 1.6 °C
         assert round((cru + era) / 2) == 2, (cru, era)
-        self.words = words(lang, self.lost, self.loss, cru, era)
+        self.words = words(lang, self.loss, cru, era)
         self.bpm = PACE["bpm"]
         self.beat = 60 / self.bpm
         scenes = tuple(Scene(b, FULL, t, line) for b, (t, line) in zip(PACE["bars"], self.words["scenes"]))
@@ -132,7 +137,7 @@ class IranSnowFilm:
         self.maps()
         dots = np.zeros((1920, 1080), bool)
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
-        dots[FOOTER - 32:FOOTER + 16] = False
+        dots[FOOTER - 36:FOOTER + 50] = False
         self.dots = dots
 
     def check(self, scenes):
@@ -145,7 +150,7 @@ class IranSnowFilm:
     def maps(self):
         """The map's two states: where snow fell in 1951-80, and how much of it is gone."""
         x, y, w, h = MAP
-        land, borders, _, self.place, _, inside = highland_map(w, h, EXTENT, "Iran")
+        _, _, _, self.place, _, inside = highland_map(w, h, EXTENT, "Iran")
         sf = snow.water_years(snow.field("snowfall", "sf"))
         then = sf.sel(wy=slice(*THEN)).mean("wy")
         lost = 100 * (1 - sf.sel(wy=slice(*NOW)).mean("wy") / then)
@@ -159,11 +164,14 @@ class IranSnowFilm:
         body = inside & ~edge
         snowy = body & (then_px >= SNOWY)
         self.pat = scr = screens(h, w)
-        self.base = body & ~snowy & scr["sparse"]                # Iran without snow: in the dot colour
-        self.before = snowy & scr["dots"]
         a, b = CLASSES
+        self.land, self.snowy = body & ~snowy, snowy
+        self.steps = (snowy & (lost_px < a), snowy & (lost_px >= a) & (lost_px < b), snowy & (lost_px >= b))
+        self.base = self.land & scr["sparse"]                    # 1-bit: Iran without snow in the dot colour
+        self.before = snowy & scr["dots"]
         self.after = snowy & np.where(lost_px < a, scr["dots"], np.where(lost_px < b, scr["hatch"], scr["solid"]))
         self.border = edge & ((np.add.outer(np.arange(h), np.arange(w))) % 2 == 0)
+        assert np.isfinite(lost_px[snowy]).all(), "a snowy place without a change would be drawn as land"
         gained = int((snowy & (lost_px < 0)).sum())
         assert gained == 0, f"{gained} map pixels gained snow: the line 'more nowhere' would be wrong"
 
@@ -223,8 +231,17 @@ class IranSnowFilm:
         th = self.th
         x, y, w, h = MAP
         turned = self.turned(t)
-        c.pixels(x, y, self.base, th.dots)
-        c.pixels(x, y, self.after if turned else self.before, th.ink)
+        if self.colour:                                   # solid fills: land, snow, then the ramp of loss
+            col = self.colour
+            c.pixels(x, y, self.land, col["land"])
+            if turned:
+                for mask, colour in zip(self.steps, col["ramp"]):
+                    c.pixels(x, y, mask, colour)
+            else:
+                c.pixels(x, y, self.snowy, col["snow"])
+        else:
+            c.pixels(x, y, self.base, th.dots)
+            c.pixels(x, y, self.after if turned else self.before, th.ink)
         c.pixels(x, y, self.border, th.ink)
         for name, lo, la in CITIES[self.lang]:            # small framed tags, readable over any screen
             px, py = self.place(lo, la)
@@ -240,30 +257,31 @@ class IranSnowFilm:
         self.legend(c, turned)
 
     def legend(self, c: Canvas, turned: bool):
-        """Under the map, centred, in reading order: where snow fell before the turn; after it a
-        heading and the three steps of loss."""
+        """A stepped colour bar under the map, in reading order: before the turn one box (where
+        snow fell), after it a heading and three boxes of loss, each labelled underneath."""
         th = self.th
         mid = (LEFT + RIGHT) / 2
         items = [("dots", self.words["snowy"])] if not turned else \
             [("dots", self.words["steps"][0]), ("hatch", self.words["steps"][1]), ("solid", self.words["steps"][2])]
         if turned:
-            self.say(c, mid, LEGEND, self.words["head"], 36, True, th.ink, "ms")
-        path, way, size, sw, gap = (FA_TEXT, "rtl", 32, 46, 30) if self.fa else (TEXT, None, 30, 46, 30)
-        widths = [sw + 10 + c.width(fa(label) if self.fa else label, path, size, way) for _, label in items]
-        total = sum(widths) + gap * (len(items) - 1)
-        x = mid + total / 2 if self.fa else mid - total / 2     # Persian starts on the right
-        y = LEGEND + 50
-        for (pat, label), wd in zip(items, widths):
-            sx = x - sw if self.fa else x                         # the swatch leads, the label follows
-            c.frame(sx, y - 26, sx + sw, y + 6)
-            c.pixels(sx + 1, y - 25, self.pat[pat][:30, :sw - 2], th.ink)
-            if self.fa:
-                c.text(sx - 10, y, fa(label), path, size, th.ink, "rs", "rtl")
-                x -= wd + gap
+            self.say(c, mid, LEGEND, self.words["head"], 44, True, th.ink, "ms")
+        box, top = 240, LEGEND + 20
+        n = len(items)
+        for k, (pat, label) in enumerate(items):
+            j = n - 1 - k if self.fa else k                   # Persian reads the bar from the right
+            x0 = mid + (j - n / 2) * box
+            if self.colour:                               # solid boxes with a 2 px gap between them
+                fill = self.colour["snow"] if n == 1 else self.colour["ramp"][k]
+                c.fill(x0 + 1, top, x0 + box - 1, top + BOX_H, fill)
             else:
-                c.text(sx + sw + 10, y, label, path, size, th.ink)
-                x += wd + gap
-        assert total <= RIGHT - LEFT, total
+                c.pixels(x0 + 2, top + 2, self.pat[pat][:BOX_H - 4, :box - 4], th.ink)
+                c.frame(x0, top, x0 + box, top + BOX_H)
+            cx = x0 + box / 2
+            label = fa(label) if self.fa else label
+            path, way = (FA_TEXT, "rtl") if self.fa else (TEXT, None)
+            size = 40 if n > 1 else 36
+            assert c.width(label, path, size, way) <= (box - 8 if n > 1 else RIGHT - LEFT), label
+            c.text(cx, top + BOX_H + 48, label, path, size, th.ink, "ms", way)
 
     def flakes(self, c: Canvas, t: float):
         """Ten flakes; the last ones in reading order fade to a dotted ghost."""
@@ -274,21 +292,22 @@ class IranSnowFilm:
             cx = (LEFT + RIGHT) / 2 + (j - 4.5) * PITCH
             x0, y0 = cx - w * CELL / 2, ROW - h * CELL / 2
             ghost = k >= 10 - gone
+            ink = self.colour["snow"] if self.colour else self.th.ink
             for r, row in enumerate(FLAKE):
                 for q, ch in enumerate(row):
                     if ch == "#" and (not ghost or (r + q) % 2 == 0):
                         a, b = x0 + q * CELL, y0 + r * CELL
                         if ghost:                             # a faded flake: one dot per pixel, its middle
-                            c.fill(a + 2, b + 2, a + CELL - 2, b + CELL - 2, self.th.ink)
+                            c.fill(a + 2, b + 2, a + CELL - 2, b + CELL - 2, ink)
                         else:
-                            c.fill(a, b, a + CELL, b + CELL, self.th.ink)
+                            c.fill(a, b, a + CELL, b + CELL, ink)
 
     def era(self, c: Canvas, t: float):
         y0, y1 = NOW if self.turned(t) else THEN
         if self.fa:
-            c.text((LEFT + RIGHT) / 2, ROW + 112, f"{fa(y0)} تا {fa(y1)}", FA_BOLD, 52, self.th.ink, "ms", "rtl")
+            c.text(*ERA, f"{fa(y0)} تا {fa(y1)}", FA_BOLD, 56, self.th.ink, "rs", "rtl")
         else:
-            c.text((LEFT + RIGHT) / 2, ROW + 112, f"{y0}–{y1}", GROTESK, 52, self.th.ink, "ms")
+            c.text(*ERA, f"{y0}–{y1}", GROTESK, 56, self.th.ink, "rs")
 
     def draw(self, s: int, t: float = np.inf, size=SIZES["reel"]):
         c = Canvas(s, self.th, 1.0, (0.0, 0.0), size)
@@ -302,7 +321,13 @@ class IranSnowFilm:
         self.map(c, t)
         self.flakes(c, t)
         self.era(c, t)
-        c.text(onebit.LEFT, FOOTER, SOURCE, MONO, 20, self.th.head)
+        for k, line in enumerate(self.words["sources"]):         # under the window, inside its width
+            if self.fa:
+                c.text(WIN[0] + WIN[2], FOOTER + 34 * k, line, FA_TEXT, 26, self.th.head, "rs", "rtl")
+            else:
+                c.text(WIN[0], FOOTER + 34 * k, line, TEXT, 24, self.th.head)
+            assert c.width(line, FA_TEXT if self.fa else TEXT, 26 if self.fa else 24,
+                           "rtl" if self.fa else None) <= WIN[2], line
         return c.im
 
 
@@ -312,14 +337,14 @@ def main() -> None:
     ap.add_argument("--lang", default="fa", choices=("en", "fa"))
     ap.add_argument("--stills", action="store_true", help="cover and frames only, no video")
     args = ap.parse_args()
-    film = IranSnowFilm(onebit.THEMES[args.theme], args.lang)
+    film = IranSnowFilm(onebit.THEMES[args.theme], args.lang, COLOURS.get(args.theme))
     (OUT / "social").mkdir(parents=True, exist_ok=True)
     base = OUT / "social" / (f"iran_snow_{args.theme}" + ("" if args.lang == "en" else f"_{args.lang}"))
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
         st = film.starts
-        for t in (st[1] + 3.0, st[1] + film.done + 2, st[2] + 4.0, st[3] + 4.0, st[4] - 0.1):
+        for t in (st[1] + 3.0, st[1] + film.done + 2, st[2] + 4.0, st[-1] - 0.1):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
         print("saved", f"{base}_t*.png")
         return
