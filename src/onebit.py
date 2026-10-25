@@ -43,6 +43,7 @@ Themes recolour the whole scene:
     kabud1  Kabud.1bit      true 1-bit: kabud, the dusty slate blue of a winter sky over Tehran, and ink
     grau1   Grau.1bit       black, grey and white: white field, black ink, grey dot grid
     kashi   Kashi           in colour: cream, navy type, Persian turquoise accents (kashi, the tiles)
+    flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
 from __future__ import annotations
@@ -177,6 +178,10 @@ THEMES = {
                    light="#F6F1E7", track="#1F2A44", cold="#2A9D96", hot="#2A9D96",
                    levels=("#F6F1E7", "#1F2A44", "#1F2A44", "#1F2A44"), title="#F6F1E7", dots="#DDD3C1",
                    mono=True, mark="#238C86", town="Tehran"),
+    "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
+                     light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
+                     levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",
+                     mono=True, mark="#6A45A6"),
     "grau1": Theme("Grau.1bit", field="#EEEEEB", ink="#141414", head="#141414", paper="#EEEEEB",
                    light="#EEEEEB", track="#141414", cold="#141414", hot="#141414",
                    levels=("#EEEEEB", "#141414", "#141414", "#141414"), title="#EEEEEB", dots="#8E8E8C",
@@ -841,9 +846,10 @@ def caption_band(c: Canvas, th: Theme, scenes, i: int, dt: float, label: str, la
 
 
 def words_of(text: str, th: Theme) -> list:
-    """The words of a title with their accent: {braces} in the hot colour, [brackets] in the cold."""
+    """The words of a title with their accent: {braces} in the hot colour, [brackets] in the cold.
+    Words part at plain spaces only, so a no-break space keeps "21\u00a0%" on one line."""
     return [(w, {"{": th.hot, "[": th.cold}.get(part[0])) for part in re.split(r"(\{[^}]*\}|\[[^]]*\])", text)
-            if part for w in part.strip("{}[]").split()]
+            if part for w in part.strip("{}[]").split(" ") if w.strip()]
 
 
 def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: float = 1.0, left=LEFT,

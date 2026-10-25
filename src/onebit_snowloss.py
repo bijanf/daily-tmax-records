@@ -25,8 +25,9 @@ type, the bar and the row. Themes: kashi in full colour (COLOURS), the 1-bit the
 
     outputs/onebit/social/iran_snow_<theme>[_fa]_reel.mp4, _cover.png, _music.wav
 
-    python -I src/onebit_iran_snow.py --theme kashi            # colour, Persian
-    python -I src/onebit_iran_snow.py --theme kashi --stills
+    python -I src/onebit_snowloss.py --region iran --theme kashi --no-music      # Persian, colour
+    python -I src/onebit_snowloss.py --region alps --theme flieder --no-music    # German, lilac
+    python -I src/onebit_snowloss.py --region alps --theme flieder --stills
 """
 
 from __future__ import annotations
@@ -48,32 +49,44 @@ from onebit import (FA_BOLD, FA_TEXT, FULL, GROTESK, OUT, PIXEL, SIZES, SOCIAL_C
                     Scene, Timeline, fa, title, words_of)
 from onebit_snow import FLAKE, highland_map, mercator_y  # noqa: E402
 
-PACE = dict(bpm=60, bars=(3, 4, 3), lead=3, per=3)   # beats before the fade, beats per flake: slow
 THEN, NOW, WARM = (1951, 1980), (2017, 2026), (2016, 2025)   # CRU TS 4.10 ends in 2025
 SNOWY = 20.0                                     # mm a year in 1951-80: a place that had snow
 CLASSES = (25, 50)                               # % lost: the map's three steps
-EXTENT = (43.5, 63.8, 24.8, 40.2)                # W, E, S, N: Iran
-CITIES = {"en": (("Tehran", 51.39, 35.69), ("Tabriz", 46.29, 38.08), ("Mashhad", 59.61, 36.30),
-                 ("Shiraz", 52.53, 29.59)),
-          "fa": (("تهران", 51.39, 35.69), ("تبریز", 46.29, 38.08), ("مشهد", 59.61, 36.30),
-                 ("شیراز", 52.53, 29.59))}
+# name: a Natural Earth country or range (snow.shape); data: the get_snow.py download; extent:
+# W, E, S, N of the map; pace: tempo, scene lengths (bars), beats before the fade and per flake;
+# expect: the published numbers (% less snow; °C stations, ERA5): the film stops if the data
+# no longer give them; nowhere_more: the caption says no snowy place gained, so the film asserts it; era: the map's
+# empty top corner that holds the years (Turkmenistan for Iran, the Jura for the Alps)
+REGIONS = {
+    "iran": dict(name="Iran", data="snow", extent=(43.5, 63.8, 24.8, 40.2), map_w=760, langs=("fa", "en"),
+                 pace=dict(bpm=60, bars=(3, 4, 3), lead=3, per=3), app="Iran.Snow", borders=False, era="right",
+                 expect=(29, 1.6, 2.4),
+                 nowhere_more=True,
+                 cities={"en": (("Tehran", 51.39, 35.69), ("Tabriz", 46.29, 38.08), ("Mashhad", 59.61, 36.30),
+                                ("Shiraz", 52.53, 29.59)),
+                         "fa": (("تهران", 51.39, 35.69), ("تبریز", 46.29, 38.08), ("مشهد", 59.61, 36.30),
+                                ("شیراز", 52.53, 29.59))}),
+    "alps": dict(name="ALPS", data="snow_alps", extent=(4.6, 17.0, 43.3, 48.6), map_w=828, langs=("de",),
+                 pace=dict(bpm=60, bars=(2.5, 3.5, 2), lead=2, per=2.5), app="Alpen.Schnee", borders=True, era="left",
+                 expect=(21, 2.1, 2.7),
+                 nowhere_more=False,
+                 cities={"de": (("Zürich", 8.54, 47.37), ("Innsbruck", 11.39, 47.27), ("Mailand", 9.19, 45.46),
+                                ("Grenoble", 5.72, 45.19))}),
+}
 WIN = (60, 196, 900, 1356)
 BAR = 40
 LEFT, RIGHT = 96, 924
 RULE = 560
 SMALL = 48                                       # px of the small line: readable on a phone
-MAP_W = 760
-MAP_H = round(MAP_W * (mercator_y(EXTENT[3]) - mercator_y(EXTENT[2])) / np.deg2rad(EXTENT[1] - EXTENT[0]))
-MAP = ((LEFT + RIGHT - MAP_W) // 2, 584, MAP_W, MAP_H)
-LEGEND = MAP[1] + MAP_H + 44                     # baseline of the colour bar's heading; the bar below
 BOX_H = 46                                       # height of the colour bar
-ROW, PITCH, CELL = LEGEND + 178, 78, 6          # the flakes: centre line, pitch, sprite pixel
-ERA = (MAP[0] + MAP_W - 6, MAP[1] + 64)          # the years: in the map's empty corner over Turkmenistan
+PITCH, CELL = 78, 6                              # the flakes: pitch, sprite pixel
+BELOW = 44 + 178 + 27                            # map foot to the colour bar's heading, the flakes, their foot
 FOOTER = 1592
 # themes in full colour (by their key), checked with the dataviz validator: the loss is an
-# ordinal ramp of one warm hue (light end 2.06:1 on the cream), snow a soft blue, and the land
-# without snow a cool grey, so that even the lightest step stands apart from it
-COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C7612F", "#93351F"))}
+# ordinal ramp of one hue (light end at least 2:1 on the field), snow a colour apart from it,
+# and the land without snow a cool grey, so that even the lightest step stands apart from it
+COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C7612F", "#93351F")),
+           "flieder": dict(land="#E3E1E8", snow="#6F8FD8", ramp=("#A98BD4", "#7E52B8", "#4B2280"))}
 
 
 def span(years, lang: str = "fa") -> str:
@@ -81,8 +94,29 @@ def span(years, lang: str = "fa") -> str:
     return f"{fa(years[0])} تا {fa(years[1])}" if lang == "fa" else f"{years[0]}–{years[1]}"
 
 
-def words(lang: str, lost: float, cru: float, era: float) -> dict:
+def decimal(v: float) -> str:
+    """One decimal with a German decimal comma: 2,1."""
+    return f"{v:.1f}".replace(".", ",")
+
+
+def seasons(years) -> str:
+    """Winters named by their March, written as seasons: (2016, 2025) -> 2015/16–2024/25."""
+    return f"{years[0] - 1}/{str(years[0])[2:]}–{years[1] - 1}/{str(years[1])[2:]}"
+
+
+def words(region: str, lang: str, lost: float, cru: float, era: float) -> dict:
     pct = f"{100 * lost:.0f}"
+    if (region, lang) == ("alps", "de"):
+        nb = "\u00a0"                                    # no-break space: a number keeps its unit
+        return dict(scenes=(("Wie viel Schnee {fehlt den Alpen?}", ""),
+                            (f"Schneefall in den Alpen: // {{{pct}{nb}% weniger}}", ""),
+                            (f"Winter (Nov–März): // {{{decimal(cru)} bis {decimal(era)}{nb}°C}} wärmer", "")),
+                    follow="Folge mir für mehr Klimadaten",
+                    snowy="Gebiete mit Schneefall, 1951–1980", head="Schneeverlust gegenüber 1951–1980",
+                    steps=(f"unter 25{nb}%", f"25–50{nb}%", f"über 50{nb}%"),
+                    sources=("Daten: ERA5 monatlich (Copernicus/ECMWF) · CRU TS 4.10 (Univ. of East Anglia)",
+                             f"Schnee {span(THEN, 'de')} → {span(NOW, 'de')} · Winter {seasons(THEN)} → {seasons(WARM)}"))
+    assert (region, lang) in (("iran", "fa"), ("iran", "en")), (region, lang)
     if lang == "fa":
         return dict(scenes=(("برفِ ایران {چقدر کم شده؟}", ""),
                             (f"بارشِ برفِ ایران // {{{fa(pct)}٪ کم شده است}}", ""),
@@ -112,31 +146,49 @@ def screens(h: int, w: int) -> dict:
             "solid": np.ones((h, w), bool)}
 
 
-class IranSnowFilm:
+class SnowLossFilm:
     """Draws the film; exposes L, S, bpm, appear(), melody() and blips for onebit_atari."""
 
-    def __init__(self, th: onebit.Theme, lang: str = "en", colour: dict | None = None):
+    def __init__(self, th: onebit.Theme, region: str = "iran", lang: str = "fa", colour: dict | None = None):
         """colour: a COLOURS entry for full colour; None draws a 1-bit theme in patterns."""
         self.th, self.lang, self.fa, self.colour = th, lang, lang == "fa", colour
-        s = snow.series(0.0, "Iran")
+        R = self.R = REGIONS[region]
+        self.extent, self.cities, self.pace, self.app = R["extent"], R["cities"][lang], R["pace"], R["app"]
+        snow.use(R["data"])
+        s = snow.series(0.0, R["name"])
         then, now = s.loc[THEN[0]:THEN[1], "snow"], s.loc[NOW[0]:NOW[1], "snow"]
         assert len(then) == 30 and len(now) == 10, "complete water years only"
         self.loss = 1 - now.mean() / then.mean()               # 0.29
         self.lost = round(10 * self.loss)                      # of every 10 flakes: 3
         era = float(s.loc[WARM[0]:WARM[1], "cold_t2m"].mean() - s.loc[THEN[0]:THEN[1], "cold_t2m"].mean())   # 2.4 °C
-        cru = snow.cru_winter("Iran", *THEN, *WARM)            # 1.6 °C
-        assert round((cru + era) / 2) == 2, (cru, era)
-        self.words = words(lang, self.loss, cru, era)
-        self.bpm = PACE["bpm"]
+        cru = snow.cru_winter(R["name"], *THEN, *WARM)         # 1.6 °C
+        got = (round(100 * self.loss), round(cru, 1), round(era, 1))
+        assert got == R["expect"], f"the data now give {got}, the published reel {R['expect']}: check before rendering"
+        assert self.lost >= 1, "no flake to fade"
+        self.warming = (cru, era)                              # °C: stations, ERA5
+        self.words = words(region, lang, self.loss, cru, era)
+        self.bpm = self.pace["bpm"]
         self.beat = 60 / self.bpm
-        scenes = tuple(Scene(b, FULL, t, line) for b, (t, line) in zip(PACE["bars"], self.words["scenes"]))
+        # the map block (map, colour bar, flakes) centred between the rule and the window's foot
+        w = R["map_w"]
+        h = round(w * (mercator_y(self.extent[3]) - mercator_y(self.extent[2]))
+                  / np.deg2rad(self.extent[1] - self.extent[0]))
+        room = WIN[1] + WIN[3] - 32 - (RULE + 24)          # 32 px above the window's foot
+        assert h + BELOW <= room, "the map block does not fit the window"
+        top = RULE + 24 + (room - (h + BELOW)) // 2
+        self.map_box = ((LEFT + RIGHT - w) // 2, top, w, h)
+        self.legend_y = top + h + 44                       # baseline of the colour bar's heading
+        self.row = self.legend_y + 178                     # centre line of the flakes
+        self.era_at = (self.map_box[0] + (w - 6 if R["era"] == "right" else 6), top + 64)   # the years
+        scenes = tuple(Scene(b, FULL, t, line) for b, (t, line) in zip(self.pace["bars"], self.words["scenes"]))
         self.check(scenes)
         starts = np.cumsum([0.0] + [sc.bars * 4 * self.beat for sc in scenes])
         self.starts = starts
         self.L = Timeline(0, 0, 0, 0, 0, end=float(starts[-1]), camera=((0.0, FULL),),
                           scenes=tuple(float(t) for t in starts[:-1]))
-        self.S = SimpleNamespace(scenes=scenes, os_name="IRAN.SNOW", lang=lang, race=[])
-        self.blips = [float(starts[1]) + (PACE["lead"] + k * PACE["per"]) * self.beat for k in range(self.lost)]
+        self.S = SimpleNamespace(scenes=scenes, os_name=self.app.upper(), lang=lang, race=[])
+        self.blips = [float(starts[1]) + (self.pace["lead"] + k * self.pace["per"]) * self.beat
+                      for k in range(self.lost)]
         self.done = self.blips[-1] - float(starts[1]) + 0.5   # s into the fade: the number, the map, the years
         assert self.blips[-1] < starts[2] - 2 * self.beat, "the fade must finish with time to read"
         self.maps()
@@ -154,13 +206,13 @@ class IranSnowFilm:
 
     def maps(self):
         """The map's two states: where snow fell in 1951-80, and how much of it is gone."""
-        x, y, w, h = MAP
-        _, _, _, self.place, _, inside = highland_map(w, h, EXTENT, "Iran")
+        x, y, w, h = self.map_box
+        _, borders, _, self.place, _, inside = highland_map(w, h, self.extent, self.R["name"])
         sf = snow.water_years(snow.field("snowfall", "sf"))
         then = sf.sel(wy=slice(*THEN)).mean("wy")
         lost = 100 * (1 - sf.sel(wy=slice(*NOW)).mean("wy") / then)
-        lon = EXTENT[0] + (np.arange(w) + 0.5) / w * (EXTENT[1] - EXTENT[0])
-        y0, y1 = mercator_y(EXTENT[2]), mercator_y(EXTENT[3])
+        lon = self.extent[0] + (np.arange(w) + 0.5) / w * (self.extent[1] - self.extent[0])
+        y0, y1 = mercator_y(self.extent[2]), mercator_y(self.extent[3])
         lat = np.rad2deg(np.arctan(np.sinh(y1 - (np.arange(h) + 0.5) / h * (y1 - y0))))
         at = dict(latitude=xr.DataArray(lat, dims="latitude"), longitude=xr.DataArray(lon, dims="longitude"),
                   method="nearest")
@@ -172,13 +224,17 @@ class IranSnowFilm:
         a, b = CLASSES
         self.land, self.snowy = body & ~snowy, snowy
         self.steps = (snowy & (lost_px < a), snowy & (lost_px >= a) & (lost_px < b), snowy & (lost_px >= b))
-        self.base = self.land & scr["sparse"]                    # 1-bit: Iran without snow in the dot colour
+        self.base = self.land & scr["sparse"]                    # 1-bit: land without snow in the dot colour
         self.before = snowy & scr["dots"]
         self.after = snowy & np.where(lost_px < a, scr["dots"], np.where(lost_px < b, scr["hatch"], scr["solid"]))
-        self.border = edge & ((np.add.outer(np.arange(h), np.arange(w))) % 2 == 0)
+        dotted = (np.add.outer(np.arange(h), np.arange(w))) % 2 == 0
+        self.border = edge & dotted
+        if self.R["borders"]:                             # the countries' borders inside the range, dotted
+            self.border |= borders & body & dotted
         assert np.isfinite(lost_px[snowy]).all(), "a snowy place without a change would be drawn as land"
-        gained = int((snowy & (lost_px < 0)).sum())
-        assert gained == 0, f"{gained} map pixels gained snow: the line 'more nowhere' would be wrong"
+        self.gained = int((snowy & (lost_px < 0)).sum())   # map pixels: the caption must say so
+        if self.R["nowhere_more"]:
+            assert self.gained == 0, f"{self.gained} map pixels gained snow: the caption would be wrong"
 
     # ── time ──
 
@@ -227,14 +283,14 @@ class IranSnowFilm:
         if last and self.fa:
             c.text(x + w - 12, y + BAR - 10, self.words["follow"], FA_TEXT, 28, th.title, "rs", "rtl")
         else:
-            c.text(x + 12, y + BAR - 9, self.words["follow"] if last else "Iran.Snow", PIXEL, 32, th.title)
+            c.text(x + 12, y + BAR - 9, self.words["follow"] if last else self.app, PIXEL, 32, th.title)
             if not last:
                 c.text(x + w - 12, y + BAR - 9, f"[{i + 1:02d}/{len(self.S.scenes):02d}]", PIXEL, 32, th.title, "rs")
         c.fill(x + 3, RULE, x + w - 3, RULE + 2, th.ink)
 
     def map(self, c: Canvas, t: float):
         th = self.th
-        x, y, w, h = MAP
+        x, y, w, h = self.map_box
         turned = self.turned(t)
         if self.colour:                                   # solid fills: land, snow, then the ramp of loss
             col = self.colour
@@ -248,7 +304,7 @@ class IranSnowFilm:
             c.pixels(x, y, self.base, th.dots)
             c.pixels(x, y, self.after if turned else self.before, th.ink)
         c.pixels(x, y, self.border, th.ink)
-        for name, lo, la in CITIES[self.lang]:            # small framed tags, readable over any screen
+        for name, lo, la in self.cities:                  # small framed tags, readable over any screen
             px, py = self.place(lo, la)
             px, py = x + px, y + py
             c.fill(px - 5, py - 5, px + 5, py + 5, th.ink)
@@ -269,8 +325,8 @@ class IranSnowFilm:
         items = [("dots", self.words["snowy"])] if not turned else \
             [("dots", self.words["steps"][0]), ("hatch", self.words["steps"][1]), ("solid", self.words["steps"][2])]
         if turned:
-            self.say(c, mid, LEGEND, self.words["head"], 44, True, th.ink, "ms")
-        box, top = 240, LEGEND + 20
+            self.say(c, mid, self.legend_y, self.words["head"], 44, True, th.ink, "ms")
+        box, top = 240, self.legend_y + 20
         n = len(items)
         for k, (pat, label) in enumerate(items):
             j = n - 1 - k if self.fa else k                   # Persian reads the bar from the right
@@ -295,7 +351,7 @@ class IranSnowFilm:
         for k in range(10):
             j = 9 - k if self.fa else k                       # Persian reads the row from the right
             cx = (LEFT + RIGHT) / 2 + (j - 4.5) * PITCH
-            x0, y0 = cx - w * CELL / 2, ROW - h * CELL / 2
+            x0, y0 = cx - w * CELL / 2, self.row - h * CELL / 2
             ghost = k >= 10 - gone
             ink = self.colour["snow"] if self.colour else self.th.ink
             for r, row in enumerate(FLAKE):
@@ -310,9 +366,9 @@ class IranSnowFilm:
     def era(self, c: Canvas, t: float):
         y0, y1 = NOW if self.turned(t) else THEN
         if self.fa:
-            c.text(*ERA, f"{fa(y0)} تا {fa(y1)}", FA_BOLD, 56, self.th.ink, "rs", "rtl")
+            c.text(*self.era_at, f"{fa(y0)} تا {fa(y1)}", FA_BOLD, 56, self.th.ink, "rs", "rtl")
         else:
-            c.text(*ERA, f"{y0}–{y1}", GROTESK, 56, self.th.ink, "rs")
+            c.text(*self.era_at, f"{y0}–{y1}", GROTESK, 56, self.th.ink, "rs" if self.R["era"] == "right" else "ls")
 
     def draw(self, s: int, t: float = np.inf, size=SIZES["reel"]):
         c = Canvas(s, self.th, 1.0, (0.0, 0.0), size)
@@ -338,14 +394,18 @@ class IranSnowFilm:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--theme", default="kabud1", choices=list(onebit.THEMES), help="colour theme")
-    ap.add_argument("--lang", default="fa", choices=("en", "fa"))
+    ap.add_argument("--region", default="iran", choices=list(REGIONS))
+    ap.add_argument("--theme", default="kashi", choices=list(onebit.THEMES), help="colour theme")
+    ap.add_argument("--lang", choices=("en", "fa", "de"), help="default: the region's first language")
     ap.add_argument("--stills", action="store_true", help="cover and frames only, no video")
     ap.add_argument("--no-music", action="store_true", help="a silent audio track: music is added in the app")
     args = ap.parse_args()
-    film = IranSnowFilm(onebit.THEMES[args.theme], args.lang, COLOURS.get(args.theme))
+    lang = args.lang or REGIONS[args.region]["langs"][0]
+    if lang not in REGIONS[args.region]["langs"]:
+        ap.error(f"{args.region} comes in {', '.join(REGIONS[args.region]['langs'])}")
+    film = SnowLossFilm(onebit.THEMES[args.theme], args.region, lang, COLOURS.get(args.theme))
     (OUT / "social").mkdir(parents=True, exist_ok=True)
-    base = OUT / "social" / (f"iran_snow_{args.theme}" + ("" if args.lang == "en" else f"_{args.lang}"))
+    base = OUT / "social" / (f"{args.region}_snow_{args.theme}" + ("" if lang == "en" else f"_{lang}"))
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:

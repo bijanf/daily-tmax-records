@@ -38,16 +38,36 @@ def field(var: str, short: str) -> xr.DataArray:
     return da.drop_vars([c for c in ("expver", "number") if c in da.coords]).rename(valid_time="time")
 
 
-def country(name: str, like: xr.DataArray) -> xr.DataArray:
-    """True where a cell's centre lies inside a country (Natural Earth 1:50 m borders)."""
+def use(folder: str) -> None:
+    """Read the ERA5 files of another download (get_snow.py --region): "snow" or "snow_alps"."""
+    global SNOW
+    SNOW = ROOT / "data" / folder
+    masks.cache_clear()
+    series.cache_clear()
+
+
+@functools.lru_cache(maxsize=8)
+def shape(name: str):
+    """The outline of a country (Natural Earth 1:50 m, by its ADMIN name, e.g. "Iran") or of a
+    mountain range (Natural Earth 1:10 m geography regions, by NAME, e.g. "ALPS")."""
     import cartopy.io.shapereader as shp
+
+    for res, cat, layer, key in (("50m", "cultural", "admin_0_countries", "ADMIN"),
+                                 ("10m", "physical", "geography_regions_polys", "NAME")):
+        for r in shp.Reader(shp.natural_earth(res, cat, layer)).records():
+            if r.attributes[key] == name:
+                return r.geometry
+    raise KeyError(name)
+
+
+def within(name: str, like: xr.DataArray) -> xr.DataArray:
+    """True where a cell's centre lies inside a country or range (shape())."""
     from shapely.geometry import Point
     from shapely.prepared import prep
 
-    rec = shp.Reader(shp.natural_earth("50m", "cultural", "admin_0_countries")).records()
-    shape = prep(next(r.geometry for r in rec if r.attributes["ADMIN"] == name))
+    outline = prep(shape(name))
     lon, lat = np.meshgrid(like["longitude"].values, like["latitude"].values)
-    inside = np.array([shape.contains(Point(x, y)) for x, y in zip(lon.ravel(), lat.ravel())]).reshape(lon.shape)
+    inside = np.array([outline.contains(Point(x, y)) for x, y in zip(lon.ravel(), lat.ravel())]).reshape(lon.shape)
     return xr.DataArray(inside, coords={"latitude": like["latitude"], "longitude": like["longitude"]},
                         dims=("latitude", "longitude"))
 
@@ -61,7 +81,7 @@ def masks(high: float = HIGH, region: str | None = None) -> tuple:
     land = lsm > 0.5
     counted = land & (height >= high)
     if region:
-        counted = counted & country(region, height)
+        counted = counted & within(region, height)
     return land, counted, height
 
 
@@ -95,7 +115,7 @@ def series(high: float = HIGH, region: str | None = None) -> pd.DataFrame:
 
 
 def cru_winter(region: str, y0: int, y1: int, z0: int, z1: int) -> float:
-    """How much warmer November-March was in z0-z1 than in y0-y1 over a country (°C), from the
+    """How much warmer November-March was in z0-z1 than in y0-y1 over a region (°C), from the
     stations of CRU TS 4.10 (0.5 deg; data/water/cru_ts4.10.<decade>.tmp.dat.nc). A season is
     named by its March."""
     import glob
@@ -103,7 +123,7 @@ def cru_winter(region: str, y0: int, y1: int, z0: int, z1: int) -> float:
     t = xr.open_mfdataset(sorted(glob.glob(str(ROOT / "data" / "water" / "cru_ts4.10.*.tmp.dat.nc"))),
                           combine="by_coords")["tmp"]
     t = t.rename(lat="latitude", lon="longitude")
-    inside = country(region, t.isel(time=0))
+    inside = within(region, t.isel(time=0))
     t = t.where(inside, drop=True)
     cold = t.where(t["time"].dt.month.isin([11, 12, 1, 2, 3]), drop=True)
     season = (cold["time"].dt.year + (cold["time"].dt.month >= 11)).rename("wy")

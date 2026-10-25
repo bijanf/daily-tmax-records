@@ -81,7 +81,9 @@ def highland_map(w: int, h: int, extent=EXTENT, region: str | None = None) -> tu
     import cartopy.feature as cfeature
     import matplotlib.pyplot as plt
 
-    fig = plt.figure(figsize=(w / 100, h / 100), dpi=100, facecolor="white")
+    # w x h pixels at 100 dpi; a hair more where the inches would floor (8.28 in -> 827 px)
+    size = tuple(v / 100 + (1e-6 if int(v / 100 * 100) < v else 0) for v in (w, h))
+    fig = plt.figure(figsize=size, dpi=100, facecolor="white")
     ax = fig.add_axes([0, 0, 1, 1], projection=ccrs.Mercator())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
     ax.spines["geo"].set_visible(False)
@@ -89,15 +91,14 @@ def highland_map(w: int, h: int, extent=EXTENT, region: str | None = None) -> tu
                    edgecolor="none", antialiased=False)
     fig.canvas.draw()
     land = np.asarray(fig.canvas.buffer_rgba())[..., 0] < 128
+    assert land.shape == (h, w), (land.shape, h, w)
     inside = None
     if region:
-        import cartopy.io.shapereader as shp
-        rec = shp.Reader(shp.natural_earth("50m", "cultural", "admin_0_countries")).records()
         ax.clear()
         ax.set_extent(extent, crs=ccrs.PlateCarree())
         ax.spines["geo"].set_visible(False)
-        ax.add_geometries([next(r.geometry for r in rec if r.attributes["ADMIN"] == region)], ccrs.PlateCarree(),
-                          facecolor="black", edgecolor="none", antialiased=False)
+        ax.add_geometries([snow.shape(region)], ccrs.PlateCarree(), facecolor="black", edgecolor="none",
+                          antialiased=False)
         fig.canvas.draw()
         inside = np.asarray(fig.canvas.buffer_rgba())[..., 0] < 128
     ax.clear()
@@ -142,6 +143,7 @@ class SnowFilm:
     """Draws the film; exposes L, S, bpm, appear(), melody() and blips for onebit_atari."""
 
     def __init__(self, th: onebit.Theme, lang: str = "en", then: int | None = None, now: int | None = None):
+        snow.use("snow")                                 # Turkey to Tibet, whatever was read before
         self.th, self.lang, self.fa = th, lang, lang == "fa"
         if then is None:
             # the average water year's snow share, 36.6 and 31.5 %: rounded, 37 and 32 keep the
