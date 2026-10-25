@@ -139,6 +139,27 @@ def cru_winter(region: str, y0: int, y1: int, z0: int, z1: int) -> float:
     return float(s.loc[z0:z1].mean() - s.loc[y0:y1].mean())
 
 
+def spring_bands(region: str, bands, then=(1951, 1980), now=(2017, 2026), months=(3, 4)) -> pd.DataFrame:
+    """The snowpack in spring (ERA5-Land snow water equivalent, mean of March and April, mm) by
+    elevation band (the grid cell's mean height): band -> 1951-80, 2017-26, change (%), cells."""
+    _, inside, height = masks(0.0, region)
+    swe = field("snow_depth_water_equivalent", "sd") * 1000
+    spring = swe.where(swe["time"].dt.month.isin(list(months)), drop=True)
+    spring = spring.groupby(spring["time"].dt.year.rename("yr")).mean("time")
+    years = spring["yr"].values
+    assert {*range(then[0], then[1] + 1), *range(now[0], now[1] + 1)} <= set(years), "a spring is missing"
+    w = np.cos(np.deg2rad(spring["latitude"]))
+    rows = []
+    for lo, hi in bands:
+        m = inside & (height >= lo) & (height < hi)
+        def mean(y, m=m):
+            v = spring.sel(yr=slice(*y)).mean("yr").where(m)
+            return float((v * w).sum() / (w * v.notnull()).sum())
+        a, b = mean(then), mean(now)
+        rows.append(dict(lo=lo, hi=hi, then=a, now=b, change=100 * (b / a - 1), cells=int(m.sum())))
+    return pd.DataFrame(rows)
+
+
 def maps(y0: int, y1: int, high: float = HIGH) -> xr.DataArray:
     """Snow share (%) of each cell over the water years y0-y1."""
     sf, tp = water_years(field("snowfall", "sf")), water_years(field("total_precipitation", "tp"))
