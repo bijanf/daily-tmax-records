@@ -19,6 +19,8 @@ yet published are skipped.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+
+import numpy as np
 from datetime import date
 from pathlib import Path
 
@@ -73,8 +75,36 @@ def this_year(var: str) -> Path | None:
 
 
 def invariant() -> Path:
-    return retrieve({"variable": ["land_sea_mask", "geopotential"], "year": ["2000"], "month": ["01"]},
+    path = retrieve({"variable": ["land_sea_mask", "geopotential"], "year": ["2000"], "month": ["01"]},
                     SNOW / "era5_invariant.nc")
+    return unzipped(path)
+
+
+def unzipped(path: Path) -> Path:
+    """CDS sometimes answers with a zip of one netCDF per variable (ERA5-Land's invariants) even
+    when asked for an unarchived file: merge them into one netCDF in its place."""
+    import tempfile
+    import zipfile
+
+    import xarray as xr
+
+    if not zipfile.is_zipfile(path):
+        return path
+    with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(path) as z:
+        z.extractall(tmp)
+        parts = []
+        for f in sorted(Path(tmp).glob("*.nc")):                  # each its own time stamp: drop it
+            d = xr.open_dataset(f)
+            for dim in ("time", "valid_time"):
+                if dim in d.dims:
+                    d = d.isel({dim: 0}, drop=True)
+            parts.append(d.load())
+        merged = xr.merge(parts, join="exact").expand_dims(valid_time=[np.datetime64("2000-01-01", "ns")])
+    assert all(int(merged[v].isnull().sum()) == 0 for v in merged.data_vars), "an empty invariant"
+    merged.to_netcdf(path.with_suffix(".nc.part"))
+    path.with_suffix(".nc.part").rename(path)
+    print("merged", path.name, flush=True)
+    return path
 
 
 def main() -> None:

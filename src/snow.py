@@ -29,13 +29,20 @@ HIGH = 1000.0                               # m: the highlands
 G = 9.80665
 
 
+def grid(da):
+    """Latitudes and longitudes in float64 to 4 decimals: ERA5-Land's invariants come in float32,
+    a few millionths of a degree off its fields, and would not align with them."""
+    return da.assign_coords(latitude=da["latitude"].astype("float64").round(4),
+                            longitude=da["longitude"].astype("float64").round(4))
+
+
 def field(var: str, short: str) -> xr.DataArray:
     """A variable over all downloaded months, the time floored to the month."""
     parts = [xr.open_dataset(p)[short] for p in sorted(SNOW.glob(f"era5_{var}_*.nc"))]
     da = xr.concat(parts, "valid_time").sortby("valid_time")
     da = da.assign_coords(valid_time=da["valid_time"].values.astype("datetime64[M]").astype("datetime64[ns]"))
     da = da.isel(valid_time=~da.get_index("valid_time").duplicated())
-    return da.drop_vars([c for c in ("expver", "number") if c in da.coords]).rename(valid_time="time")
+    return grid(da.drop_vars([c for c in ("expver", "number") if c in da.coords]).rename(valid_time="time"))
 
 
 def use(folder: str) -> None:
@@ -75,7 +82,7 @@ def within(name: str, like: xr.DataArray) -> xr.DataArray:
 @functools.lru_cache(maxsize=8)
 def masks(high: float = HIGH, region: str | None = None) -> tuple:
     """Land, the land counted (at least `high` m, inside `region` if given), terrain height (m)."""
-    inv = xr.open_dataset(SNOW / "era5_invariant.nc")
+    inv = grid(xr.open_dataset(SNOW / "era5_invariant.nc"))
     lsm = inv["lsm"].isel(valid_time=0, drop=True)
     height = inv["z"].isel(valid_time=0, drop=True) / G
     land = lsm > 0.5
