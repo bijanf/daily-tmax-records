@@ -141,9 +141,16 @@ def cru_winter(region: str, y0: int, y1: int, z0: int, z1: int) -> float:
 
 def spring_bands(region: str, bands, then=(1951, 1980), now=(2017, 2026), months=(3, 4)) -> pd.DataFrame:
     """The snowpack in spring (ERA5-Land snow water equivalent, mean of March and April, mm) by
-    elevation band (the grid cell's mean height): band -> 1951-80, 2017-26, change (%), cells."""
+    elevation band (the grid cell's mean height): band -> 1951-80, 2017-26, change (%), cells.
+    Without the cells still under snow in September (over 10 mm on average in either period),
+    mostly the model's glaciers: ERA5-Land holds snow on them all year, up to its 10 m cap, so
+    they hardly change."""
     _, inside, height = masks(0.0, region)
     swe = field("snow_depth_water_equivalent", "sd") * 1000
+    september = swe.where(swe["time"].dt.month == 9, drop=True)
+    lasting = [september.sel(time=slice(str(y[0]), str(y[1]))).mean("time") for y in (then, now)]
+    assert not any((inside & s.isnull()).any() for s in lasting), "September snow missing"
+    inside = inside & (lasting[0] <= 10) & (lasting[1] <= 10)
     spring = swe.where(swe["time"].dt.month.isin(list(months)), drop=True)
     spring = spring.groupby(spring["time"].dt.year.rename("yr")).mean("time")
     years = spring["yr"].values

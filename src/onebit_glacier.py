@@ -6,7 +6,8 @@ as ice thickness at the density of pure ice (900 kg/m3: 31 m; at 850 kg/m3, the 
 turn elevation change into mass, 33 m): "rund 31 Meter", the footer naming the density.
 
 A slow, still slide on the Slides frame. Under the title a block of ice with the 1976 surface
-dashed above it. In the second scene the surface sinks year by year (gaining in the few good
+dashed above it; a slanted cut through its foot says the ice goes on below (how thick the glaciers
+still are is not shown). In the second scene the surface sinks year by year (gaining in the few good
 years), the ice above it turning lilac, and once it reaches 2024 a ten-storey house (3 m a
 floor) stands in the gap for scale. In the third scene the last ten years' slice turns dark.
 Three scenes, 8 bars of 60 BPM = 32 s.
@@ -46,7 +47,7 @@ def words(ice: float, glaciers: int) -> dict:
                         (f"Von 1976 bis 2024: // {{rund {ice:.0f}{nb}Meter Eis weg}}", ""),
                         (f"Fast die Hälfte davon // {{allein {LAST10[0]}–{LAST10[1]}}}", "")),
                 follow="Folge mir für mehr Klimadaten",
-                head="Mittlere Absenkung der Gletscheroberfläche",
+                head="Mittlerer Verlust an Eisdicke",
                 surface="Oberfläche 1976", now="Oberfläche 2024", house="10 Stockwerke",
                 sources=(f"Daten: Dussaillant et al. 2025, ESSD (WGMS) · {glaciers:,} Gletscher der Alpen".replace(",", "."),
                          "Massenbilanz 1976–2024, Flächenmittel, in Eis umgerechnet (Dichte 900 kg/m³)"))
@@ -112,6 +113,7 @@ class GlacierFilm(Slides):
         c.fill(x0, top, x1, self.base - 12, col["snow"])
         for k in range(0, x1 - x0, 24):                    # a ragged foot: the ice goes on below
             c.fill(x0 + k, self.base - 12, x0 + k + 12, self.base, col["snow"])
+        self.cut(c, x0, x1, self.base - 70)
         # the 1976 surface, dashed
         for x in range(int(x0) - 20, int(x1) + 20, 16):
             c.fill(x, self.surface - 2, x + 9, self.surface + 1, th.ink)
@@ -124,6 +126,13 @@ class GlacierFilm(Slides):
                 c.fill(x, ground - 1, x + 9, ground + 2, th.ink)
             c.text(x1 + 50, ground + 40, self.words["now"], TEXT, 32, th.ink)
             self.house(c, x1 + 50, ground)
+
+    def cut(self, c: Canvas, x0: float, x1: float, y: float):
+        """A slanted gap across the ice, as on a broken axis: not to scale, the ice goes on."""
+        w, h = int(x1 - x0) + 24, 48
+        xs, ys = np.meshgrid(np.arange(w), np.arange(h))
+        mid = h / 2 - 0.08 * (xs - w / 2)
+        c.pixels(x0 - 12, y - h / 2, np.abs(ys - mid) < 5, self.th.field)
 
     def house(self, c: Canvas, x: float, ground: float):
         th = self.th
