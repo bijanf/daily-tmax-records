@@ -6,10 +6,12 @@ as ice thickness at the density of pure ice (900 kg/m3: 31 m; at 850 kg/m3, the 
 turn elevation change into mass, 33 m): "rund 31 Meter", the footer naming the density.
 
 A slow, still slide on the Slides frame. Under the title a block of ice with the 1976 surface
-dashed above it; a slanted cut through its foot says the ice goes on below (how thick the glaciers
-still are is not shown). In the second scene the surface sinks year by year (gaining in the few good
-years), the ice above it turning lilac, and once it reaches 2024 a ten-storey house (3 m a
-floor) stands in the gap for scale. In the third scene the last ten years' slice turns dark.
+dashed above it, a metre scale on its left (10, 20, 30 m below the 1976 surface); a slanted cut
+through its foot says the ice goes on below (how thick the glaciers still are is not shown).
+In the second scene the surface sinks year by year (gaining in the few good years), the ice
+above it turning lilac; once it reaches 2024 the lost ice is labelled with its
+metres and a ten-storey house (3 m a floor) stands in the gap for scale. In the third scene the
+last ten years' slice turns dark, each part labelled with its years and metres (17 + 14 = 31 m).
 Three scenes, 8 bars of 60 BPM = 32 s.
 
     outputs/onebit/social/alps_glacier_<theme>_de_reel.mp4, _cover.png
@@ -35,7 +37,7 @@ from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 
 ICE = 0.9                                         # m of ice per m of water equivalent / 0.9 (900 kg/m3)
 LAST10 = (2015, 2024)
-EXPECT = dict(ice=31, last10=46)                  # the published numbers: m, %
+EXPECT = dict(ice=31, last10=46, parts=(17, 14))  # the published numbers: m, %, m before and in 2015-2024
 PACE = dict(bpm=60, bars=(2.5, 3.5, 2), lead=1, steps=9.0)   # beats before the sinking; its length (s)
 SCALE = 18                                        # px per m of ice
 FLOOR = 3                                         # m a storey
@@ -48,8 +50,10 @@ def words(ice: float, glaciers: int) -> dict:
                         (f"Fast die Hälfte davon // {{allein {LAST10[0]}–{LAST10[1]}}}", "")),
                 follow="Folge mir für mehr Klimadaten",
                 head="Mittlerer Verlust an Eisdicke",
-                surface="Oberfläche 1976", now="Oberfläche 2024", house="10 Stockwerke",
-                sources=(f"Daten: Dussaillant et al. 2025, ESSD (WGMS) · {glaciers:,} Gletscher der Alpen".replace(",", "."),
+                surface="Oberfläche 1976", now="Oberfläche 2024",
+                house=("10 Stockwerke", f"{10 * FLOOR}{nb}m hoch"),
+                sources=(f"Daten: Dussaillant et al. 2025, ESSD (WGMS) · {glaciers:,} Gletscher der Alpen"
+                         .replace(",", "."),
                          "Massenbilanz 1976–2024, Flächenmittel, in Eis umgerechnet (Dichte 900 kg/m³)"))
 
 
@@ -65,7 +69,8 @@ class GlacierFilm(Slides):
         total = float(self.ice.iloc[-1])
         last10 = 100 * float(b.loc[LAST10[0]:LAST10[1], "mb"].sum() / b["cum"].iloc[-1])
         got = dict(ice=int(round(total)), last10=int(round(last10)))
-        assert got == EXPECT, f"the data now give {got}, the published reel {EXPECT}: check before rendering"
+        assert got == {k: EXPECT[k] for k in got}, \
+            f"the data now give {got}, the published reel {EXPECT}: check before rendering"
         assert 40 <= last10 < 50, "the title says almost half"
         self.setup(th, "de", colour, words(total, len(glacier.table())), PACE, "Alpen.Gletscher")
         t0 = float(self.starts[1]) + PACE["lead"] * self.beat
@@ -76,6 +81,10 @@ class GlacierFilm(Slides):
         self.surface = RULE + 24 + 230                     # y of the 1976 surface
         self.base = WIN[1] + WIN[3] - 40                   # the drawn ice ends here: it goes on below
         assert self.y(self.labels[-1]) < self.base - 80, "some ice must be left to see"
+        last10_m = float(self.ice.loc[LAST10[1]] - self.ice.loc[LAST10[0] - 1])
+        self.parts = (round(total - last10_m), round(last10_m))      # m of ice before and in 2015-2024
+        assert self.parts == EXPECT["parts"], f"the data now give {self.parts}: check before rendering"
+        assert sum(self.parts) == round(total), "the parts must add up on screen"
 
     def later(self, i: int) -> float:
         """The second scene's number once the surface has reached 2024."""
@@ -100,20 +109,30 @@ class GlacierFilm(Slides):
         k = self.level_at(t)
         year = self.labels[k]
         mid = (LEFT + RIGHT) / 2
-        x0, x1 = LEFT + 30, LEFT + 370                     # the ice
+        x0, x1 = LEFT + 100, LEFT + 340                    # the ice, the scale on its left
         self.say(c, mid, self.surface - 170, self.words["head"], 40, True, th.ink, "ms")
         c.text(x1, self.surface - 70, str(year), GROTESK, 72, th.ink, "rs")
         # the ice, its lost part and, in the last scene, the last ten years' slice
         top = self.surface + self.levels[k] * SCALE
         c.fill(x0, self.surface, x1, top, col["ramp"][0])
         if i == 2:
-            a, b = self.y(LAST10[0] - 1), self.y(LAST10[1])
-            c.fill(x0, a, x1, b, col["ramp"][2])
-            c.text((x0 + x1) / 2, (a + b) / 2 + 12, f"{LAST10[0]}–{LAST10[1]}", TEXT, 36, th.field, "ms")
+            c.fill(x0, self.y(LAST10[0] - 1), x1, self.y(LAST10[1]), col["ramp"][2])
         c.fill(x0, top, x1, self.base - 12, col["snow"])
         for k in range(0, x1 - x0, 24):                    # a ragged foot: the ice goes on below
             c.fill(x0 + k, self.base - 12, x0 + k + 12, self.base, col["snow"])
         self.cut(c, x0, x1, self.base - 70)
+        nb = "\u00a0"
+        for m in (10, 20, 30):                             # the scale: metres below the 1976 surface
+            y = self.surface + m * SCALE
+            c.fill(x0 - 14, y - 1, x0, y + 2, th.ink)
+            c.text(x0 - 20, y + 11, f"{m}{nb}m", TEXT, 32, th.ink, "rs")
+        # the lost ice, labelled with its years and metres once the surface has reached 2024
+        split, end = self.y(LAST10[0] - 1), self.y(LAST10[1])
+        if i == 2:
+            self.part(c, x0, x1, self.surface, split, f"1976–{LAST10[0] - 1}", f"{self.parts[0]}{nb}m", th.ink)
+            self.part(c, x0, x1, split, end, f"{LAST10[0]}–{LAST10[1]}", f"{self.parts[1]}{nb}m", th.field)
+        elif self.settled(t):
+            self.part(c, x0, x1, self.surface, end, f"1976–{LAST10[1]}", f"{sum(self.parts)}{nb}m", th.ink)
         # the 1976 surface, dashed
         for x in range(int(x0) - 20, int(x1) + 20, 16):
             c.fill(x, self.surface - 2, x + 9, self.surface + 1, th.ink)
@@ -126,6 +145,13 @@ class GlacierFilm(Slides):
                 c.fill(x, ground - 1, x + 9, ground + 2, th.ink)
             c.text(x1 + 50, ground + 40, self.words["now"], TEXT, 32, th.ink)
             self.house(c, x1 + 50, ground)
+
+    def part(self, c: Canvas, x0: float, x1: float, a: float, b: float, years: str, metres: str, colour):
+        """A part of the lost ice between a and b: its years over its metres, in its middle."""
+        mid = (a + b) / 2
+        c.text((x0 + x1) / 2, mid - 14, years, TEXT, 32, colour, "ms")
+        c.text((x0 + x1) / 2, mid + 50, metres, onebit.BOLD, 60, colour, "ms")
+        assert b - a > 150 and c.width(years, TEXT, 32) < x1 - x0 - 20, "the part's label must fit in it"
 
     def cut(self, c: Canvas, x0: float, x1: float, y: float):
         """A slanted gap across the ice, as on a broken axis: not to scale, the ice goes on."""
@@ -143,8 +169,9 @@ class GlacierFilm(Slides):
             c.fill(x, y, x + w, y + 2, th.ink)
             for wx in (x + 28, x + w - 58):
                 c.fill(wx, y + 18, wx + 30, y + fh - 14, th.ink)
-        c.text(x + w + 14, ground - 5 * fh + 12, self.words["house"], TEXT, 34, th.ink)
-        assert x + w + 14 + c.width(self.words["house"], TEXT, 34) <= RIGHT, "the house's label leaves the window"
+        for k, line in enumerate(self.words["house"]):
+            c.text(x + w + 14, ground - 5 * fh - 8 + 42 * k, line, TEXT, 34, th.ink)
+            assert x + w + 14 + c.width(line, TEXT, 34) <= RIGHT, "the house's label leaves the window"
 
 
 def main() -> None:
