@@ -8,7 +8,8 @@ turn elevation change into mass, 33 m): "rund 31 Meter", the footer naming the d
 A slow, still slide on the Slides frame. Under the title a block of ice with the 1976 surface
 dashed above it, a metre scale on its left (10, 20, 30 m below the 1976 surface); a slanted cut
 through its foot says the ice goes on below (how thick the glaciers still are is not shown).
-In the second scene the surface sinks year by year (gaining in the few good years), the ice
+In the second scene the surface sinks year by year over 6 s (gaining in the few good years),
+a counter beside the year saying how far it stands from 1976's surface, the ice
 above it turning lilac; once it reaches 2024 the lost ice is labelled with its
 metres and a ten-storey house (3 m a floor) stands in the gap for scale. In the third scene the
 last ten years' slice turns dark, each part labelled with its years and metres (17 + 14 = 31 m).
@@ -38,7 +39,7 @@ from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 ICE = 0.9                                         # m of ice per m of water equivalent / 0.9 (900 kg/m3)
 LAST10 = (2015, 2024)
 EXPECT = dict(ice=31, last10=46, parts=(17, 14))  # the published numbers: m, %, m before and in 2015-2024
-PACE = dict(bpm=60, bars=(2.5, 3.5, 2), lead=1, steps=9.0)   # beats before the sinking; its length (s)
+PACE = dict(bpm=60, bars=(2.5, 3.5, 2), lead=1, steps=6.0)   # beats before the sinking; its length (s)
 SCALE = 18                                        # px per m of ice
 FLOOR = 3                                         # m a storey
 
@@ -112,6 +113,9 @@ class GlacierFilm(Slides):
         x0, x1 = LEFT + 100, LEFT + 340                    # the ice, the scale on its left
         self.say(c, mid, self.surface - 170, self.words["head"], 40, True, th.ink, "ms")
         c.text(x1, self.surface - 70, str(year), GROTESK, 72, th.ink, "rs")
+        # beside the year, how far the surface stands from 1976's: the number runs with the sinking
+        moved = -round(self.levels[k])
+        c.text(x1 + 24, self.surface - 70, f"{moved:+d} m".replace("-", "−") if moved else "0 m", GROTESK, 72, th.mark)
         # the ice, its lost part and, in the last scene, the last ten years' slice
         top = self.surface + self.levels[k] * SCALE
         c.fill(x0, self.surface, x1, top, col["ramp"][0])

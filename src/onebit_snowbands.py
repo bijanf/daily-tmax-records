@@ -86,8 +86,10 @@ class SnowBandsFilm(Slides):
         self.top = RULE + 24 + (room - (height + 150)) // 2 + 100     # the heading and years above
 
     def later(self, i: int) -> float:
-        """The second scene's second part once the last band has turned."""
-        return self.done if i == 1 else super().later(i)
+        """The second scene's second part once the bands below 1,500 m have turned (the first two:
+        bands turn from the bottom), before most viewers have gone."""
+        low = sum(1 for lo, hi in BANDS if hi <= LOW[1])
+        return self.turns[low - 1] - float(self.starts[1]) + 0.5 if i == 1 else super().later(i)
 
     def turned(self, t: float) -> int:
         """How many bands have turned so far, from the bottom of the mountain."""
