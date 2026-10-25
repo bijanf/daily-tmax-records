@@ -82,6 +82,7 @@ BOX_H = 46                                       # height of the colour bar
 PITCH, CELL = 78, 6                              # the flakes: pitch, sprite pixel
 BELOW = 44 + 178 + 27                            # map foot to the colour bar's heading, the flakes, their foot
 FOOTER = 1592
+PROGRESS = 10                                    # height of the progress bar over the window
 # themes in full colour (by their key), checked with the dataviz validator: the loss is an
 # ordinal ramp of one hue (light end at least 2:1 on the field), snow a colour apart from it,
 # and the land without snow a cool grey, so that even the lightest step stands apart from it
@@ -363,6 +364,30 @@ class SnowLossFilm:
                         else:
                             c.fill(a, b, a + CELL, b + CELL, ink)
 
+    def progress(self, c: Canvas, t: float):
+        """Above the window, one segment per scene, as in a story: the scenes before are full, the
+        scene playing fills as it plays, so a viewer sees there is more to come; on the cover all
+        are empty. Persian fills from the right."""
+        n, gap = len(self.S.scenes), 12
+        x0, x1, y = WIN[0], WIN[0] + WIN[2], WIN[1] - 34
+        seg = (x1 - x0 - gap * (n - 1)) / n
+        i = self.scene(t)
+        track = self.colour["land"] if self.colour else self.th.dots
+        for k in range(n):
+            if not np.isfinite(t) or k > i:
+                frac = 0.0
+            elif k < i:
+                frac = 1.0
+            else:
+                frac = (t - self.starts[k]) / (self.starts[k + 1] - self.starts[k])
+            a = x1 - (k + 1) * seg - k * gap if self.fa else x0 + k * (seg + gap)
+            c.fill(a, y, a + seg, y + PROGRESS, track)
+            done = seg * min(1.0, frac)
+            if self.fa:
+                c.fill(a + seg - done, y, a + seg, y + PROGRESS, self.th.mark)
+            else:
+                c.fill(a, y, a + done, y + PROGRESS, self.th.mark)
+
     def era(self, c: Canvas, t: float):
         y0, y1 = NOW if self.turned(t) else THEN
         if self.fa:
@@ -376,6 +401,7 @@ class SnowLossFilm:
         i = self.scene(t)
         dt = t - self.starts[i] if np.isfinite(t) else np.inf
         self.window(c, i)
+        self.progress(c, t)
         at = self.appear(i)
         title(c, self.th, self.S.scenes[i], dt, self.lang, 1.0, LEFT, RIGHT, WIN[1] + BAR + 96, at,
               motion=False, line_at=at[-1] + 0.6, small=SMALL)

@@ -6,6 +6,8 @@ Turkey to the edge of Tibet.
                                         0.25 deg: snowfall, total precipitation, 2 m temperature
     data/snow/era5_invariant.nc         land-sea mask and surface geopotential (terrain height)
     data/snow_alps/...                  the same over the Alps, 43.3-48.6 N, 4.5-17 E (--region alps)
+    data/snow_alps_land/...             ERA5-Land over the Alps, 0.1 deg, from 1950, with the snowpack
+                                        (snow water equivalent) (--region alps_land)
 
 ERA5 comes from the Copernicus Climate Data Store and needs a key in ~/.cdsapirc; months not
 yet published are skipped.
@@ -23,7 +25,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # N, W, S, E and the folder: Turkey to western Tibet (Ladakh, Aksai Chin), and the Alps
 REGIONS = {"asia": ([43, 26, 25, 80], ROOT / "data" / "snow"),
-           "alps": ([48.6, 4.5, 43.3, 17.0], ROOT / "data" / "snow_alps")}
+           "alps": ([48.6, 4.5, 43.3, 17.0], ROOT / "data" / "snow_alps"),
+           "alps_land": ([48.6, 4.5, 43.3, 17.0], ROOT / "data" / "snow_alps_land")}
+# ERA5-Land (0.1 deg, from 1950; a land model on ERA5's weather, with the snowpack): its own
+# dataset, variables and first year
+LAND = dict(dataset="reanalysis-era5-land-monthly-means", first=1950,
+            vars=["snowfall", "total_precipitation", "2m_temperature", "snow_depth_water_equivalent"])
 AREA, SNOW = REGIONS["asia"]
 ALL = [f"{m:02d}" for m in range(1, 13)]
 VARS = ["snowfall", "total_precipitation", "2m_temperature"]
@@ -76,8 +83,13 @@ def main() -> None:
     global AREA, SNOW
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--region", default="asia", choices=list(REGIONS))
-    AREA, SNOW = REGIONS[ap.parse_args().region]
+    region = ap.parse_args().region
+    AREA, SNOW = REGIONS[region]
     SNOW.mkdir(parents=True, exist_ok=True)
+    if region.endswith("_land"):
+        global DATASET, VARS, CHUNKS
+        DATASET, VARS = LAND["dataset"], LAND["vars"]
+        CHUNKS = ((LAND["first"], 1969), (1970, 1989), (1990, 2009), (2010, 2025))
     assert CHUNKS[-1][1] == date.today().year - 1, "add the finished year to CHUNKS"
     with ThreadPoolExecutor(8) as ex:
         jobs = [ex.submit(era5, v, a, b) for v in VARS for a, b in CHUNKS] + [ex.submit(invariant)]
