@@ -2,22 +2,22 @@
 
 Measured data only:
 - Pictures: Landsat Collection 2 Level-2 (USGS, via Microsoft's Planetary Computer), red, green
-  and blue surface reflectance; per year the per-pixel median of the six least-cloudy scenes of
-  each path between 20 August and 10 October (29 Mordad to 18 Mehr), clouds flagged by Landsat
-  dropped outside the lake, from get_urmia.py --colour. Land left without a clear view (cloud in
-  every scene) is taken from the nearest year with one; the lake is never filled. 1993 has no
-  scene and 2003 none for the lake's south-east: both are left out. White on the lakebed is salt
-  crust or a thin film of brine over salt (reflectance cannot tell them apart).
+  and blue surface reflectance; per year and path the per-pixel median of the six least-cloudy
+  scenes between 20 August and 10 October (29 Mordad to 18 Mehr) over those Landsat does not flag
+  as cloud there (on the lake, where none is clear, over all: salt can be flagged), from
+  get_urmia.py --colour. Land left without a clear view is taken from the nearest year with one;
+  the lake is never filled. 1993, 1999 and 2003 are left out (NO_PICTURE). White on the lakebed
+  is salt crust or a thin film of brine over salt (reflectance cannot tell them apart).
 - Level: the shore gauges' daily level to January 2020 (Mendeley deposit doi:10.17632/285n67m8zd.2,
   get_urmia.py --gauge), as the September mean; later years from official statements (OFFICIAL,
   with date and source: 1400, 1404, 1405; none found for 1399 or 1401-1403). September 1995:
   1,277.89 m; early Mehr 1404 (late September 2025): 1,269.50 m, 8.4 m lower; 19 Mehr 1405
   (11 October 2026): 1,270.58 m.
-- Not from this module (fact check, in the caption): the reported extent fell from about 6,900 km2
-  (Khordad 1374, the official high) to 481 km2 (early Mehr 1404), less than a tenth; open water
-  in Landsat (MNDWI > 0 and NIR < 0.10, the rule closest to JRC's monthly maps) 1.6 % of
-  September 1995, NDWI > 0 8.2 %. The MNDWI areas in area_september.csv count salt crust as
-  water in dry years and are not used.
+- The reported extent (EXTENT, on screen and in the caption): about 6,900 km2 in Khordad 1374
+  (the official high; Aftab News 1051479) and 481 km2 in early Mehr 1404 (Mehr News 6745237),
+  less than a tenth. A Landsat open-water check outside this repo (fact check of 27 Oct 2026)
+  agrees: MNDWI > 0 and NIR < 0.10 gives 1.6 %, NDWI > 0 8.2 % of September 1995. The MNDWI
+  areas in area_september.csv count salt crust as water in dry years and are not used.
 
     python -I src/urmia.py > outputs/urmia_log.txt
 """
@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "urmia"
 YEARS = (1986, 2026)
 BASE, LOW, NOW = 1995, 2025, 2026
+EXTENT = {"Khordad 1374": 6900, "early Mehr 1404": 481}   # km2, reported (method not given)
 # Official statements (level in m above sea level), for the years after the gauge record ends. No
 # end-of-Shahrivar figure was found for 1399 or 1401-1403 (only spring or autumn readings, or "the
 # lake dried" without a number; level search of 27 Oct 2026): those years have no level.
@@ -65,9 +66,10 @@ def levels() -> pd.Series:
     return pd.Series(out).sort_index()
 
 
-NO_PICTURE = {1993: "no Landsat scene between 20 August and 10 October",
-              2003: "no scene of path 168 in the window: 6 % of the lake unseen (the only one, Landsat 7 of "
-                    "11 October, is striped)"}
+NO_PICTURE = {1993: "no Landsat scene with at most 60 % cloud between 20 August and 10 October",
+              1999: "the lake's south-east bay is under cloud in the only scene of path 168 (22 Sep)",
+              2003: "no scene of path 168 in the window (path 169 has Landsat 5 of 24 Sep and 10 Oct): "
+                    "6.4 % of the lake unseen"}
 
 
 def years() -> list:
@@ -77,8 +79,8 @@ def years() -> list:
 
 @functools.cache
 def lake() -> np.ndarray:
-    """JRC's lake extent (any water 1984-2021) on the pictures' grid. get_urmia drops clouds only
-    outside it widened by two pixels, so an unseen pixel inside it was never seen at all."""
+    """JRC's lake extent (any water 1984-2021) on the pictures' grid. Inside it get_urmia falls
+    back to all scenes where none is clear, so an unseen pixel inside it was never seen at all."""
     return np.load(DATA / "picture_1995.npz")["lake"]
 
 

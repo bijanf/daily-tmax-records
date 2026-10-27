@@ -217,56 +217,87 @@ def picture(year: int) -> None:
     print(f"picture {year}: {len(items)} scenes, water {np.nansum(med > 0) * GRID ** 2 * 111.32 ** 2 * np.cos(np.deg2rad(37.7)):.0f} km2 on the grid")
 
 
-def rgb_on_grid(feat, t, shape) -> np.ndarray:
+def slc_off(feat) -> bool:
+    """Landsat 7 after its scan-line corrector failed (31 May 2003): striped scenes."""
+    p = feat["properties"]
+    return p.get("platform") == "landsat-7" and p["datetime"][:10] >= "2003-05-31"
+
+
+def rgb_on_grid(feat, t, shape) -> tuple[np.ndarray, np.ndarray]:
     """A scene's red, green and blue surface reflectance on the pictures' grid (NaN where unseen),
-    read from the COG's overviews at about 120 m. Outside the lake (JRC's extent, two pixels wider)
-    the pixels Landsat flags as dilated cloud, cirrus, cloud or cloud shadow (QA_PIXEL bits 1-4,
-    read at 30 m) are dropped; inside it none are: bright salt can be flagged as cloud or snow."""
-    out = np.full((3,) + shape, np.nan, np.float32)
-    ext, ext_t = extent()
+    read from the COG's overviews at about 120 m: all its pixels, and those Landsat does not flag
+    as dilated cloud, cirrus, cloud or cloud shadow (QA_PIXEL bits 1-4, read at 30 m and pooled
+    over exact 4 x 4 blocks). A pixel counts only where all three bands have data (no colour
+    fringes where the bands' edges differ), two pixels in from the scene's edge (no averaged edge),
+    except on Landsat 7 after its scan-line failure, whose stripes the erosion would wipe out."""
     with Env(**ENV):
         with rasterio.open(signed(feat["assets"]["qa_pixel"]["href"])) as q:
             b = transform_bounds(CRS.from_epsg(4326), q.crs, *BOX)
             win = from_bounds(*b, transform=q.transform).round_offsets(op="floor").round_lengths(op="ceil")
             win = win.intersection(Window(0, 0, q.width, q.height))
             h, w = int(win.height) // DECIMATE, int(win.width) // DECIMATE
-            qa = q.read(1, window=win)[:h * DECIMATE, :w * DECIMATE]
-            crs, st = q.crs, q.window_transform(win) * Affine.scale(win.width / w, win.height / h)
-        cloudy = ((qa & 0b11110) > 0).reshape(h, DECIMATE, w, DECIMATE).any(axis=(1, 3))
-        lake = ndimage.binary_dilation(on_grid(ext, ext_t, CRS.from_epsg(4326), st, crs, (h, w)) == 1, iterations=2)
-        drop = cloudy & ~lake
-        for k, band in enumerate(("red", "green", "blue")):
+            win = Window(win.col_off, win.row_off, w * DECIMATE, h * DECIMATE)
+            qa = q.read(1, window=win)
+            crs, st = q.crs, q.window_transform(win) * Affine.scale(DECIMATE)
+        dn = []
+        for band in ("red", "green", "blue"):
             with rasterio.open(signed(feat["assets"][band]["href"])) as src:
-                dn = src.read(1, window=win, out_shape=(h, w), resampling=Resampling.average).astype(np.float32)
-            sr = np.where((dn > 0) & ~drop, dn * 0.0000275 - 0.2, np.nan).astype(np.float32)
-            reproject(source=sr, destination=out[k], src_transform=st, src_crs=crs, dst_transform=t,
-                      dst_crs=CRS.from_epsg(4326), resampling=Resampling.bilinear, src_nodata=np.nan,
-                      dst_nodata=np.nan)
-    return out
+                dn.append(src.read(1, window=win, out_shape=(h, w), resampling=Resampling.average).astype(np.float32))
+    dn = np.stack(dn)
+    cloudy = ((qa & 0b11110) > 0).reshape(h, DECIMATE, w, DECIMATE).any(axis=(1, 3))
+    valid = (dn > 0).all(axis=0)
+    if not slc_off(feat):
+        valid = ndimage.binary_erosion(valid, iterations=2)
+    sr = dn * 0.0000275 - 0.2
+    out = np.full((2, 3) + shape, np.nan, np.float32)
+    for j, keep in enumerate((valid, valid & ~cloudy)):
+        for k in range(3):
+            reproject(source=np.where(keep, sr[k], np.nan).astype(np.float32), destination=out[j, k],
+                      src_transform=st, src_crs=crs, dst_transform=t, dst_crs=CRS.from_epsg(4326),
+                      resampling=Resampling.bilinear, src_nodata=np.nan, dst_nodata=np.nan)
+    return out[0], out[1]
 
 
 def colour(year: int) -> None:
-    """The year's September lake in true colour on the pictures' grid: per Landsat path the per-pixel
-    median of its six least-cloudy scenes (no cloud mask: the median drops a cloud seen in fewer
-    than half of them; with three, a pixel seen twice kept half of a cloud),
-    path 169 over path 168 (the lake's south-east) over path 169's row 033 (the box's north-west corner)."""
+    """The year's late-summer lake in true colour on the pictures' grid. Per Landsat path the
+    per-pixel median of its six least-cloudy scenes, over the scenes Landsat does not flag as
+    cloud there; inside the lake (JRC's extent, two pixels wider), where no scene is clear, over
+    all of them (salt can be flagged as cloud in every scene: it stays); outside it such land
+    stays unseen (urmia.py fills it from the nearest year). Path 169 over path 168 (the lake's
+    south-east) over path 169's row 033 (the box's north-west corner), each first only where all
+    its whole scenes see (a scene's edge inside a path's median draws a dotted line), then where
+    any does."""
     w, s, e, n = BOX
     t = from_origin(w, n, GRID, GRID)
     shape = (int(round((n - s) / GRID)), int(round((e - w) / GRID)))
-    layers, items = [], []
+    ext, ext_t = extent()
+    lake = ndimage.binary_dilation(on_grid(ext, ext_t, CRS.from_epsg(4326), t, CRS.from_epsg(4326), shape) == 1,
+                                   iterations=2)
+    strict, loose, items = [], [], []
     for path_row in ("169034", "168034", "169033"):
         feats = scenes(year, path_row, n=6)
-        if feats:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", RuntimeWarning)           # all-NaN pixels stay NaN
-                layers.append(np.nanmedian(np.stack([rgb_on_grid(f, t, shape) for f in feats]), axis=0))
-            items += [f["id"] for f in feats]
-    if not layers:
+        if not feats:
+            continue
+        pairs = [rgb_on_grid(f, t, shape) for f in feats]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)           # all-NaN pixels stay NaN
+            every = np.nanmedian(np.stack([a for a, _ in pairs]), axis=0)
+            clear = np.nanmedian(np.stack([c for _, c in pairs]), axis=0)
+        layer = np.where(np.isnan(clear) & lake, every, clear)
+        whole = [k for k, f in enumerate(feats) if not slc_off(f)]      # where every whole scene sees:
+        seen = np.stack([~np.isnan(a[0]) for a, _ in pairs])            # no edge where the median's
+        inner = seen[whole].all(axis=0) if whole else seen.any(axis=0)   # set of scenes changes
+        strict.append(np.where(inner, layer, np.nan))
+        loose.append(layer)
+        items += [f["id"] for f in feats]
+    if not loose:
         print(f"colour {year}: no scene", flush=True)
         return
-    rgb = layers[0]
-    for more in layers[1:]:
+    rgb, rest = strict[0], loose[0]
+    for more, other in zip(strict[1:], loose[1:]):
         rgb = np.where(np.isnan(rgb), more, rgb)
+        rest = np.where(np.isnan(rest), other, rest)
+    rgb = np.where(np.isnan(rgb), rest, rgb)                            # never a hole the loose mosaic fills
     np.savez_compressed(DATA / f"colour_{year}.npz", rgb=rgb.astype(np.float16), items=np.array(items),
                         transform=np.array(tuple(t)[:6]))
     print(f"colour {year}: {len(items)} scenes, unseen {100 * np.isnan(rgb[0]).mean():.1f} % of the box", flush=True)
@@ -318,8 +349,18 @@ if __name__ == "__main__":
         gauge()
     elif len(sys.argv) > 1 and sys.argv[1] == "--colour":       # every year in true colour, three at a time
         years = [int(a) for a in sys.argv[2:]] or list(range(YEARS[0], YEARS[1] + 1))
+
+        def patient(year: int) -> None:                         # a dropped connection costs one try
+            for attempt in range(3):
+                try:
+                    return colour(year)
+                except Exception as ex:
+                    print(f"colour {year}: try {attempt + 1} failed: {ex!r}"[:300], flush=True)
+                    time.sleep(20)
+            raise RuntimeError(f"colour {year}: three tries failed")
+
         with ThreadPoolExecutor(3) as pool:
-            list(pool.map(colour, years))
+            list(pool.map(patient, years))
     elif len(sys.argv) > 1 and sys.argv[1] == "--scene":    # one scene, for checking against a cache
         feat = next(f for f in scenes(int(sys.argv[2])) if f["id"] == sys.argv[3])
         print(json.dumps(process(feat), indent=1))
