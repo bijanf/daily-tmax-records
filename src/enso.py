@@ -7,18 +7,22 @@ Measured data only, no forecast. Sources:
 - Rain: CRU TS 4.10 monthly precipitation (Harris et al. 2020, University of East Anglia; 0.5 deg,
   from stations), data/water/cru_ts4.10.*.pre.dat.nc (src/get_water.py).
 
+- Check: CPC's Relative Oceanic Niño Index (RONI, ERSSTv6), its official index since 2026:
+  https://www.cpc.ncep.noaa.gov/data/indices/RONI.ascii.txt (fetched into data/enso/).
+
 Iran = CRU cells whose centres lie in Natural Earth's 50 m Iran polygon (621 cells), cos-latitude
-weights. A season is El Niño when the ONI of that same 3-month season is at least +1.0 °C, La Niña
-at most -1.0 °C, neutral otherwise (+-0.5 and +-1.5 as checks). "Wetter" = Iran's rain that season
-above the 1951-2024 median of the same season. Seasons 1951-2024. The design was fixed before the
-numbers were seen, for September-November and December-February (named by its January);
-October-December and January-March were added before they were computed, because Persian autumn
-(Mehr-Azar, 23 Sep-21 Dec) and winter (Dey-Esfand, 22 Dec-20 Mar) are closer to them: the reel
-says پاییز and زمستان only if both definitions agree, else it names the months.
+weights. A season is El Niño when the ONI of that same 3-month season is at least +0.5 °C (NOAA's
+El Niño threshold), La Niña at most -0.5 °C, neutral otherwise; +-1.0, +-1.5 (strong) and RONI
+are checks. "Wetter" = Iran's rain that season above the 1951-2024 median of the same season.
+Seasons 1951-2024. In the order the choices were made: first September-November and
+December-February (named by its January) at +-1.0; then October-December and January-March,
+because Persian autumn (Mehr-Azar, 23 Sep-21 Dec) and winter (Dey-Esfand, 22 Dec-20 Mar) are
+closer to them; then, after an independent check showed the winter count hangs on the +-1.0 cut,
+NOAA's +-0.5. Every variant is in the log and the caption.
 
 Tests: permutation of the season labels (10,000 shuffles, two-sided) for El Niño minus neutral
-mean rain, and Spearman's rank correlation of the ONI with the rain. Small samples (about ten El
-Niño seasons each), no correction across the seasons and thresholds: read as suggestive.
+mean rain, and Spearman's rank correlation of the ONI with the rain. Small samples, no correction
+across the seasons and thresholds: read as suggestive.
 
     python -I src/enso.py > outputs/enso_iran_log.txt
 """
@@ -40,27 +44,30 @@ from scipy import stats  # noqa: E402
 import water  # noqa: E402  (its Iran mask, loaded after the netCDF files: shapely first crashes the heap)
 
 ROOT = Path(__file__).resolve().parents[1]
-ONI_FILE = ROOT / "data" / "enso" / "oni.ascii.txt"
-ONI_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
+INDICES = {"oni": "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt",
+           "roni": "https://www.cpc.ncep.noaa.gov/data/indices/RONI.ascii.txt"}
 CRU = ROOT / "data" / "water"
 YEARS = (1951, 2024)
-THRESHOLD = 1.0                                  # °C: El Niño at or above, La Niña at or below minus
-CHECKS = (0.5, 1.5)
+THRESHOLD = 0.5                                  # °C: El Niño at or above, La Niña at or below minus
+CHECKS = (1.0, 1.5)
 # season: its months and its ONI label; a season that starts in December is named by its January
 SEASONS = {"SON": (9, 10, 11), "OND": (10, 11, 12), "DJF": (12, 1, 2), "JFM": (1, 2, 3)}
 SHUFFLES, SEED = 10_000, 20261027
 BOX = (43.0, 65.0, 24.0, 41.0)                  # W, E, S, N read from CRU; the polygon decides
 
 
-def oni() -> pd.DataFrame:
-    """The ONI table: season label, year, value (°C); downloaded once."""
-    if not ONI_FILE.exists():
-        ONI_FILE.parent.mkdir(parents=True, exist_ok=True)
-        part = ONI_FILE.with_suffix(".part")
-        urllib.request.urlretrieve(ONI_URL, part)
-        part.rename(ONI_FILE)
-    rows = [(p[0], int(p[1]), float(p[3])) for p in (line.split() for line in ONI_FILE.read_text().splitlines())
-            if len(p) == 4 and p[1].isdigit()]
+@functools.cache
+def oni(index: str = "oni") -> pd.DataFrame:
+    """An index table (ONI or RONI): season label, year, value (°C); downloaded once. ONI rows are
+    season, year, total, anomaly; RONI rows season, year, anomaly."""
+    path = ROOT / "data" / "enso" / Path(INDICES[index]).name
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        part = path.with_suffix(".part")
+        urllib.request.urlretrieve(INDICES[index], part)
+        part.rename(path)
+    rows = [(p[0], int(p[1]), float(p[-1])) for p in (line.split() for line in path.read_text().splitlines())
+            if len(p) in (3, 4) and p[1].isdigit()]
     df = pd.DataFrame(rows, columns=["season", "year", "oni"])
     assert not df.duplicated(["season", "year"]).any()
     return df
@@ -111,11 +118,11 @@ def shuffle_p(rain: pd.Series, cls: pd.Series, rng) -> float:
 
 
 @functools.cache
-def result(season: str, threshold: float = THRESHOLD) -> dict:
+def result(season: str, threshold: float = THRESHOLD, index: str = "oni") -> dict:
     """Everything the reel shows for one season, and what the caption needs."""
     monthly, _ = iran_rain()
     rain = seasonal(monthly, season)
-    o = oni().query("season == @season").set_index("year")["oni"].loc[rain.index]
+    o = oni(index).query("season == @season").set_index("year")["oni"].loc[rain.index]
     assert len(o) == len(rain)
     cls = classes(o, threshold)
     median = float(rain.median())
@@ -137,8 +144,10 @@ def result(season: str, threshold: float = THRESHOLD) -> dict:
 def main() -> None:
     monthly, cells = iran_rain()
     print(f"Iran: {int(np.isfinite(cells.isel(time=0)).sum())} CRU TS 4.10 cells, months "
-          f"{monthly.index[0]:%Y-%m} to {monthly.index[-1]:%Y-%m}; ONI {ONI_FILE.name}, last row "
-          f"{oni().iloc[-1].season} {oni().iloc[-1].year} = {oni().iloc[-1].oni:+.2f}")
+          f"{monthly.index[0]:%Y-%m} to {monthly.index[-1]:%Y-%m}; seasons used {YEARS[0]}-{YEARS[1]}")
+    for index in INDICES:
+        last = oni(index).iloc[-1]
+        print(f"{index.upper()} last row {last.season} {last.year} = {last.oni:+.2f}")
     annual = monthly.loc[f"{YEARS[0]}":f"{YEARS[1]}"].groupby(monthly.loc[f"{YEARS[0]}":f"{YEARS[1]}"].index.year).sum()
     print(f"Iran's mean annual rain {YEARS[0]}-{YEARS[1]}: {annual.mean():.1f} mm")
     for season in SEASONS:
@@ -153,10 +162,10 @@ def main() -> None:
         print(f"  mean rain vs the season's mean: El Niño {r['pct']['El Niño']:+.1f} %, neutral {r['pct']['neutral']:+.1f} %, "
               f"La Niña {r['pct']['La Niña']:+.1f} %; El Niño {r['mm_en']:.1f} mm vs neutral {r['mm_neutral']:.1f} mm")
         print(f"  permutation p (El Niño minus neutral, two-sided) {r['p']:.3f}; Spearman rho {r['rho']:+.2f} (p {r['rho_p']:.4f})")
-        for t in CHECKS:
-            c = result(season, t)
-            print(f"  check ONI +-{t}: {c['n_wetter']} of {len(c['years'])} wetter, El Niño {c['pct']['El Niño']:+.1f} % "
-                  f"vs neutral {c['pct']['neutral']:+.1f} %, p {c['p']:.3f}")
+        for index, t in [("oni", t) for t in CHECKS] + [("roni", t) for t in (THRESHOLD,) + CHECKS]:
+            c = result(season, t, index)
+            print(f"  check {index.upper()} +-{t}: {c['n_wetter']} of {len(c['years'])} wetter, El Niño "
+                  f"{c['pct']['El Niño']:+.1f} % vs neutral {c['pct']['neutral']:+.1f} %, p {c['p']:.3f}")
 
 
 if __name__ == "__main__":

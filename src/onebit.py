@@ -914,7 +914,8 @@ def title(c: Canvas, th: Theme, sc: Scene, dt: float, lang: str = "en", scale: f
         if accent and th.mono:
             # two colours only: the accent is inverse video, a box of ink under field-coloured type
             half = (_font(bold, size).getlength(w, direction=way) + space * grow * s) / 2
-            d.rectangle([mid * s - half, base - 0.84 * size, mid * s + half, base + 0.26 * size], fill=th.mark)
+            foot = 0.42 if rtl else 0.26             # Persian: the kasra of an ezafe and the tails of ر and ی sit low
+            d.rectangle([mid * s - half, base - 0.84 * size, mid * s + half, base + foot * size], fill=th.mark)
             accent = th.field
         d.text((mid * s, base), w, font=_font(bold, size), fill=accent or th.head, anchor="ms", direction=way)
     y = top + (places[-1][1] - top) * grow
