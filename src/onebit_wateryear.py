@@ -18,7 +18,8 @@ A slow, still slide on the frame of onebit_slides. One window, one bold line per
 Iran's map with Tehran province in saffron, and under it six squares, one per water year from
 1399-1400 (right) to 1404-1405 (left), solid where Tehran's rain was below normal in both CHIRPS
 and ERA5. The first frame carries the whole question and the map; the squares fill in the third
-scene. Three scenes, 2 + 3 + 3.5 bars of 60 BPM = 34 s, a silent track (music in the app).
+scene, one after another. Three scenes, 1.5 + 2 + 2.5 bars of 60 BPM = 24 s (--cut 34s: 2 + 3 + 3.5
+bars, the first version, "so slow"), a silent track (music in the app).
 
     outputs/onebit/social/iran_wateryear_<theme>_fa_reel.mp4, _cover.png
 
@@ -42,7 +43,9 @@ import wateryear  # noqa: E402
 from onebit import FA_BOLD, FA_TEXT, OUT, SIZES, SOCIAL_CRF, Canvas, fa  # noqa: E402
 from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 
-PACE = dict(bpm=60, bars=(2, 3, 3.5))
+CUTS = {"24s": dict(bpm=60, bars=(1.5, 2, 2.5)),   # the default: "so slow" at 34 s (2026-10-27)
+        "34s": dict(bpm=60, bars=(2, 3, 3.5))}
+STEP = 0.5                                        # s between two squares filling
 YEARS = tuple(range(1399, 1405))                 # water years 1399-1400 .. 1404-1405
 EXPECT = {"iran": 113, "tehran": (82, 71, 92, 77, 47, 75)}   # CHIRPS % of normal: the published reel
 OFFICIAL = dict(iran=101, tehran=60)              # % (press reports of IRIMO figures; fact check)
@@ -64,7 +67,7 @@ def words() -> dict:
 
 
 class WaterYearFilm(Slides):
-    def __init__(self, th: onebit.Theme, colour: dict):
+    def __init__(self, th: onebit.Theme, colour: dict, cut: str = "24s"):
         pct = {}
         for region in ("iran", "tehran"):
             t = wateryear.table("rnl", region)
@@ -82,13 +85,13 @@ class WaterYearFilm(Slides):
         self.tehran_px = self.map.province("Tehran") & self.map.inside
         assert self.tehran_px.sum() > 200, "Tehran province too small to see"
         self.hook_at_once = True
-        self.setup(th, "fa", colour, words(), PACE, "Iran.WaterYear")
+        self.setup(th, "fa", colour, words(), CUTS[cut], "Iran.WaterYear")
         dots = np.zeros((1920, 1080), bool)               # the sources sit in the window
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
         self.dots = dots
         self.layout()
         b = self.beat
-        self.fill_at = float(self.starts[2]) + b
+        self.fill_at = [float(self.starts[2]) + b / 2 + k * STEP for k in range(len(YEARS))]   # one square at a time
         self.done = b
         assert float(self.starts[1]) + self.later(1) < 15
 
@@ -110,13 +113,13 @@ class WaterYearFilm(Slides):
 
     def later(self, i: int) -> float:
         if i == 2:
-            return self.fill_at - float(self.starts[2]) + self.beat
-        return 2 * self.beat + 0.3
+            return self.fill_at[-1] - float(self.starts[2]) + STEP
+        return self.beat + 0.3
 
-    def filled(self, t: float) -> bool:
+    def filled(self, t: float, k: int) -> bool:
         if not np.isfinite(t):
             return True                                   # the cover: the squares full
-        return self.scene(t) == 2 and t >= self.fill_at
+        return self.scene(t) == 2 and t >= self.fill_at[k]
 
     # ── drawing ──
 
@@ -142,11 +145,10 @@ class WaterYearFilm(Slides):
         c.fill(RIGHT - 30, self.key_y - 26, RIGHT, self.key_y + 4, col["now"])        # the key, read first
         c.text(RIGHT - 42, self.key_y, self.words["key"], FA_TEXT, 30, th.ink, "rs", "rtl")
         assert RIGHT - 42 - w > LEFT
-        full = self.filled(t)
         for k, jy in enumerate(YEARS):                   # Persian: the earliest year on the right
             right = self.sq_right - k * (SQ + SQ_GAP)
             box = (right - SQ, self.sq_top, right, self.sq_top + SQ)
-            if full and self.below[k]:
+            if self.filled(t, k) and self.below[k]:
                 c.fill(*box, col["now"])
             c.frame(*box)
             cx = right - SQ / 2
@@ -166,11 +168,12 @@ class WaterYearFilm(Slides):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--theme", default="zafaran", choices=["zafaran"], help="colour theme")
+    ap.add_argument("--cut", default="24s", choices=list(CUTS), help="24 s (default) or the slower 34 s")
     ap.add_argument("--stills", action="store_true", help="cover and frames only, no video")
     args = ap.parse_args()
-    film = WaterYearFilm(onebit.THEMES[args.theme], COLOURS[args.theme])
+    film = WaterYearFilm(onebit.THEMES[args.theme], COLOURS[args.theme], args.cut)
     (OUT / "social").mkdir(parents=True, exist_ok=True)
-    base = OUT / "social" / f"iran_wateryear_{args.theme}_fa"
+    base = OUT / "social" / f"iran_wateryear_{args.theme}_fa_{args.cut}"
     for old in (OUT / "social").glob(f"{base.name}_t*.png"):
         old.unlink()                                      # no stale frames of an earlier cut
     film.draw(1).save(f"{base}_cover.png", optimize=True)
