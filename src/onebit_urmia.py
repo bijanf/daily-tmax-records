@@ -3,16 +3,17 @@
 Measured data only. Pictures and levels from urmia.py (outputs/urmia_log.txt):
 - Landsat (USGS) in true colour: per year and path the median of up to six least-cloudy scenes
   between 20 August and 10 October (29 Mordad to 18 Mehr) over those not flagged as cloud; land
-  without a clear view from the nearest year; 1993, 1999 and 2003 left out (urmia.NO_PICTURE).
+  without a clear view from the nearest year; the paths joined with matched tones; 1993, 1999,
+  2003 and 2012 left out (urmia.NO_PICTURE).
   White on the bed is salt crust or a thin film of brine over salt: «سفید: نمک» on the picture.
 - The level: the in-situ September mean to 2019 (Mendeley deposit), later years from official
   statements (urmia.OFFICIAL: 1400, 1404, 1405): September 1995 1,277.89 m, early Mehr 1404
   1,269.50 m (8.4 m lower), 19 Mehr 1405 1,270.58 m (about 7 m below 1995, about 1 m above 1404).
   For 1399 and 1401-1403 no end-of-Shahrivar figure was found: the gauge holds the last measured
   year's level, names that year in its heading and says «(آخرین اندازه‌گیری)».
-- "Less than a tenth of the extent" (scene 2): the reported extent, about 6,900 km2 in Khordad
-  1374 and 481 km2 in early Mehr 1404 (urmia.EXTENT; a Landsat open-water check, outside this
-  repo, agrees: 1.6-8.2 % of September 1995). Causes are in the caption, not on screen.
+- Scene 2 is the level, like for like (September 1995 against late September 2025): 8.4 m lower.
+  The reported extents (urmia.EXTENT) compare a spring high with a late-summer low and their
+  method is not given: caption only, dated, without a ratio. Causes are in the caption.
 
 A slide on the frame of onebit_slides: one window, one bold line per scene. The picture on the
 right (Persian reads it first), the level gauge on its left. The first frame carries the whole
@@ -64,13 +65,12 @@ def persian(year: int) -> int:
 
 def words() -> dict:
     return dict(scenes=(("دریاچه‌ی ارومیه // {۴۰ سال} پیش چه شکلی بود؟", ""),
-                        ("از ۱۳۷۴ تا ۱۴۰۴: // {کمتر از یک‌دهمِ} وسعت ماند", ""),
+                        ("از ۱۳۷۴ تا ۱۴۰۴: // ترازِ آب {حدود ۸ متر} پایین رفت", ""),
                         ("ترازِ امسال بالا آمد، // هنوز {حدود ۷ متر} پایین‌تر از ۱۳۷۴", "")),
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
                 gauge="ترازِ آبِ", unit="متر", last="(آخرین اندازه‌گیری)", salt="سفید: نمک",
                 sources=("منبع: تصاویرِ لندست (USGS)، اواخرِ مرداد تا اواسطِ مهر؛ سفید: نمک",
-                         "تراز: میدانی (Mendeley) تا ۱۳۹۸؛ رسمی: ۱۴۰۰، ۱۴۰۴، ۱۴۰۵",
-                         "وسعتِ رسمی: خردادِ ۱۳۷۴ حدود ۶٬۹۰۰، مهرِ ۱۴۰۴: ۴۸۱ کیلومترِ مربع"))
+                         "تراز: میدانی (Mendeley) تا ۱۳۹۸؛ رسمی: ۱۴۰۰، ۱۴۰۴، ۱۴۰۵"))
 
 
 class UrmiaFilm(Slides):
@@ -81,8 +81,7 @@ class UrmiaFilm(Slides):
         assert lv.loc[1995] - lv.loc[2025] >= 8.0, "scene 2's gauge: about 8 m"
         assert round(lv.loc[1995] - lv.loc[2026]) == 7, "scene 3: about 7 m below 1374"
         assert lv.loc[2026] > lv.loc[2025], "scene 3: the level rose this year"
-        e = urmia.EXTENT
-        assert e["early Mehr 1404"] / e["Khordad 1374"] < 0.1, "scene 2: less than a tenth of the extent"
+        assert round(lv.loc[1995] - lv.loc[2025]) == 8, "scene 2: about 8 m lower"
         self.years = urmia.years()
         assert self.years[0] == 1986 and self.years[-1] == 2026 and 1993 not in self.years, self.years
         self.level = lv                                   # the gauge holds the last measured year's level,

@@ -5,8 +5,9 @@ Measured data only:
   and blue surface reflectance; per year and path the per-pixel median of the six least-cloudy
   scenes between 20 August and 10 October (29 Mordad to 18 Mehr) over those Landsat does not flag
   as cloud there (on the lake, where none is clear, over all: salt can be flagged), from
-  get_urmia.py --colour. Land left without a clear view is taken from the nearest year with one;
-  the lake is never filled. 1993, 1999 and 2003 are left out (NO_PICTURE). White on the lakebed
+  get_urmia.py --colour; the paths' layers joined with matched tones. Land left without a clear
+  view is taken from the nearest year with one; the lake is never filled. 1993, 1999, 2003 and
+  2012 are left out (NO_PICTURE). White on the lakebed
   is salt crust or a thin film of brine over salt (reflectance cannot tell them apart).
 - Level: the shore gauges' daily level to January 2020 (Mendeley deposit doi:10.17632/285n67m8zd.2,
   get_urmia.py --gauge), as the September mean; later years from official statements (OFFICIAL,
@@ -69,7 +70,8 @@ def levels() -> pd.Series:
 NO_PICTURE = {1993: "no Landsat scene with at most 60 % cloud between 20 August and 10 October",
               1999: "the lake's south-east bay is under cloud in the only scene of path 168 (22 Sep)",
               2003: "no scene of path 168 in the window (path 169 has Landsat 5 of 24 Sep and 10 Oct): "
-                    "6.4 % of the lake unseen"}
+                    "6.4 % of the lake unseen",
+              2012: "only Landsat 7 after its scan-line failure: its gaps stripe the salt flats"}
 
 
 def years() -> list:
@@ -84,9 +86,42 @@ def lake() -> np.ndarray:
     return np.load(DATA / "picture_1995.npz")["lake"]
 
 
+FEATHER = 8                                       # px: two layers blend over this width where they meet
+
+
+def _matched(base: np.ndarray, layer: np.ndarray, over: np.ndarray) -> np.ndarray:
+    """The layer in the base's tones: per band the least-squares gain and offset over their overlap
+    (two paths' scenes are days apart: the water's colour and the light differ)."""
+    out = layer.copy()
+    for b in range(3):
+        x, y = layer[b][over].astype(np.float64), base[b][over].astype(np.float64)
+        gain, offset = np.linalg.lstsq(np.vstack([x, np.ones_like(x)]).T, y, rcond=None)[0]
+        out[b] = gain * layer[b] + offset
+    return out
+
+
+def _join(strict: np.ndarray, loose: np.ndarray) -> np.ndarray:
+    """One picture from the paths' layers: the first path's whole-scene layer, then each further
+    layer (the other paths, then where any scene sees) matched to it and blended in at the join."""
+    from scipy import ndimage
+    rgb = strict[0].astype(np.float32)
+    for layer in list(strict[1:]) + list(loose):
+        layer = layer.astype(np.float32)
+        have, new = np.isfinite(rgb[0]), np.isfinite(layer[0])
+        if (have & new).sum() >= 1000:
+            layer = _matched(rgb, layer, have & new)
+        d = ndimage.distance_transform_edt(have)
+        edge = have & new & (d <= FEATHER)
+        w = d[edge] / FEATHER
+        rgb[:, edge] = w * rgb[:, edge] + (1 - w) * layer[:, edge]
+        rgb[:, ~have & new] = layer[:, ~have & new]
+    return rgb
+
+
 @functools.cache
 def _rgb(year: int) -> np.ndarray:
-    return np.load(DATA / f"colour_{year}.npz")["rgb"].astype(np.float32)
+    z = np.load(DATA / f"colour_{year}.npz")
+    return _join(z["strict"], z["loose"])
 
 
 def colour(year: int) -> dict:

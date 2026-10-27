@@ -266,7 +266,7 @@ def colour(year: int) -> None:
     stays unseen (urmia.py fills it from the nearest year). Path 169 over path 168 (the lake's
     south-east) over path 169's row 033 (the box's north-west corner), each first only where all
     its whole scenes see (a scene's edge inside a path's median draws a dotted line), then where
-    any does."""
+    any does. Saved as the paths' layers; urmia.py joins them, matching their tones."""
     w, s, e, n = BOX
     t = from_origin(w, n, GRID, GRID)
     shape = (int(round((n - s) / GRID)), int(round((e - w) / GRID)))
@@ -293,12 +293,11 @@ def colour(year: int) -> None:
     if not loose:
         print(f"colour {year}: no scene", flush=True)
         return
-    rgb, rest = strict[0], loose[0]
-    for more, other in zip(strict[1:], loose[1:]):
-        rgb = np.where(np.isnan(rgb), more, rgb)
-        rest = np.where(np.isnan(rest), other, rest)
-    rgb = np.where(np.isnan(rgb), rest, rgb)                            # never a hole the loose mosaic fills
-    np.savez_compressed(DATA / f"colour_{year}.npz", rgb=rgb.astype(np.float16), items=np.array(items),
+    rgb = strict[0]
+    for more in strict[1:] + loose:
+        rgb = np.where(np.isnan(rgb), more, rgb)                        # for the log; urmia.py tone-matches
+    np.savez_compressed(DATA / f"colour_{year}.npz", strict=np.stack(strict).astype(np.float16),
+                        loose=np.stack(loose).astype(np.float16), items=np.array(items),
                         transform=np.array(tuple(t)[:6]))
     print(f"colour {year}: {len(items)} scenes, unseen {100 * np.isnan(rgb[0]).mean():.1f} % of the box", flush=True)
 
