@@ -7,10 +7,11 @@
                                              and thermal radiation, surface pressure)
     data/water/era5_iran_<var>_<y0>-<y1>.nc  the same seven fields over Iran (24-41 N, 43-64 E),
                                              every month: the ERA5 check of the Iran story
-    data/water/cru_ts4.10.<decade>.<pre|pet>.dat.nc
-                                             CRU TS 4.10 (Harris et al. 2020) precipitation and
-                                             Penman-Monteith potential evapotranspiration,
-                                             1901-2025: the record of water.py
+    data/water/cru_ts4.10.<decade>.<pre|pet|tmp>.dat.nc
+                                             CRU TS 4.10 (Harris et al. 2020) precipitation,
+                                             Penman-Monteith potential evapotranspiration and
+                                             mean temperature, 1901-2025: the record of water.py,
+                                             enso.py and temperature.py
 
 ERA5 comes from the Copernicus Climate Data Store and needs a key in ~/.cdsapirc; months not
 yet published are skipped. CRU TS is a plain download from the University of East Anglia.
@@ -99,7 +100,7 @@ def main() -> None:
     y1 = date.today().year - 1
     with ThreadPoolExecutor(8) as ex:
         jobs = [ex.submit(era5, v, a, b) for v in VARS for a, b in ((1940, 1949), (1950, y1))]
-        jobs += [ex.submit(cru, d, v) for d in DECADES for v in ("pre", "pet")]
+        jobs += [ex.submit(cru, d, v) for d in DECADES for v in ("pre", "pet", "tmp")]
         [j.result() for j in jobs]
         list(ex.map(this_year, VARS))
         list(ex.map(iran, VARS))

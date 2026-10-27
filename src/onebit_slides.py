@@ -30,7 +30,12 @@ PROGRESS = 10                                    # height of the progress bar ov
 # land without snow a cool grey, so that even the lightest step stands apart from it
 COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C7612F", "#93351F")),
            "flieder": dict(land="#E3E1E8", snow="#6F8FD8", ramp=("#A98BD4", "#7E52B8", "#4B2280")),
-           "baran": dict(land="#D3DEE5", rain="#2F6FB3")}
+           "baran": dict(land="#D3DEE5", rain="#2F6FB3"),
+           # diverging, 0.5 °C steps from <= -1.75 to >= +1.75: the dataviz palette's blue 300-700, a
+           # warm grey midpoint, and red at the same OKLCH lightness (validate_palette.js --ordinal on
+           # each arm against the paper: all pass)
+           "kahgel": dict(land="#E2D8C8", ramp=("#0d366b", "#1c5cab", "#2a78d6", "#6da7ec", "#d2ccc2",
+                                                "#e78477", "#ca453b", "#a03129", "#641914"))}
 
 
 def span(years, lang: str = "fa") -> str:

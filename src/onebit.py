@@ -44,6 +44,7 @@ Themes recolour the whole scene:
     grau1   Grau.1bit       black, grey and white: white field, black ink, grey dot grid
     kashi   Kashi           in colour: cream, navy type, Persian turquoise accents (kashi, the tiles)
     baran   Baran           in colour: pale rain grey, deep navy type, rain-blue accents (baran, rain)
+    kahgel  Kahgel          in colour: straw-plaster paper, brown type, brick accents (kahgel, the plaster)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -183,6 +184,10 @@ THEMES = {
                    light="#EAF0F3", track="#162B40", cold="#2F6FB3", hot="#2F6FB3",
                    levels=("#EAF0F3", "#162B40", "#162B40", "#162B40"), title="#EAF0F3", dots="#CCD8DF",
                    mono=True, mark="#2F6FB3", town="Tehran"),
+    "kahgel": Theme("Kahgel", field="#F3ECE1", ink="#2E2118", head="#2E2118", paper="#F3ECE1",
+                    light="#F3ECE1", track="#2E2118", cold="#A03129", hot="#A03129",
+                    levels=("#F3ECE1", "#2E2118", "#2E2118", "#2E2118"), title="#F3ECE1", dots="#E2D8C8",
+                    mono=True, mark="#A03129", town="Tehran"),
     "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
                      light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
                      levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",
