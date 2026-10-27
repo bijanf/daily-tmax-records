@@ -3,8 +3,8 @@
 Measured data only. Every number comes from clouds.py (outputs/clouds_iran_log.txt):
 - CRU TS 4.10 precipitation (University of East Anglia; stations, 0.5 deg), water years
   October-September named by the year they end, 1952-2025, each country in % of its own mean.
-- Iran and Iraq usually move together: r = 0.77 (0.75 detrended; ERA5 0.74, GPCC 0.69 in the
-  fact check; about 60 % of the year-to-year swings shared). No neighbour moves against Iran
+- Iran and Iraq usually move together: r = 0.77 (0.75 detrended; ERA5 0.74; about 60 % of the
+  year-to-year swings shared). No neighbour moves against Iran
   over 1952-2025 (all eight r > 0; over 1995-2024 alone Azerbaijan is slightly negative).
 - In Iran's ten driest water years each neighbour was below its own median in 6 to 10: Iraq and
   Afghanistan 10, Turkmenistan 9, Turkey and the six GCC states 8, Azerbaijan and Armenia 7,

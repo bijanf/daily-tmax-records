@@ -2,10 +2,11 @@
 
 Measured data only. Numbers from wateryear.py (outputs/wateryear_iran_log.txt) and, for the
 official figures, the press reports of Iran's Meteorological Organization (fact check):
-- Iran, water year 1404-1405 (1 Mehr 1404 to 31 Shahrivar 1405): official 233.6 mm against a
-  long-term 231.9 mm (101 %, via Rokna); ERA5 October-September 101 %; CHIRPS v3.0 113 % of its own
-  1370-1371 to 1399-1400 normal (CHIRPS reads 1.25-1.29 times the official totals). The screen
-  says "about normal" and prints all three.
+- Iran, water year 1404-1405 (1 Mehr 1404 to 31 Shahrivar 1405): ERA5 October-September 101 %;
+  CHIRPS v3.0 113 % of its own 1370-1371 to 1399-1400 normal (this year CHIRPS read 28-35 % above
+  the official national totals); official IRIMO figures 97 % to 24 Ordibehesht and 103 % to 9
+  Khordad 1405 (the year-end 233.6 mm via Rokna could not be traced in the audit of 27 Oct and is
+  not used). The screen says "about normal" and prints ERA5, CHIRPS and the 9 Khordad figure.
 - Tehran province (Natural Earth's, current boundaries, Alborz apart): below normal in each of
   the six water years 1399-1400 to 1404-1405 in CHIRPS (82, 71, 92, 77, 47, 75 %) and in ERA5
   (October-September 2020-21 to 2025-26: 95, 79, 71, 96, 68, 68 %); official 1404-1405 to 19
@@ -48,7 +49,8 @@ CUTS = {"24s": dict(bpm=60, bars=(1.5, 2, 2.5)),   # the default: "so slow" at 3
 STEP = 0.5                                        # s between two squares filling
 YEARS = tuple(range(1399, 1405))                 # water years 1399-1400 .. 1404-1405
 EXPECT = {"iran": 113, "tehran": (82, 71, 92, 77, 47, 75)}   # CHIRPS % of normal: the published reel
-OFFICIAL = dict(iran=101, tehran=60)              # % (press reports of IRIMO figures; fact check)
+OFFICIAL = dict(iran=103, tehran=60)              # %: IRIMO, Iran to 9 Khordad 1405 (Taadol 389184), Tehran
+                                                  # at the year's end (Mehr, 28 Shahrivar 1405); audit of 27 Oct
 MAP_W = 600
 SQ, SQ_GAP = 84, 34                               # the six squares
 YEAR_PX, YEAR_LEAD = 32, 34
@@ -62,7 +64,7 @@ def words() -> dict:
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
                 tehran="استان تهران", key="زیرِ نرمال در CHIRPS و ERA5",
                 sources=("منبع: بارش CHIRPS v3 و ERA5؛ آمار رسمی: سازمان هواشناسی",
-                         f"ایران ۱۴۰۴–۱۴۰۵: رسمی {fa(OFFICIAL['iran'])}٪ · ERA5 {fa(101)}٪ · CHIRPS {fa(EXPECT['iran'])}٪ نرمال",
+                         f"ایران ۱۴۰۴–۱۴۰۵: ERA5 {fa(101)}٪ · CHIRPS {fa(EXPECT['iran'])}٪ · رسمی تا ۹ خرداد {fa(OFFICIAL['iran'])}٪",
                          f"تهران ۱۴۰۴–۱۴۰۵: رسمی حدود {fa(OFFICIAL['tehran'])}٪ · ERA5 {fa(68)}٪ · CHIRPS {fa(75)}٪"))
 
 
