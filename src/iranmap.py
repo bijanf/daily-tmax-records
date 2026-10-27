@@ -40,6 +40,11 @@ class Map:
         self.inside = enso.country_mask(list(countries), self.lat, self.lon)
         self.border = self.inside & ~ndimage.binary_erosion(self.inside, iterations=2)
 
+    def province(self, name: str) -> np.ndarray:
+        """A province's pixels (Natural Earth 10 m, by its English name)."""
+        import get_chirps
+        return get_chirps.province(name, self.lat, self.lon)
+
     def place(self, lon: float, lat: float) -> tuple[float, float]:
         W, E, S, N = self.extent
         y0, y1 = mercator_y(S), mercator_y(N)

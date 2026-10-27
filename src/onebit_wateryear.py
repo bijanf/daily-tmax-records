@@ -1,21 +1,24 @@
-"""THE WATER YEAR 1404-1405: near normal for Iran, a sixth dry year in a row for Tehran.
+"""THE WATER YEAR 1404-1405: about normal rain for Iran, a sixth year below normal for Tehran.
 
-Measured data only. Every number comes from wateryear.py (outputs/wateryear_iran_log.txt):
-- CHIRPS v3.0 daily rain (Climate Hazards Center, UC Santa Barbara) summed over the Persian
-  calendar's water years, 1 Mehr to 31 Shahrivar, over all of Iran and all of Tehran province;
-  in % of the normal (the mean of 1370-1371 to 1399-1400).
-- Iran: 1403-1404 was the driest water year since 1360-1361 (53 %), 1404-1405 came in at 113 %
-  (ERA5, October-September: 64 % and 101 %). Tehran province: below normal six water years in a
-  row, 1399-1400 to 1404-1405 (82, 71, 92, 77, 47, 75 %; ERA5 95, 79, 71, 96, 68, 68 %).
-- Not on screen, in the caption: Mehr and Aban 1404 together were the driest start of a water
-  year in the record (14 % of normal), Azar 1404 brought twice its normal.
+Measured data only. Numbers from wateryear.py (outputs/wateryear_iran_log.txt) and, for the
+official figures, the press reports of Iran's Meteorological Organization (fact check):
+- Iran, water year 1404-1405 (1 Mehr 1404 to 31 Shahrivar 1405): official 233.6 mm against a
+  long-term 231.9 mm (101 %, via Rokna); ERA5 October-September 101 %; CHIRPS v3.0 113 % of its own
+  1370-1371 to 1399-1400 normal (CHIRPS reads 1.25-1.29 times the official totals). The screen
+  says "about normal" and prints all three.
+- Tehran province (Natural Earth's, current boundaries, Alborz apart): below normal in each of
+  the six water years 1399-1400 to 1404-1405 in CHIRPS (82, 71, 92, 77, 47, 75 %) and in ERA5
+  (October-September 2020-21 to 2025-26: 95, 79, 71, 96, 68, 68 %); official 1404-1405 to 19
+  Mordad: 162 mm against 272 mm, about 60 %. The squares carry no per-year percentages: the
+  products differ by up to 20 points in a year, all agree on the side of normal.
+- Rain only: not dam storage, groundwater or consumption; a province mean is not the dams'
+  catchment rain.
 
 A slow, still slide on the frame of onebit_slides. One window, one bold line per scene. Below it
-two rows of six bars, Iran and Tehran province, one bar per water year from 1399-1400 (right)
-to 1404-1405 (left), in % of normal, with the normal as a dotted line and each bar's value on
-top. On the cover the bars are full (the grid's thumbnail); the film opens on empty frames, the
-Iran bars come in in the second scene, Tehran's in the third. Three scenes, 2 + 3 + 3.5 bars of
-60 BPM = 34 s, a silent track (music is added in the app).
+Iran's map with Tehran province in saffron, and under it six squares, one per water year from
+1399-1400 (right) to 1404-1405 (left), solid where Tehran's rain was below normal in both CHIRPS
+and ERA5. The first frame carries the whole question and the map; the squares fill in the third
+scene. Three scenes, 2 + 3 + 3.5 bars of 60 BPM = 34 s, a silent track (music in the app).
 
     outputs/onebit/social/iran_wateryear_<theme>_fa_reel.mp4, _cover.png
 
@@ -33,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np  # noqa: E402
 
+import iranmap  # noqa: E402
 import onebit  # noqa: E402
 import wateryear  # noqa: E402
 from onebit import FA_BOLD, FA_TEXT, OUT, SIZES, SOCIAL_CRF, Canvas, fa  # noqa: E402
@@ -40,112 +44,114 @@ from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 
 PACE = dict(bpm=60, bars=(2, 3, 3.5))
 YEARS = tuple(range(1399, 1405))                 # water years 1399-1400 .. 1404-1405
-EXPECT = {"iran": (67, 67, 92, 90, 53, 113), "tehran": (82, 71, 92, 77, 47, 75)}   # % of normal: the published reel
-TOP = 140                                         # % at the top of a block's bars
-TALL = 190                                        # px of 140 %
-YEAR_PX, YEAR_LEAD = 32, 34                       # a water year in two lines under its bar
-NORMAL_LABEL = 84                                 # px kept left of the bars for "نرمال"
-SOURCE, SOURCE_PX = 38, 28
-
-
-def label(jy: int) -> str:
-    return fa(f"{jy}–{jy + 1}")
+EXPECT = {"iran": 113, "tehran": (82, 71, 92, 77, 47, 75)}   # CHIRPS % of normal: the published reel
+OFFICIAL = dict(iran=101, tehran=60)              # % (press reports of IRIMO figures; fact check)
+MAP_W = 600
+SQ, SQ_GAP = 84, 34                               # the six squares
+YEAR_PX, YEAR_LEAD = 32, 34
+SOURCE, SOURCE_PX = 38, 30
 
 
 def words() -> dict:
-    return dict(scenes=(("سال آبیِ ۱۴۰۴–۱۴۰۵ // {چطور} گذشت؟", ""),
-                        ("ایران: // سالِ {نزدیکِ نرمال}", ""),
-                        ("اما تهران: // {۶ سال} پشتِ سرِ هم کم‌باران", "")),
+    return dict(scenes=(("سال آبی ۱۴۰۴–۱۴۰۵ // {چطور} گذشت؟", ""),
+                        ("ایران: // بارش {حدودِ نرمال}", ""),
+                        ("اما استان تهران: // {۶ سال} پشتِ سرِ هم زیرِ نرمال", "")),
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
-                heads=("ایران", "استان تهران"),
-                sources=("منبع: بارش روزانه‌ی CHIRPS v3 (دانشگاه کالیفرنیا، سانتا باربارا)",
-                         "سال آبی: ۱ مهر تا ۳۱ شهریور · نرمال: میانگینِ ۱۳۷۰ تا ۱۴۰۰",
-                         "میانگینِ کلِ ایران و کلِ استان تهران · بررسی با ERA5"))
+                tehran="استان تهران", key="زیرِ نرمال در CHIRPS و ERA5",
+                sources=("منبع: بارش CHIRPS v3 و ERA5؛ آمار رسمی: سازمان هواشناسی",
+                         f"ایران ۱۴۰۴–۱۴۰۵: رسمی {fa(OFFICIAL['iran'])}٪ · ERA5 {fa(101)}٪ · CHIRPS {fa(EXPECT['iran'])}٪ نرمال",
+                         f"تهران ۱۴۰۴–۱۴۰۵: رسمی حدود {fa(OFFICIAL['tehran'])}٪ · ERA5 {fa(68)}٪ · CHIRPS {fa(75)}٪"))
 
 
 class WaterYearFilm(Slides):
     def __init__(self, th: onebit.Theme, colour: dict):
-        self.pct = {}
+        pct = {}
         for region in ("iran", "tehran"):
             t = wateryear.table("rnl", region)
             normal = t.loc[wateryear.NORMAL[0]:wateryear.NORMAL[1], "year"].mean()
-            self.pct[region] = {jy: 100 * t.loc[jy, "year"] / normal for jy in YEARS}
-            got = tuple(int(round(self.pct[region][jy])) for jy in YEARS)
-            assert got == EXPECT[region], (region, got)
-        assert all(v < 100 for v in self.pct["tehran"].values()), "Tehran: six below normal"
-        era = wateryear.era5_oct_sep("tehran")
-        era_n = era.loc[1991:2020].mean()
-        assert all(era.loc[y] < era_n for y in range(2020, 2026)), "ERA5 must agree: Tehran six below normal"
+            pct[region] = {jy: 100 * t.loc[jy, "year"] / normal for jy in YEARS}
+        assert round(pct["iran"][1404]) == EXPECT["iran"], pct["iran"][1404]
+        assert tuple(round(pct["tehran"][jy]) for jy in YEARS) == EXPECT["tehran"], pct["tehran"]
+        era = {r: wateryear.era5_oct_sep(r) for r in ("iran", "tehran")}
+        era_pct = {r: 100 * era[r] / era[r].loc[1991:2020].mean() for r in era}
+        assert round(era_pct["iran"].loc[2025]) == 101 and round(era_pct["tehran"].loc[2025]) == 68
+        self.below = [pct["tehran"][jy] < 100 and era_pct["tehran"].loc[jy + 621] < 100     # water year 1399-1400 ~ ERA5 Oct 2020-Sep 2021
+                      for jy in YEARS]
+        assert all(self.below), "Tehran: below normal in every year, in both CHIRPS and ERA5"
+        self.map = iranmap.Map(MAP_W)
+        self.tehran_px = self.map.province("Tehran") & self.map.inside
+        assert self.tehran_px.sum() > 200, "Tehran province too small to see"
+        self.hook_at_once = True
         self.setup(th, "fa", colour, words(), PACE, "Iran.WaterYear")
         dots = np.zeros((1920, 1080), bool)               # the sources sit in the window
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
         self.dots = dots
         self.layout()
         b = self.beat
-        self.fill_at = {"iran": float(self.starts[1]) + b, "tehran": float(self.starts[2]) + b}
+        self.fill_at = float(self.starts[2]) + b
         self.done = b
-        assert self.fill_at["iran"] + b < 15
+        assert float(self.starts[1]) + self.later(1) < 15
 
     def layout(self):
         inner_top = RULE + 24
         inner_bot = WIN[1] + WIN[3] - 24 - SOURCE * len(self.words["sources"])
         self.source_y = inner_bot + SOURCE - 8
-        block = 50 + 46 + TALL + 30 + 2 * YEAR_LEAD          # heading, values, bars, two lines of years
-        gap = (inner_bot - inner_top - 2 * block) / 3
+        squares = 44 + SQ + 20 + 2 * YEAR_LEAD             # key, squares, two lines of years
+        gap = (inner_bot - inner_top - self.map.h - squares) / 3
         assert gap >= 20, f"the picture does not fit the window ({gap:.0f})"
-        self.blocks = {}
-        y = inner_top + gap
-        for region in ("iran", "tehran"):
-            head = y + 40
-            base = head + 46 + 10 + TALL                   # the bars' foot
-            self.blocks[region] = dict(head=head, base=base, years=base + 38)
-            y += block + gap
-        x0, x1 = LEFT + NORMAL_LABEL, RIGHT
-        self.pitch = (x1 - x0) / len(YEARS)
-        self.bar_w = self.pitch * 0.62
-        self.x_right = x1
+        self.map_at = ((LEFT + RIGHT - self.map.w) / 2, inner_top + gap)
+        self.key_y = self.map_at[1] + self.map.h + gap + 30
+        self.sq_top = self.key_y + 20
+        self.years_y = self.sq_top + SQ + 40
+        width = len(YEARS) * SQ + (len(YEARS) - 1) * SQ_GAP
+        self.sq_right = (LEFT + RIGHT + width) / 2
 
     # ── time ──
 
     def later(self, i: int) -> float:
-        if i in (1, 2):
-            region = "iran" if i == 1 else "tehran"
-            return self.fill_at[region] - float(self.starts[i]) + self.beat
-        return super().later(i)
+        if i == 2:
+            return self.fill_at - float(self.starts[2]) + self.beat
+        return 2 * self.beat + 0.3
 
-    def full(self, region: str, t: float) -> bool:
+    def filled(self, t: float) -> bool:
         if not np.isfinite(t):
-            return True                                   # the cover: both rows full
-        i = self.scene(t)
-        need = 1 if region == "iran" else 2
-        return i > need or (i == need and t >= self.fill_at[region])
+            return True                                   # the cover: the squares full
+        return self.scene(t) == 2 and t >= self.fill_at
 
     # ── drawing ──
 
-    def block(self, c: Canvas, region: str, head: str, t: float):
-        th, col, B = self.th, self.colour, self.blocks[region]
-        self.say(c, RIGHT, B["head"], head, 44, True, th.ink)
-        y100 = B["base"] - 100 / TOP * TALL
-        for x in np.arange(LEFT + NORMAL_LABEL, RIGHT, 12):          # the normal: a dotted line
-            c.fill(x, y100 - 1, x + 6, y100 + 1, th.ink)
-        c.text(LEFT + NORMAL_LABEL - 10, y100 + 10, "نرمال", FA_TEXT, 28, th.ink, "rs", "rtl")
-        full = self.full(region, t)
+    def iran(self, c: Canvas, t: float):
+        th, col = self.th, self.colour
+        x, y = self.map_at
+        c.pixels(x, y, self.map.inside & ~self.tehran_px, col["land"])
+        c.pixels(x, y, self.tehran_px, col["now"])
+        c.pixels(x, y, self.map.border, th.ink)
+        for name, lo, la in iranmap.CITIES:
+            px, py = self.map.place(lo, la)
+            px, py = x + px, y + py
+            c.fill(px - 5, py - 5, px + 5, py + 5, th.ink)
+            if name == "تهران":                           # the province, named beside its city
+                name = self.words["tehran"]
+            tw = c.width(name, FA_TEXT, 30, "rtl")
+            c.frame(px + 12, py - 26, px + 12 + tw + 16, py + 12, fill=th.field)
+            c.text(px + 20 + tw, py + 4, name, FA_TEXT, 30, th.ink, "rs", "rtl")
+
+    def squares(self, c: Canvas, t: float):
+        th, col = self.th, self.colour
+        w = c.width(self.words["key"], FA_TEXT, 30, "rtl")
+        c.fill(RIGHT - 30, self.key_y - 26, RIGHT, self.key_y + 4, col["now"])        # the key, read first
+        c.text(RIGHT - 42, self.key_y, self.words["key"], FA_TEXT, 30, th.ink, "rs", "rtl")
+        assert RIGHT - 42 - w > LEFT
+        full = self.filled(t)
         for k, jy in enumerate(YEARS):                   # Persian: the earliest year on the right
-            cx = self.x_right - (k + 0.5) * self.pitch
-            x0, x1 = cx - self.bar_w / 2, cx + self.bar_w / 2
-            v = self.pct[region][jy]
-            top = B["base"] - min(v, TOP) / TOP * TALL
-            colour = col["now"] if jy == YEARS[-1] else col["bar"]
-            if full:
-                c.fill(x0, top, x1, B["base"], colour)
-                c.text(cx, top - 12, fa(f"{v:.0f}%"), FA_BOLD, 34, th.ink, "ms", "rtl")
-            else:
-                c.frame(x0, B["base"] - TALL * 0.02, x1, B["base"])
-            first, second = fa(f"{jy}–"), fa(f"{jy + 1}")          # 1404– over 1405: years in full
-            c.text(cx, B["years"], first, FA_TEXT, YEAR_PX, th.ink, "ms", "rtl")
-            c.text(cx, B["years"] + YEAR_LEAD, second, FA_TEXT, YEAR_PX, th.ink, "ms", "rtl")
-            assert c.width(first, FA_TEXT, YEAR_PX, "rtl") <= self.pitch - 10, first
-        c.fill(LEFT + NORMAL_LABEL, B["base"], RIGHT, B["base"] + 2, th.ink)
+            right = self.sq_right - k * (SQ + SQ_GAP)
+            box = (right - SQ, self.sq_top, right, self.sq_top + SQ)
+            if full and self.below[k]:
+                c.fill(*box, col["now"])
+            c.frame(*box)
+            cx = right - SQ / 2
+            c.text(cx, self.years_y, fa(f"{jy}–"), FA_TEXT, YEAR_PX, th.ink, "ms", "rtl")
+            c.text(cx, self.years_y + YEAR_LEAD, fa(f"{jy + 1}"), FA_TEXT, YEAR_PX, th.ink, "ms", "rtl")
 
     def sources(self, c: Canvas):
         for k, line in enumerate(self.words["sources"]):
@@ -153,8 +159,8 @@ class WaterYearFilm(Slides):
             assert c.width(line, FA_TEXT, SOURCE_PX, "rtl") <= RIGHT - LEFT, line
 
     def body(self, c: Canvas, t: float):
-        self.block(c, "iran", self.words["heads"][0], t)
-        self.block(c, "tehran", self.words["heads"][1], t)
+        self.iran(c, t)
+        self.squares(c, t)
 
 
 def main() -> None:
@@ -165,11 +171,13 @@ def main() -> None:
     film = WaterYearFilm(onebit.THEMES[args.theme], COLOURS[args.theme])
     (OUT / "social").mkdir(parents=True, exist_ok=True)
     base = OUT / "social" / f"iran_wateryear_{args.theme}_fa"
+    for old in (OUT / "social").glob(f"{base.name}_t*.png"):
+        old.unlink()                                      # no stale frames of an earlier cut
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
         st = film.starts
-        for t in (st[0] + 4.0, st[1] + film.later(1) + 1.0, st[2] + film.later(2) + 1.0, st[-1] - 0.1):
+        for t in (st[0] + 0.0, st[1] + film.later(1) + 1.0, st[2] + film.later(2) + 1.0, st[-1] - 0.1):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
             print("saved", f"{base}_t{t:04.1f}.png")
         return

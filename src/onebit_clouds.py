@@ -16,9 +16,9 @@ Measured data only. Every number comes from clouds.py (outputs/clouds_iran_log.t
 A slow, still slide on the frame of onebit_slides. One window, one bold line per scene. Below
 it a line chart, 1952 (right) to 2025 (left), and a scoreboard of the seven land neighbours and
 the six GCC states across the Gulf, ten squares each, one per dry Iran year (first and last year
-under it). The cover (the thumbnail) shows both lines; the film opens on the empty chart and the
-empty board; in the second scene Iran's line comes in, then Iraq's; in the third the squares
-fill, solid where that neighbour was below its own median too.
+under it). The first frame carries the whole question and both lines (a reel's first second
+decides); the board fills in the third scene, solid where that neighbour was below its own
+median too.
 Three scenes, 2 + 3 + 3.5 bars of 60 BPM = 34 s, a silent track (music is added in the app).
 
     outputs/onebit/social/iran_clouds_<theme>_fa_reel.mp4, _cover.png
@@ -84,6 +84,7 @@ class CloudsFilm(Slides):
         median = df.median()
         self.dry = {k: [bool(df.loc[y, k] < median[k]) for y in self.driest] for k in EXPECT_DRY}
         self.order = sorted(EXPECT_DRY, key=lambda k: (-got[k], -rel.loc[k, "r"]))
+        self.hook_at_once = True                          # the first frame carries the whole question
         self.setup(th, "fa", colour, words(), PACE, "Iran.Rain")
         dots = np.zeros((1920, 1080), bool)                 # the sources sit in the window
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
@@ -123,8 +124,10 @@ class CloudsFilm(Slides):
         return super().later(i)
 
     def shown(self, what: str, t: float) -> bool:
+        if what != "board":
+            return True                                     # both lines from the very first frame
         if not np.isfinite(t):
-            return what != "board"                          # the cover shows both lines, the board empty
+            return False                                    # the cover: the board still empty
         i = self.scene(t)
         at = {"iran": self.iran_at, "iraq": self.iraq_at, "board": self.board_at}[what]
         return i > {"iran": 1, "iraq": 1, "board": 2}[what] or (t >= at and i >= {"iran": 1, "iraq": 1, "board": 2}[what])
