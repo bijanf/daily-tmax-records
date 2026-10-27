@@ -29,7 +29,8 @@ PROGRESS = 10                                    # height of the progress bar ov
 # ramp of one hue (light end at least 2:1 on the field), snow a colour apart from it, and the
 # land without snow a cool grey, so that even the lightest step stands apart from it
 COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C7612F", "#93351F")),
-           "flieder": dict(land="#E3E1E8", snow="#6F8FD8", ramp=("#A98BD4", "#7E52B8", "#4B2280"))}
+           "flieder": dict(land="#E3E1E8", snow="#6F8FD8", ramp=("#A98BD4", "#7E52B8", "#4B2280")),
+           "baran": dict(land="#D3DEE5", rain="#2F6FB3")}
 
 
 def span(years, lang: str = "fa") -> str:

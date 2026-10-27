@@ -43,6 +43,7 @@ Themes recolour the whole scene:
     kabud1  Kabud.1bit      true 1-bit: kabud, the dusty slate blue of a winter sky over Tehran, and ink
     grau1   Grau.1bit       black, grey and white: white field, black ink, grey dot grid
     kashi   Kashi           in colour: cream, navy type, Persian turquoise accents (kashi, the tiles)
+    baran   Baran           in colour: pale rain grey, deep navy type, rain-blue accents (baran, rain)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -178,6 +179,10 @@ THEMES = {
                    light="#F6F1E7", track="#1F2A44", cold="#2A9D96", hot="#2A9D96",
                    levels=("#F6F1E7", "#1F2A44", "#1F2A44", "#1F2A44"), title="#F6F1E7", dots="#DDD3C1",
                    mono=True, mark="#238C86", town="Tehran"),
+    "baran": Theme("Baran", field="#EAF0F3", ink="#162B40", head="#162B40", paper="#EAF0F3",
+                   light="#EAF0F3", track="#162B40", cold="#2F6FB3", hot="#2F6FB3",
+                   levels=("#EAF0F3", "#162B40", "#162B40", "#162B40"), title="#EAF0F3", dots="#CCD8DF",
+                   mono=True, mark="#2F6FB3", town="Tehran"),
     "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
                      light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
                      levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",
