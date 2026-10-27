@@ -75,20 +75,30 @@ def oni(index: str = "oni") -> pd.DataFrame:
     return df
 
 
-def iran_mask(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
-    """True where a cell centre lies inside Natural Earth's 50 m Iran, read with pyshp and tested
-    with matplotlib's even-odd rule over all rings (islands count, holes would not). shapely
-    (GEOS) and netCDF in one process corrupt the heap ("corrupted size vs. prev_size" at start,
-    "free(): invalid next size" at exit), so this module never imports it; water.inside gives
-    the same 621 cells (the guard in iran_rain)."""
+def country_mask(names, lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
+    """True where a cell centre lies inside any of Natural Earth's 50 m countries `names`, read
+    with pyshp and tested with matplotlib's even-odd rule over each country's rings (islands
+    count, holes would not). shapely (GEOS) and netCDF in one process corrupt the heap
+    ("corrupted size vs. prev_size" at start, "free(): invalid next size" at exit), so this
+    module never imports it; for Iran water.inside gives the same 621 cells (the guard in
+    iran_rain)."""
     assert BORDERS.exists(), f"{BORDERS}: run any cartopy map once to download Natural Earth 50m"
-    rec = next(r for r in shapefile.Reader(str(BORDERS)).iterShapeRecords() if r.record["NAME"] == "Iran")
+    names = {names} if isinstance(names, str) else set(names)
+    recs = [r for r in shapefile.Reader(str(BORDERS)).iterShapeRecords() if r.record["NAME"] in names]
+    assert len(recs) == len(names), f"not in Natural Earth: {names - {r.record['NAME'] for r in recs}}"
     pts = np.column_stack([lon.ravel(), lat.ravel()])
-    starts = list(rec.shape.parts) + [len(rec.shape.points)]
-    hits = np.zeros(len(pts), int)
-    for a, b in zip(starts[:-1], starts[1:]):
-        hits += Outline(rec.shape.points[a:b]).contains_points(pts)
-    return (hits % 2 == 1).reshape(lat.shape)
+    inside = np.zeros(len(pts), bool)
+    for rec in recs:
+        starts = list(rec.shape.parts) + [len(rec.shape.points)]
+        hits = np.zeros(len(pts), int)
+        for a, b in zip(starts[:-1], starts[1:]):
+            hits += Outline(rec.shape.points[a:b]).contains_points(pts)
+        inside |= hits % 2 == 1
+    return inside.reshape(lat.shape)
+
+
+def iran_mask(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
+    return country_mask("Iran", lat, lon)
 
 
 @functools.cache
