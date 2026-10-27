@@ -2,19 +2,23 @@
 
 Measured data only. Every number comes from clouds.py (outputs/clouds_iran_log.txt):
 - CRU TS 4.10 precipitation (University of East Anglia; stations, 0.5 deg), water years
-  October-September 1952-2024, each country in % of its own 1952-2024 mean.
-- Iran and Iraq move together: r = 0.77 (0.75 with both detrended; ERA5 0.73). No neighbour
-  moves against Iran (all eight r > 0).
-- In Iran's ten driest water years, each neighbour was below its own median: Iraq and
-  Afghanistan 10 of 10, Turkmenistan 9, Turkey 8, the Arabian block, Azerbaijan and Armenia 7,
-  Pakistan 6 (chance alone: about 5). ERA5: Iraq 9, Afghanistan and Turkmenistan 10.
-- Not on screen: how much Iran's rain fell (CRU -11.5 % from 1952-1981 to 1995-2024, ERA5 -0.5 %
-  from the 1960s: the datasets disagree), and nothing about cloud seeding's local effects.
+  October-September named by the year they end, 1952-2025, each country in % of its own mean.
+- Iran and Iraq usually move together: r = 0.77 (0.75 detrended; ERA5 0.74, GPCC 0.69 in the
+  fact check; about 60 % of the year-to-year swings shared). No neighbour moves against Iran
+  over 1952-2025 (all eight r > 0; over 1995-2024 alone Azerbaijan is slightly negative).
+- In Iran's ten driest water years each neighbour was below its own median in 6 to 10: Iraq and
+  Afghanistan 10, Turkmenistan 9, Turkey and the six GCC states 8, Azerbaijan and Armenia 7,
+  Pakistan 6; ERA5 Iraq 9, Afghanistan and Turkmenistan 10. The rows illustrate the correlation:
+  they are about what r alone predicts, not a second test, and four rows alone are near chance.
+- Not on screen: how much Iran's rain fell (CRU and ERA5 disagree: about -12 % against -2 %),
+  and nothing about cloud seeding's local effects, snow cover, dams or rivers.
 
 A slow, still slide on the frame of onebit_slides. One window, one bold line per scene. Below
-it a line chart, 1952 (right) to 2024 (left), and a scoreboard of the eight neighbours, ten
-squares each, one per dry Iran year. On the cover all is empty; in the second scene Iran's line
-comes in, then Iraq's; in the third the squares fill, solid where that neighbour was dry too.
+it a line chart, 1952 (right) to 2025 (left), and a scoreboard of the seven land neighbours and
+the six GCC states across the Gulf, ten squares each, one per dry Iran year (first and last year
+under it). The cover (the thumbnail) shows both lines; the film opens on the empty chart and the
+empty board; in the second scene Iran's line comes in, then Iraq's; in the third the squares
+fill, solid where that neighbour was below its own median too.
 Three scenes, 2 + 3 + 3.5 bars of 60 BPM = 34 s, a silent track (music is added in the app).
 
     outputs/onebit/social/iran_clouds_<theme>_fa_reel.mp4, _cover.png
@@ -40,29 +44,30 @@ from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 
 PACE = dict(bpm=60, bars=(2, 3, 3.5))
 EXPECT_R = 0.77                                  # Iran-Iraq, CRU: the published reel
-EXPECT_DRY = {"Iraq": 10, "Afghanistan": 10, "Turkmenistan": 9, "Turkey": 8, "Arabia": 7, "Azerbaijan": 7,
+EXPECT_DRY = {"Iraq": 10, "Afghanistan": 10, "Turkmenistan": 9, "Turkey": 8, "Arabia": 8, "Azerbaijan": 7,
               "Armenia": 7, "Pakistan": 6}
 NAMES = {"Iraq": "عراق", "Afghanistan": "افغانستان", "Turkmenistan": "ترکمنستان", "Turkey": "ترکیه",
-         "Arabia": "شبه‌جزیره‌ی عربستان", "Azerbaijan": "جمهوری آذربایجان", "Armenia": "ارمنستان",
+         "Arabia": "شورای همکاری خلیج فارس", "Azerbaijan": "جمهوری آذربایجان", "Armenia": "ارمنستان",
          "Pakistan": "پاکستان"}
 LO, HI = 40, 160                                 # % of the mean: the chart's range
-PLOT = 270                                       # px: the chart's height
+PLOT = 255                                       # px: the chart's height
 LABEL = 96                                       # px kept left of the chart for the lines' names
 YAXIS = 74                                       # px kept right of it for 150 / 100 / 50 %
-SQ, GAP, ROW = 28, 10, 38                        # the scoreboard's squares
-SOURCE, SOURCE_PX = 38, 28
+SQ, GAP, ROW = 28, 10, 37                        # the scoreboard's squares
+NAME_W = 336                                     # px kept right of the squares for the names
+SOURCE, SOURCE_PX = 38, 30
 
 
 def words() -> dict:
     return dict(scenes=(("همسایه‌ها {بارانِ ایران} را می‌دزدند؟", ""),
-                        ("ایران و عراق: // {با هم} بالا و پایین می‌روند", ""),
-                        ("سال‌های خشکِ ایران: // همسایه‌ها هم {خشک} بودند", "")),
+                        ("ایران و عراق: // معمولاً {با هم} بالا و پایین می‌روند", ""),
+                        ("سال‌های خشکِ ایران: // همسایه‌ها هم اغلب {کم‌باران} بودند", "")),
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
                 chart="بارشِ سالانه، درصدِ میانگینِ هر کشور",
-                board="۱۰ سالِ خشکِ ایران", board_key="همسایه هم خشک بود",
+                board="۱۰ سالِ خشکِ ایران", board_key="همسایه هم کم‌باران بود",
                 sources=("منبع: بارش CRU TS 4.10 (دانشگاه ایست‌آنگلیا)",
-                         "سال‌های آبی (اکتبر تا سپتامبر) ۱۹۵۲ تا ۲۰۲۴",
-                         "خشک: کمتر از میانه‌ی ۱۹۵۲ تا ۲۰۲۴ همان کشور"))
+                         "سال آبی: اکتبر تا سپتامبر، به نامِ سالِ پایانی؛ ۱۹۵۲ تا ۲۰۲۵",
+                         "کم‌باران: زیرِ میانه‌ی ۱۹۵۲ تا ۲۰۲۵ همان کشور"))
 
 
 class CloudsFilm(Slides):
@@ -96,13 +101,13 @@ class CloudsFilm(Slides):
         inner_bot = WIN[1] + WIN[3] - 24 - SOURCE * len(self.words["sources"])
         self.source_y = inner_bot + SOURCE - 8
         chart = 44 + 30 + PLOT + 50                         # heading, legend, plot, years
-        board = 44 + ROW * len(EXPECT_DRY)
+        board = 44 + ROW * len(EXPECT_DRY) + 40              # rows and the years under them
         gap = (inner_bot - inner_top - chart - board) / 3
         assert gap >= 20, f"the picture does not fit the window ({gap:.0f})"
         y = inner_top + gap
         self.chart_head = y + 36
-        self.legend_y = self.chart_head + 40
-        self.plot = (LEFT + LABEL, self.legend_y + 24, RIGHT - YAXIS, self.legend_y + 24 + PLOT)
+        self.legend_y = self.chart_head + 48            # clear of the heading's kasra
+        self.plot = (LEFT + LABEL, self.legend_y + 20, RIGHT - YAXIS, self.legend_y + 20 + PLOT)
         self.years_y = self.plot[3] + 40
         y += chart + gap
         self.board_head = y + 36
@@ -132,8 +137,10 @@ class CloudsFilm(Slides):
         return x, y1 - (np.clip(v, LO, HI) - LO) / (HI - LO) * (y1 - y0)
 
     def line(self, c: Canvas, name: str, colour: str, width: float = 5):
-        pts = [self.xy(y, self.pct.loc[y, name]) for y in self.years]
-        c.d.line([(c.X(x), c.Y(y)) for x, y in pts], fill=colour, width=max(1, round(width * c.k)), joint="curve")
+        """A line with a 2 px ring in the paper colour, so where the two cross both stay visible."""
+        pts = [(c.X(x), c.Y(y)) for x, y in (self.xy(y, self.pct.loc[y, name]) for y in self.years)]
+        c.d.line(pts, fill=self.th.field, width=max(1, round((width + 4) * c.k)), joint="curve")
+        c.d.line(pts, fill=colour, width=max(1, round(width * c.k)), joint="curve")
 
     def chart(self, c: Canvas, t: float):
         th, col = self.th, self.colour
@@ -174,13 +181,20 @@ class CloudsFilm(Slides):
         for key, y in zip(self.order, self.rows_y):
             c.text(RIGHT, y + 10, NAMES[key], FA_TEXT, 30, th.ink, "rs", "rtl")
             for j, dry in enumerate(self.dry[key]):         # earliest of the ten years on the right
-                right = RIGHT - 300 - j * (SQ + GAP)
+                right = RIGHT - NAME_W - j * (SQ + GAP)
                 box = (right - SQ, y - SQ / 2, right, y + SQ / 2)
                 if full and dry:
                     c.fill(*box, th.ink)
                 else:
                     c.frame(*box)
-        assert RIGHT - 300 - 10 * (SQ + GAP) >= LEFT, "the scoreboard runs out of the window"
+        assert RIGHT - NAME_W - 10 * (SQ + GAP) >= LEFT, "the scoreboard runs out of the window"
+        widest = max(c.width(n, FA_TEXT, 30, "rtl") for n in NAMES.values())
+        assert widest + 12 <= NAME_W, f"a name runs into the squares ({widest:.0f} px)"
+        first_x = RIGHT - NAME_W - SQ / 2                   # the first and the last of the ten years
+        last_x = RIGHT - NAME_W - 9 * (SQ + GAP) - SQ / 2
+        y = self.rows_y[-1] + SQ / 2 + 34
+        c.text(first_x, y, fa(self.driest[0]), FA_TEXT, 28, th.ink, "ms", "rtl")
+        c.text(last_x, y, fa(self.driest[-1]), FA_TEXT, 28, th.ink, "ms", "rtl")
 
     def sources(self, c: Canvas):
         for k, line in enumerate(self.words["sources"]):

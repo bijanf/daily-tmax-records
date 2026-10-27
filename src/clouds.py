@@ -1,15 +1,16 @@
 """DO THE NEIGHBOURS STEAL IRAN'S RAIN? Iran's rain against its neighbours', year by year.
 
 The claim ("ابردزدی", cloud theft): neighbours or rivals take the rain that would fall on
-Iran (in July 2018 the head of Iran's Passive Defence Organisation said Israel and a
-neighbour were stealing clouds and snow; Iran's Meteorological Organization answered that a
-country cannot steal clouds). If rain were taken from Iran by a neighbour, the two would move
+Iran (in July 2018 the head of Iran's Passive Defence Organisation said joint teams of another
+country and a neighbour made clouds bound for Iran unproductive, and spoke of "cloud and snow
+theft"; the forecasting directorate of Iran's Meteorological Organization answered that no
+country can steal snow or clouds). If rain were taken from Iran by a neighbour, the two would move
 in opposite directions: a dry year in Iran a wet one next door. Measured data only:
 - CRU TS 4.10 monthly precipitation (Harris et al. 2020, University of East Anglia; 0.5 deg,
   from stations), data/water/cru_ts4.10.*.pre.dat.nc (src/get_water.py).
 - Countries: Natural Earth 50 m (enso.country_mask), cell centres, cos-latitude weights.
   The Arabian block is Saudi Arabia, Kuwait, the UAE, Oman, Qatar and Bahrain together.
-- Water years October-September, named by September's year, 1952-2024 (73 years).
+- Water years October-September, named by September's year, 1952-2025 (74 years).
 
 Numbers: each region's rain per water year in % of its own 1952-2024 mean; Pearson's r of
 Iran's year-to-year rain with each neighbour's, raw and with both series detrended; the change
@@ -37,8 +38,8 @@ import xarray as xr  # noqa: E402
 import enso  # noqa: E402  (country masks without shapely)
 
 ROOT = Path(__file__).resolve().parents[1]
-YEARS = (1952, 2024)
-EARLY, LATE = (1952, 1981), (1995, 2024)
+YEARS = (1952, 2025)
+EARLY, LATE = (1952, 1981), (1996, 2025)
 REGIONS = {"Iran": ["Iran"], "Iraq": ["Iraq"], "Turkey": ["Turkey"], "Afghanistan": ["Afghanistan"],
            "Pakistan": ["Pakistan"], "Turkmenistan": ["Turkmenistan"], "Azerbaijan": ["Azerbaijan"],
            "Armenia": ["Armenia"],
