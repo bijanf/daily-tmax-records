@@ -11,9 +11,10 @@ Measured data only, no forecast. Sources:
   https://www.cpc.ncep.noaa.gov/data/indices/RONI.ascii.txt (fetched into data/enso/).
 
 Iran = CRU cells whose centres lie in Natural Earth's 50 m Iran polygon (621 cells), cos-latitude
-weights. A season is El Niño when the ONI of that same 3-month season is at least +0.5 °C (NOAA's
-El Niño threshold), La Niña at most -0.5 °C, neutral otherwise; +-1.0, +-1.5 (strong) and RONI
-are checks. "Wetter" = Iran's rain that season above the 1951-2024 median of the same season.
+weights. A season is El Niño when the ONI of that same 3-month season is at least +0.5 °C (the
+value NOAA uses, applied here to one season at a time; NOAA's El Niño episodes also need five
+overlapping seasons in a row), La Niña at most -0.5 °C, neutral otherwise; +-1.0, +-1.5 (strong)
+and RONI are checks. "Wetter" = Iran's rain that season above the 1951-2024 median of the same season.
 Seasons 1951-2024. In the order the choices were made: first September-November and
 December-February (named by its January) at +-1.0; then October-December and January-March,
 because Persian autumn (Mehr-Azar, 23 Sep-21 Dec) and winter (Dey-Esfand, 22 Dec-20 Mar) are
@@ -147,7 +148,9 @@ def main() -> None:
           f"{monthly.index[0]:%Y-%m} to {monthly.index[-1]:%Y-%m}; seasons used {YEARS[0]}-{YEARS[1]}")
     for index in INDICES:
         last = oni(index).iloc[-1]
-        print(f"{index.upper()} last row {last.season} {last.year} = {last.oni:+.2f}")
+        path = ROOT / "data" / "enso" / Path(INDICES[index]).name
+        print(f"{index.upper()} last row {last.season} {last.year} = {last.oni:+.2f} "
+              f"({path.name}, fetched {pd.Timestamp(path.stat().st_mtime, unit='s'):%Y-%m-%d})")
     annual = monthly.loc[f"{YEARS[0]}":f"{YEARS[1]}"].groupby(monthly.loc[f"{YEARS[0]}":f"{YEARS[1]}"].index.year).sum()
     print(f"Iran's mean annual rain {YEARS[0]}-{YEARS[1]}: {annual.mean():.1f} mm")
     for season in SEASONS:

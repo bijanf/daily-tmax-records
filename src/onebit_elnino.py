@@ -4,14 +4,14 @@ Measured data only, no forecast. Every number comes from enso.py (outputs/enso_i
 - Iran's rain, CRU TS 4.10 (University of East Anglia), 621 cells inside Iran, 1951-2024. Autumn
   = October-December, winter = January-March (closest to Persian Mehr-Azar and Dey-Esfand;
   September-November and December-February agree: 21 of 25 and 14 of 25).
-- El Niño = NOAA CPC's Oceanic Niño Index of that same season at least +0.5 °C (NOAA's El Niño
-  threshold): 26 autumns, of which 21 had more rain than the 1951-2024 median (p = 0.001,
-  permutation); 22 winters, of which 11 did (p = 0.31). CPC's RONI gives 20 of 25 and 11 of 21.
-  Strong El Niños alone (ONI at least +1.5) are few: 4 of 6 autumns, 2 of 6 winters (caption).
-  Autumn brings 27 % of Iran's yearly rain, winter 46 %.
-- "This year": CPC's ENSO discussion of 8 October 2026 (El Niño Advisory, Niño-3.4 +2.1 °C, a
-  strong to very strong El Niño likely through January-March 2027). The reel asks about past
-  El Niños only; it says nothing about this season.
+- El Niño = NOAA CPC's Oceanic Niño Index of that same season at least +0.5 °C (the value NOAA
+  uses, applied to one season at a time): 26 autumns, of which 21 had more rain than the
+  1951-2024 median (p = 0.001, permutation); 22 winters, of which 11 did (p = 0.31). CPC's RONI
+  gives 20 of 25 and 11 of 21. Strong El Niños alone (ONI at least +1.5) are few: 4 of 6 autumns
+  and 2 of 6 winters wetter (caption). Autumn brings 27 % of Iran's yearly rain, winter 46 %.
+- "This year": CPC's ENSO discussion of 8 October 2026 (El Niño Advisory, Niño-3.4 +2.1 °C;
+  "strong-to-very strong El Niño likely through January-March 2027"). The first line states that
+  status; every number on screen is about past seasons, and the reel forecasts nothing.
 
 A slow, still slide on the frame of onebit_slides. One window that never moves; its top holds
 the scene's bold line. Below it two blocks of rain drops, one drop per El Niño season, earliest
@@ -53,10 +53,12 @@ CELL = 7                                          # px per sprite pixel: a drop 
 PER_ROW = 9
 PITCH, ROW = 90, 84                               # drop to drop in a row, row to row
 HEAD = 48                                         # px of a block's heading
+SOURCE = 36                                       # line step of the sources (26 px type)
 
 
 def words(autumn: dict, winter: dict) -> dict:
     a, w = autumn, winter
+    # «ال‌نینوهای گذشته» would push the title down to 58 px; the past tense «آوردند» carries the past
     return dict(scenes=(("امسال ال‌نینوی قوی داریم. // ال‌نینوها {باران} آوردند؟", ""),
                         (f"پاییزهای ال‌نینو: // {{{fa(a['n_wetter'])} از {fa(len(a['years']))}}} پربارش‌تر", ""),
                         (f"زمستان‌های ال‌نینو: // {{{fa(w['n_wetter'])} از {fa(len(w['years']))}}}، نیمی بله و نیمی نه", "")),
@@ -79,6 +81,11 @@ class ElNinoFilm(Slides):
         for s, r in self.res.items():
             assert round(100 * r["mean"] / annual) == SHARE[s], (s, 100 * r["mean"] / annual)
         self.setup(th, "fa", colour, words(self.res[AUTUMN], self.res[WINTER]), PACE, "ElNino.Iran")
+        # the sources sit inside the window (below it, Instagram lays its caption over the frame),
+        # so the dot grid runs on under the window
+        dots = np.zeros((1920, 1080), bool)
+        dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
+        self.dots = dots
         self.blocks = self.layout()
         b = self.beat
         # the rows of a block turn one per beat from beat 1 of its scene; its number one beat later
@@ -90,7 +97,8 @@ class ElNinoFilm(Slides):
     def layout(self) -> dict:
         """Two blocks under the rule, each a heading and rows of at most PER_ROW drops, spread
         evenly down the window with the legend under them."""
-        inner_top, inner_bot = RULE + 24, WIN[1] + WIN[3] - 32
+        inner_top, inner_bot = RULE + 24, WIN[1] + WIN[3] - 24 - SOURCE * len(self.words["sources"])
+        self.source_y = inner_bot + SOURCE - 8           # first baseline of the sources, in the window
         heights, blocks = [], {}
         for s in (AUTUMN, WINTER):
             years = self.res[s]["years"]
@@ -166,6 +174,12 @@ class ElNinoFilm(Slides):
             self.drop(c, x + 150, y - 14, kind)
             c.text(x + 100, y, label, FA_TEXT, 34, self.th.ink, "rs", "rtl")
             assert c.width(label, FA_TEXT, 34, "rtl") <= 300, label
+
+    def sources(self, c: Canvas):
+        """Inside the window, under the legend: clear of Instagram's caption over the frame's foot."""
+        for k, line in enumerate(self.words["sources"]):
+            c.text(RIGHT, self.source_y + SOURCE * k, line, FA_TEXT, 26, self.th.head, "rs", "rtl")
+            assert c.width(line, FA_TEXT, 26, "rtl") <= RIGHT - LEFT, line
 
     def body(self, c: Canvas, t: float):
         self.block(c, AUTUMN, self.words["heads"][0], t)
