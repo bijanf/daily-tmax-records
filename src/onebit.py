@@ -47,6 +47,7 @@ Themes recolour the whole scene:
     kahgel  Kahgel          in colour: straw-plaster paper, brown type, brick accents (kahgel, the plaster)
     pesteh  Pesteh          in colour: pale pistachio paper, olive type, pistachio-green accents (pesteh)
     zafaran Zafaran         in colour: pale saffron paper, dark brown type, saffron accents (zafaran)
+    namak   Namak           in colour: salt-white paper, slate type, lake-blue accents (namak, salt)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -198,6 +199,10 @@ THEMES = {
                      light="#F7EFDD", track="#34200F", cold="#A8520F", hot="#A8520F",
                      levels=("#F7EFDD", "#34200F", "#34200F", "#34200F"), title="#F7EFDD", dots="#E6D9BC",
                      mono=True, mark="#A8520F", town="Tehran"),
+    "namak": Theme("Namak", field="#F3F2EE", ink="#1E2A33", head="#1E2A33", paper="#F3F2EE",
+                   light="#F3F2EE", track="#1E2A33", cold="#2D6A9F", hot="#2D6A9F",
+                   levels=("#F3F2EE", "#1E2A33", "#1E2A33", "#1E2A33"), title="#F3F2EE", dots="#E1E0DA",
+                   mono=True, mark="#2D6A9F", town="Tehran"),
     "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
                      light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
                      levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",

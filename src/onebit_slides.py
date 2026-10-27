@@ -39,7 +39,8 @@ COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C761
            # two series: the dataviz palette's categorical slots 1 and 2 (validate_palette.js on the
            # paper: pass; orange 2.8:1, so both lines carry labels)
            "pesteh": dict(land="#D6DEC9", iran="#2a78d6", iraq="#eb6834"),
-           "zafaran": dict(land="#E6D9BC", bar="#34200F", now="#A8520F")}
+           "zafaran": dict(land="#E6D9BC", bar="#34200F", now="#A8520F"),
+           "namak": dict(land="#E1E0DA", water="#3A7FBE", bed="#CDBF9E", bar="#C9CDD1")}
 
 
 def span(years, lang: str = "fa") -> str:
