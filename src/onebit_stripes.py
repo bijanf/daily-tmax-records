@@ -3,17 +3,21 @@
 Measured data only. Every number comes from temperature.py (outputs/temperature_iran_log.txt):
 - Iran's annual mean temperature, CRU TS 4.10 (University of East Anglia; stations, 0.5 deg),
   621 cells inside Iran: 2016-2025 is 1.86 °C warmer than 1951-1980; ERA5 (Copernicus/ECMWF,
-  the check) gives 2.30 °C. The screen says "about 2 degrees" and names both.
+  a second estimate) gives 2.30 °C; Berkeley Earth 1.71 °C for 2014-2023 (fact check). The screen
+  says "about 2 degrees", names both, and keeps the base (1951-1980, NASA GISS's too) in the
+  colour bar's heading; against 1991-2020 it would be 0.7 (CRU) to 0.9 °C (ERA5): caption.
 - Iran's ten warmest years since 1951 all came after 2000, in CRU TS and in ERA5.
-- Not on screen, in the caption: the world's land in the same dataset warmed 1.30 °C (Iran 1.4
-  times as much); summer +2.2 °C; no cell of Iran reaches +3 °C (largest +2.26).
+- Not on screen, in the caption: the world's land in the same dataset warmed 1.30 °C (Iran about
+  1.4 times as much; Berkeley Earth about 1.3); summer +2.2 °C in CRU and ERA5. Not claimed: that
+  no part of Iran warmed 3 °C (CRU's largest cell +2.26, but 4 % of ERA5's cells reach +3).
 
 A slow, still slide on the frame of onebit_slides: one window, one bold line per scene. Below it
 75 stripes, one per year from 1951 (right) to 2025 (left), each coloured by how much warmer or
 cooler that year was than the 1951-1980 mean, in 0.5 °C steps (a diverging ramp, blue - grey -
 red, checked with the dataviz validator), and a stepped colour bar under them. On the cover the
 stripes are empty; in the second scene they fill in three steps (1951-1980, 1981-2000,
-2001-2025); in the third every stripe but the ten warmest fades. Three scenes, 2 + 3 + 3.5 bars
+2001-2025); in the third every stripe but the ten warmest goes. The cover (the grid's thumbnail)
+shows the full stripes; the film opens on the empty frame. Three scenes, 2 + 3 + 3.5 bars
 of 60 BPM = 34 s, a silent track (music is added in the app).
 
     outputs/onebit/social/iran_stripes_<theme>_fa_reel.mp4, _cover.png
@@ -43,18 +47,19 @@ EXPECT = dict(cru=1.9, era5=2.3)                 # °C, rounded: the published r
 PACE = dict(bpm=60, bars=(2, 3, 3.5))
 FILL = ((1951, 1980), (1981, 2000), (2001, 2025))  # the stripes come in, one group per beat
 STRIPE, TALL = 11, 400                           # px: a year's width, the stripes' height
-SOURCE = 36
+SOURCE, SOURCE_PX = 38, 28                   # line step and size of the sources
 
 
 def words(cru: float, era: float) -> dict:
     return dict(scenes=(("ایران چقدر // {گرم‌تر} شده؟", ""),
-                        ("ده سالِ اخیر: // {حدود ۲ درجه} گرم‌تر", ""),
+                        ("۱۰ سالِ اخیر: // {حدود ۲ درجه} گرم‌تر", ""),
                         ("۱۰ سالِ گرم‌ترِ ایران: // {همه بعد از ۲۰۰۰}", "")),
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
                 head="نسبت به میانگینِ ۱۹۵۱ تا ۱۹۸۰",
-                ends=("۲ درجه سردتر", "بی‌تغییر", "۲ درجه گرم‌تر"),
-                sources=("منبع: دمای CRU TS 4.10 (دانشگاه ایست‌آنگلیا) · بررسی با ERA5 (کوپرنیکوس)",
-                         f"میانگینِ سالانه‌ی ایران، ۲۰۱۶ تا ۲۰۲۵: CRU {fa(f'{cru:.1f}')} و ERA5 {fa(f'{era:.1f}')} درجه گرم‌تر"))
+                ends=("۲ درجه سردتر", "تقریباً بی‌تغییر", "۲ درجه گرم‌تر"),
+                sources=("منبع: دمای CRU TS 4.10 (دانشگاه ایست‌آنگلیا)",
+                         "و ERA5 (کوپرنیکوس) · میانگینِ سالانه‌ی ایران",
+                         f"۲۰۱۶ تا ۲۰۲۵: CRU {fa(f'{cru:.1f}')} و ERA5 {fa(f'{era:.1f}')} درجه گرم‌تر"))
 
 
 class StripesFilm(Slides):
@@ -110,12 +115,14 @@ class StripesFilm(Slides):
     def shown(self, year: int, t: float) -> str:
         """'empty', 'full' or 'faded' for a year's stripe at time t."""
         i = self.scene(t)
-        if not np.isfinite(t) or i == 0:
+        if not np.isfinite(t):
+            return "full"                             # the cover (the grid's thumbnail): the stripes
+        if i == 0:
             return "empty"
         if i == 1:
             k = next(k for k, (a, b) in enumerate(FILL) if a <= year <= b)
             return "full" if t >= self.fill_at[k] else "empty"
-        return "full" if (year in self.top or t < self.fade_at) else "faded"
+        return "full" if (year in self.top or t < self.fade_at) else "empty"
 
     # ── drawing ──
 
@@ -126,8 +133,6 @@ class StripesFilm(Slides):
             state = self.shown(y, t)
             if state == "full":
                 c.fill(right - STRIPE, self.y0, right, self.y0 + TALL, ramp[k])
-            elif state == "faded":
-                c.fill(right - STRIPE, self.y0, right, self.y0 + TALL, self.colour["land"])
         c.frame(x1 - len(self.cls) * STRIPE - 2, self.y0 - 2, x1 + 2, self.y0 + TALL + 2)
         c.text(x1, self.years_y, fa(YEARS[0]), FA_TEXT, 34, self.th.ink, "rs", "rtl")
         c.text(x1 - len(self.cls) * STRIPE, self.years_y, fa(YEARS[1]), FA_TEXT, 34, self.th.ink, "ls", "rtl")
@@ -148,8 +153,8 @@ class StripesFilm(Slides):
 
     def sources(self, c: Canvas):
         for k, line in enumerate(self.words["sources"]):
-            c.text(RIGHT, self.source_y + SOURCE * k, line, FA_TEXT, 26, self.th.head, "rs", "rtl")
-            assert c.width(line, FA_TEXT, 26, "rtl") <= RIGHT - LEFT, line
+            c.text(RIGHT, self.source_y + SOURCE * k, line, FA_TEXT, SOURCE_PX, self.th.head, "rs", "rtl")
+            assert c.width(line, FA_TEXT, SOURCE_PX, "rtl") <= RIGHT - LEFT, line
 
     def body(self, c: Canvas, t: float):
         self.stripes(c, t)

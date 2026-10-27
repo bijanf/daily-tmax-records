@@ -87,9 +87,11 @@ def cru(decade: str, var: str) -> Path:
     path = WATER / f"cru_ts4.10.{decade}.{var}.dat.nc"
     if not path.exists():
         gz = path.with_suffix(".nc.gz")
+        part = path.with_suffix(".part")                  # a broken unzip must not pass for a file
         urllib.request.urlretrieve(f"{CRU}/{var}/{gz.name}", gz)
-        with gzip.open(gz) as src, open(path, "wb") as dst:
+        with gzip.open(gz) as src, open(part, "wb") as dst:
             shutil.copyfileobj(src, dst)
+        part.rename(path)
         gz.unlink()
         print("wrote", path.relative_to(ROOT), flush=True)
     return path

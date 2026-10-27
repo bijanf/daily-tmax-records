@@ -47,7 +47,7 @@ def tmp() -> xr.DataArray:
 
 def weights(t: xr.DataArray, mask: xr.DataArray | None) -> xr.DataArray:
     w = np.cos(np.deg2rad(t.lat)) * xr.ones_like(t.isel(time=0))
-    w = w.where(np.isfinite(t).all("time"))                # cells with every month: no coverage drift
+    w = w.where(np.isfinite(t).all("time"))                # cells with every month (not a station-density check)
     return w if mask is None else w.where(mask)
 
 
@@ -55,6 +55,7 @@ def weights(t: xr.DataArray, mask: xr.DataArray | None) -> xr.DataArray:
 def series() -> pd.DataFrame:
     """Annual means 1901-2025 (°C) for Iran and the world's land; and Iran by season."""
     t = tmp()
+    assert (t.time.groupby("time.year").count() == 12).all(), "an incomplete year in CRU TS"
     lon, lat = np.meshgrid(t.lon.values, t.lat.values)
     iran = xr.DataArray(enso.iran_mask(lat, lon), dims=("lat", "lon"), coords=dict(lat=t.lat, lon=t.lon))
     assert int(iran.sum()) == 621
