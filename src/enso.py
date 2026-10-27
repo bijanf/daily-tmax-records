@@ -39,12 +39,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
+import shapefile  # noqa: E402  (pyshp: the polygon without shapely, see iran_mask)
 import xarray as xr  # noqa: E402
+from matplotlib.path import Path as Outline  # noqa: E402
 from scipy import stats  # noqa: E402
 
-import water  # noqa: E402  (its Iran mask, loaded after the netCDF files: shapely first crashes the heap)
-
 ROOT = Path(__file__).resolve().parents[1]
+BORDERS = Path.home() / ".local/share/cartopy/shapefiles/natural_earth/cultural/ne_50m_admin_0_countries.shp"
 INDICES = {"oni": "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt",
            "roni": "https://www.cpc.ncep.noaa.gov/data/indices/RONI.ascii.txt"}
 CRU = ROOT / "data" / "water"
@@ -74,6 +75,22 @@ def oni(index: str = "oni") -> pd.DataFrame:
     return df
 
 
+def iran_mask(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
+    """True where a cell centre lies inside Natural Earth's 50 m Iran, read with pyshp and tested
+    with matplotlib's even-odd rule over all rings (islands count, holes would not). shapely
+    (GEOS) and netCDF in one process corrupt the heap ("corrupted size vs. prev_size" at start,
+    "free(): invalid next size" at exit), so this module never imports it; water.inside gives
+    the same 621 cells (the guard in iran_rain)."""
+    assert BORDERS.exists(), f"{BORDERS}: run any cartopy map once to download Natural Earth 50m"
+    rec = next(r for r in shapefile.Reader(str(BORDERS)).iterShapeRecords() if r.record["NAME"] == "Iran")
+    pts = np.column_stack([lon.ravel(), lat.ravel()])
+    starts = list(rec.shape.parts) + [len(rec.shape.points)]
+    hits = np.zeros(len(pts), int)
+    for a, b in zip(starts[:-1], starts[1:]):
+        hits += Outline(rec.shape.points[a:b]).contains_points(pts)
+    return (hits % 2 == 1).reshape(lat.shape)
+
+
 @functools.cache
 def iran_rain() -> tuple[pd.Series, xr.DataArray]:
     """Iran's monthly rain (mm, cos-lat mean of the cells inside Iran) and the cells themselves."""
@@ -82,7 +99,7 @@ def iran_rain() -> tuple[pd.Series, xr.DataArray]:
     pre = xr.concat([xr.open_dataset(f)["pre"].sel(lon=slice(BOX[0], BOX[1]), lat=slice(BOX[2], BOX[3])).load()
                      for f in files], "time").sortby("time")
     lon, lat = np.meshgrid(pre.lon.values, pre.lat.values)
-    inside = xr.DataArray(water.inside("iran", lat, lon), dims=("lat", "lon"), coords=dict(lat=pre.lat, lon=pre.lon))
+    inside = xr.DataArray(iran_mask(lat, lon), dims=("lat", "lon"), coords=dict(lat=pre.lat, lon=pre.lon))
     cells = pre.where(inside)
     assert int(inside.sum()) == 621 and np.isfinite(cells.values[:, inside.values]).all()
     w = np.cos(np.deg2rad(pre.lat)) * inside

@@ -51,7 +51,8 @@ SHARE = {AUTUMN: 27, WINTER: 46}                  # % of the year's rain: the pu
 PACE = dict(bpm=60, bars=(2, 3, 3.5))
 CELL = 7                                          # px per sprite pixel: a drop is 63 px
 PER_ROW = 9
-PITCH, ROW = 90, 84                               # drop to drop in a row, row to row
+PITCH, ROW = 80, 84                               # drop to drop in a row, row to row
+YEAR = 28                                         # px of the first and last year beside each row
 HEAD = 48                                         # px of a block's heading
 SOURCE = 36                                       # line step of the sources (26 px type)
 
@@ -166,6 +167,13 @@ class ElNinoFilm(Slides):
             for j, y in enumerate(years):                 # Persian: the earliest year on the right
                 cx = mid + ((n - 1) / 2 - j) * PITCH
                 self.drop(c, cx, cy, ("wet" if r["wetter"][y] else "dry") if turned else "open")
+            # the row's first year at its right end, its last year at its left end: the order reads
+            half = len(DROP[0]) * CELL / 2 + 10
+            first, last = fa(years[0]), fa(years[-1])
+            right, left = mid + (n - 1) / 2 * PITCH + half, mid - (n - 1) / 2 * PITCH - half
+            c.text(right, cy + YEAR / 3, first, FA_TEXT, YEAR, self.th.head, "ls")
+            c.text(left, cy + YEAR / 3, last, FA_TEXT, YEAR, self.th.head, "rs")
+            assert right + c.width(first, FA_TEXT, YEAR) <= RIGHT + 8 and left - c.width(last, FA_TEXT, YEAR) >= LEFT - 8, years
 
     def legend(self, c: Canvas):
         mid, y = (LEFT + RIGHT) / 2, self.legend_y
