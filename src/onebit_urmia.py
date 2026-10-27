@@ -1,17 +1,27 @@
-"""LAKE URMIA FROM SPACE: its September water halved from 1995 to 2025; this year a little more.
+"""LAKE URMIA, 40 YEARS FROM SPACE: the late-summer lake in true colour every year since 1986.
 
-Measured data only. Every number comes from urmia.py (outputs/urmia_log.txt), from Landsat
-(get_urmia.py): the lake's September water area on one fixed footprint, 1986-2026, in % of 1995
-(the record's largest: 5,382 km2). 2025 = 50 % (48-55 % over the MNDWI thresholds), the smallest;
-2026 = 61 % (59-64 %). The two pictures are the September water of 1995 (Shahrivar 1374) and 2025
-(Shahrivar 1404) from Landsat paths 168 and 169, over the lake's full extent in JRC Global
-Surface Water 1984-2021 (its outline is drawn as the old shore). Causes are in the caption
-(peer-reviewed studies; most give water use the larger share), not on screen.
+Measured data only. Pictures and levels from urmia.py (outputs/urmia_log.txt):
+- Landsat (USGS) in true colour: per year the median of up to six least-cloudy scenes per path
+  between 20 August and 10 October (29 Mordad to 18 Mehr); 1993 has none. White on the bed is
+  salt crust or a thin film of brine over salt.
+- The level: the in-situ September mean to 2019 (Mendeley deposit), later years from official
+  statements (urmia.OFFICIAL: 1400, 1404, 1405): September 1995 1,277.89 m, early Mehr 1404
+  1,269.50 m (8.4 m lower), 19 Mehr 1405 1,270.58 m (7.3 m below 1995, 1.1 m above 1404). For
+  1399 and 1401-1403 no end-of-Shahrivar figure was found: the gauge holds the last measured
+  year's level and its heading names that year («ترازِ آبِ ۱۴۰۰» over the picture of 1402).
+- "Less than a tenth" (scene 2), fact check of 27 Oct 2026: the reported extent fell from about
+  6,900 km2 (Khordad 1374) to 481 km2 (early Mehr 1404); open water in Landsat 1.6 % (MNDWI > 0
+  and NIR < 0.10) to 8.2 % (NDWI > 0) of September 1995; the official volume from 32-36 to 0.24
+  billion m3. Causes are in the caption, not on screen.
 
-A slow, still slide on the frame of onebit_slides. One window, one bold line per scene. The two
-pictures side by side, 1995 on the right, and under them one bar per September since 1986 in %
-of 1995. The first frame carries the whole question and both pictures. Three scenes, 2 + 3 + 3.5
-bars of 60 BPM = 34 s, a silent track (music in the app).
+A slide on the frame of onebit_slides: one window, one bold line per scene. The picture on the
+right (Persian reads it first), the level gauge on its left. The first frame carries the whole
+question and the end state, the white lake of 1404 (the winners of the round-5 scouting open on
+the end state, then rewind); the film rewinds to 1365 in 2 s (the first answer, the blue lake, by
+2.3 s), then plays every year forward to 1404 (the years before 1374 quickly), the year on the
+picture and the gauge falling with it; the last scene is 1405. The cover splits the lake down the
+middle, its east half in 1374 and its west half in 1404. Three scenes, 1.5 + 1.5 + 2 bars of
+60 BPM = 20 s, a silent track (music in the app).
 
     outputs/onebit/social/urmia_namak_fa_reel.mp4, _cover.png
 
@@ -29,126 +39,185 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
-from scipy import ndimage  # noqa: E402
 
 import onebit  # noqa: E402
 import urmia  # noqa: E402
 from onebit import FA_BOLD, FA_TEXT, OUT, SIZES, SOCIAL_CRF, Canvas, fa  # noqa: E402
 from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 
-PACE = dict(bpm=60, bars=(2, 3, 3.5))
-EXPECT = {1995: 100, 2025: 50, 2026: 61}          # % of 1995: the published reel
-PIC_W, PIC_GAP = 290, 36                           # px: each picture's width, between them
-BARS_H = 90                                      # px of 100 %
+PACE = dict(bpm=60, bars=(1.5, 1.5, 2))
+EXPECT = {1995: 1277.9, 2025: 1269.5, 2026: 1270.6}   # m, rounded: the published reel
+REWIND = (0.3, 2.3)                               # s: 1404 back to 1365
+FORWARD = 2.8                                     # s: 1365 forward again, after a short hold
+FAST, SLOW = 0.15, 0.26                           # s per year going forward: before 1995, then 1995-2025
+FADE = 0.12                                       # s: one year dissolves into the next (at most half a step)
+STRETCH, GAMMA = 0.32, 1.3                        # reflectance shown as white; one stretch for every year
+PIC_H = 790                                       # px: the picture's height (its width follows the lake)
+TUBE = (300, 356)                                 # px: the gauge's tube, left and right
+LEVELS = (1269.0, 1279.0)                         # m: the gauge's range
 SOURCE, SOURCE_PX = 38, 30
 
 
 def persian(year: int) -> int:
-    return year - 621                              # September of year Y is Shahrivar of Y - 621
+    return year - 621                              # 20 Aug-10 Oct of year Y lies in Persian year Y - 621
 
 
 def words() -> dict:
-    return dict(scenes=(("دریاچه‌ی ارومیه // {چه شد}؟", ""),
-                        ("در ۳۰ سال: // آبش {نصف} شد", ""),
-                        ("امسال کمی بهتر: // هنوز {حدود ۴۰٪} کمتر", "")),
+    return dict(scenes=(("دریاچه‌ی ارومیه // {۴۰ سال} پیش چه شکلی بود؟", ""),
+                        ("از ۱۳۷۴ تا ۱۴۰۴: // {کمتر از یک‌دهم} آب ماند", ""),
+                        ("امسال بهتر شد، // اما هنوز {۷ متر} پایین‌تر از ۱۳۷۴", "")),
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
-                key=("آب", "بسترِ بی‌آب"), bars="آبِ شهریور، درصدِ ۱۳۷۴",
-                sources=("منبع: تصاویرِ ماهواره‌ی لندست (USGS) · مرزِ دریاچه: JRC",
-                         "مساحتِ آب در شهریورِ هر سال؛ ۱۳۷۴ = ۵٬۳۸۲ کیلومترِ مربع",
-                         "۱۴۰۴: ۵۰٪ · ۱۴۰۵: ۶۱٪ (با آستانه‌های دیگر ۴۸ تا ۵۵٪ و ۵۹ تا ۶۴٪)"))
+                gauge="ترازِ آبِ", unit="متر",
+                sources=("منبع: تصاویرِ لندست (USGS)، اواخرِ مرداد تا اواسطِ مهر؛ سفید: نمک",
+                         "تراز: اندازه‌گیریِ میدانی (Mendeley) تا ۱۳۹۸، سپس آمارِ رسمی",
+                         "وسعتِ رسمی: خردادِ ۱۳۷۴ حدود ۶٬۹۰۰، مهرِ ۱۴۰۴: ۴۸۱ کیلومترِ مربع"))
 
 
 class UrmiaFilm(Slides):
     def __init__(self, th: onebit.Theme, colour: dict):
-        a = urmia.series()
-        got = {y: int(round(a.loc[y, "pct"])) for y in EXPECT}
+        lv = urmia.levels()
+        got = {y: round(float(lv.loc[y]), 1) for y in EXPECT}
         assert got == EXPECT, got
-        assert a.area_km2.idxmax() == 1995 and a.area_km2.idxmin() == 2025, "the record's largest and smallest"
-        self.pct = a["pct"]
-        self.years = (int(a.index[0]), int(a.index[-1]))
-        self.pics = {y: self.raster(y, colour, th) for y in (1995, 2025)}
+        assert lv.loc[1995] - lv.loc[2025] >= 8.0, "scene 2's gauge: about 8 m"
+        assert round(lv.loc[1995] - lv.loc[2026]) == 7, "scene 3: 7 m below 1374"
+        self.years = urmia.years()
+        assert self.years[0] == 1986 and self.years[-1] == 2026 and 1993 not in self.years, self.years
+        self.level = lv                                   # the gauge holds the last measured year's level,
+        self.measured = {y: max(m for m in lv.index if m <= y) for y in self.years}   # its heading names it
+        assert max(y - m for y, m in self.measured.items()) <= 3, self.measured
+        self.photos = {y: self.photo(y, th) for y in self.years}
+        self.pic_w = self.photos[1995].width
         self.hook_at_once = True
         self.setup(th, "fa", colour, words(), PACE, "Urmia.Lake")
         dots = np.zeros((1920, 1080), bool)               # the sources sit in the window
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
         self.dots = dots
         self.layout()
-        b = self.beat
-        self.done = b
-        assert float(self.starts[1]) + self.later(1) + 1.5 < 15
+        self.schedule()
+        self.done = 0.6
+        assert float(self.starts[1]) + self.later(1) < 15, "scene 2's number must land before 15 s"
 
-    def raster(self, year: int, colour: dict, th) -> dict:
-        """The picture as masks at its drawn size: water, bed (the extent without water), shore."""
-        p = urmia.picture(year)
-        h0, w0 = p["water"].shape
-        w = PIC_W
-        h = round(h0 * w / (w0 * np.cos(np.deg2rad(37.7))))   # lon/lat grid, squeezed to true shape
-        def fit(m):
-            return np.asarray(Image.fromarray(m.astype(np.uint8) * 255).resize((w, h), Image.BILINEAR)) > 127
-        lake, water = fit(p["lake"]), fit(p["water"])
-        shore = lake & ~ndimage.binary_erosion(lake, iterations=2)
-        return dict(water=water & lake, bed=lake & ~water, shore=shore, w=w, h=h)
+    def photo(self, year: int, th) -> Image.Image:
+        """The year's lake, one stretch for all years, squeezed from the lon/lat grid to its true shape."""
+        rgb = urmia.colour(year)["rgb"]
+        v = np.clip(rgb / STRETCH, 0, 1) ** (1 / GAMMA)
+        field = np.array([int(th.field[k:k + 2], 16) / 255 for k in (1, 3, 5)])[:, None, None]
+        v = np.where(np.isnan(v), field, v)                # unseen: the paper
+        im = Image.fromarray((np.moveaxis(v, 0, -1) * 255 + 0.5).astype(np.uint8))
+        h0, w0 = rgb.shape[1:]
+        w = round(PIC_H * w0 * np.cos(np.deg2rad(37.7)) / h0)
+        return im.resize((w, PIC_H), Image.LANCZOS)
 
     def layout(self):
         inner_top = RULE + 24
         inner_bot = WIN[1] + WIN[3] - 24 - SOURCE * len(self.words["sources"])
         self.source_y = inner_bot + SOURCE - 8
-        h = self.pics[1995]["h"]
-        block = 40 + h + 44 + 40 + 44 + BARS_H + 40       # key, pictures, labels, bar heading, values, bars, years
-        gap = (inner_bot - inner_top - block) / 3
-        assert gap >= 16, f"the picture does not fit the window ({gap:.0f})"
-        self.key_y = inner_top + gap + 30
-        self.pic_y = self.key_y + 16
-        mid = (LEFT + RIGHT) / 2
-        self.pic_x = {1995: mid + PIC_GAP / 2, 2025: mid - PIC_GAP / 2 - PIC_W}   # 1995 on the right
-        self.label_y = self.pic_y + h + 40
-        self.bars_head = self.label_y + gap + 40
-        self.bars_base = self.bars_head + 44 + BARS_H
-        self.years_y = self.bars_base + 36
+        gap = (inner_bot - inner_top - PIC_H) / 2
+        assert gap >= 12, f"the picture does not fit the window ({gap:.0f})"
+        self.pic = (RIGHT - self.pic_w, inner_top + gap)
+        assert TUBE[1] + 70 <= self.pic[0], "the gauge runs into the picture"
+        self.gauge_mid = (LEFT + TUBE[1]) / 2 + 20
+        self.head_y = self.pic[1] + 34
+        self.count_y = self.head_y + 76
+        self.tube_top, self.tube_bot = self.count_y + 46, self.pic[1] + PIC_H - 6
+
+    def schedule(self):
+        """Keyframes (time, year): 1404 at 0 s, the rewind to 1365, forward again (the years before
+        1995 fast), 1405 at the start of the last scene."""
+        upto = [y for y in self.years if y <= 2025]
+        back = upto[::-1][1:]                              # 2024 ... 1986
+        step = (REWIND[1] - REWIND[0]) / len(back)
+        keys = [(0.0, 2025)] + [(REWIND[0] + k * step, y) for k, y in enumerate(back)]
+        t, self.at = FORWARD, {}
+        for y in upto[1:]:                                 # 1987 ... 2025
+            keys.append((t, y))
+            self.at[y] = t
+            t += FAST if y < 1995 else SLOW
+        assert self.at[2025] < float(self.starts[2]), "the years run past the last scene"
+        keys.append((float(self.starts[2]) + 0.3, 2026))
+        self.at[2026] = keys[-1][0]
+        self.keys = keys
 
     # ── time ──
 
     def later(self, i: int) -> float:
-        return self.beat + 0.3
+        return 1.6                                        # once the first part is in (0.3-1.5 s)
+
+    def state(self, t: float):
+        """(year, next year, blend 0-1), or None for the split (the cover)."""
+        if not np.isfinite(t):
+            return None
+        k = max(i for i, (at, _) in enumerate(self.keys) if at <= max(t, 0.0))
+        y = self.keys[k][1]
+        if k + 1 < len(self.keys):
+            nxt_at, nxt = self.keys[k + 1]
+            fade = min(FADE, 0.5 * (nxt_at - self.keys[k][0]))
+            a = (t - (nxt_at - fade)) / fade
+            if a > 0:
+                return y, nxt, min(a, 1.0)
+        return y, y, 0.0
 
     # ── drawing ──
 
-    def pictures(self, c: Canvas):
-        th, col = self.th, self.colour
-        for y, x in self.pic_x.items():
-            r = self.pics[y]
-            c.pixels(x, self.pic_y, r["bed"], col["bed"])
-            c.pixels(x, self.pic_y, r["water"], col["water"])
-            c.pixels(x, self.pic_y, r["shore"], th.ink)
-            c.text(x + PIC_W / 2, self.label_y, f"شهریور {fa(persian(y))}", FA_BOLD, 40, th.ink, "ms", "rtl")
-        x = RIGHT                                          # the key, right to left
-        for (name, k) in zip(self.words["key"], ("water", "bed")):
-            c.fill(x - 30, self.key_y - 26, x, self.key_y + 2, col[k])
-            if k == "bed":
-                c.frame(x - 30, self.key_y - 26, x, self.key_y + 2)
-            c.text(x - 42, self.key_y, name, FA_TEXT, 32, th.ink, "rs", "rtl")
-            x -= 42 + c.width(name, FA_TEXT, 32, "rtl") + 40
+    def scaled(self, im: Image.Image, c: Canvas) -> Image.Image:
+        return im if c.k == 1 else im.resize((round(im.width * c.k), round(im.height * c.k)), Image.LANCZOS)
 
-    def bars(self, c: Canvas, t: float):
+    def chip(self, c: Canvas, x: float, y: float, s: str, anchor: str):
+        """A year on the picture, in a paper box: anchor 'r' puts its right edge at x."""
+        w = c.width(s, FA_BOLD, 48, "rtl")
+        x0 = x - w - 28 if anchor == "r" else x
+        c.frame(x0, y, x0 + w + 28, y + 64, fill=self.th.field)
+        c.text(x0 + w + 14, y + 50, s, FA_BOLD, 48, self.th.ink, "rs", "rtl")
+
+    def picture(self, c: Canvas, t: float):
+        x, y = self.pic
+        s = self.state(t)
+        if s is None:                                     # the cover: east 1374, west 1404
+            east, west = self.photos[1995], self.photos[2025]
+            half = east.width // 2
+            im = west.copy()
+            im.paste(east.crop((half, 0, east.width, east.height)), (half, 0))
+            c.im.paste(self.scaled(im, c), (c.X(x), c.Y(y)))
+            c.fill(x + half - 2, y, x + half + 2, y + PIC_H, self.th.field)
+            self.chip(c, x + self.pic_w - 14, y + 14, fa(persian(1995)), "r")
+            self.chip(c, x + 14, y + 14, fa(persian(2025)), "l")
+        else:
+            a, b, w = s
+            im = self.photos[a] if w == 0 else Image.blend(self.photos[a], self.photos[b], w)
+            c.im.paste(self.scaled(im, c), (c.X(x), c.Y(y)))
+            self.chip(c, x + self.pic_w - 14, y + 14, fa(persian(b if w >= 0.5 else a)), "r")
+        c.frame(x, y, x + self.pic_w, y + PIC_H)
+
+    def ly(self, level: float) -> float:
+        lo, hi = LEVELS
+        return self.tube_bot - (level - lo) / (hi - lo) * (self.tube_bot - self.tube_top)
+
+    def gauge(self, c: Canvas, t: float):
         th, col = self.th, self.colour
-        i = self.scene(t) if np.isfinite(t) else 2
-        self.say(c, RIGHT, self.bars_head, self.words["bars"], 32, True, th.ink)
-        y0, y1 = self.years
-        n = y1 - y0 + 1
-        pitch = (RIGHT - LEFT) / n
-        show = {1995: True, 2025: i >= 1, 2026: i >= 2}
-        for k, y in enumerate(range(y0, y1 + 1)):
-            if y not in self.pct.index:
-                continue                                   # 1993: no usable scene
-            right = RIGHT - k * pitch
-            top = self.bars_base - self.pct.loc[y] / 100 * BARS_H
-            colour = th.ink if y == 1995 else col["water"] if y in (2025, 2026) and show[y] else col["bar"]
-            c.fill(right - pitch + 2, top, right - 2, self.bars_base, colour)
-            if y in show and show[y] and not (y == 2025 and i >= 2):
-                c.text(right - pitch / 2, top - 10, fa(f"{self.pct.loc[y]:.0f}٪"), FA_BOLD, 30, th.ink, "ms", "rtl")
-        c.fill(LEFT, self.bars_base, RIGHT, self.bars_base + 2, th.ink)
-        c.text(RIGHT, self.years_y, fa(persian(y0)), FA_TEXT, 30, th.ink, "rs", "rtl")
-        c.text(LEFT, self.years_y, fa(persian(y1)), FA_TEXT, 30, th.ink, "ls", "rtl")
+        x0, x1 = TUBE
+        s = self.state(t)
+        if s is None:                                     # the cover: 1404's water, 1374's mark
+            now, shown, past = float(self.level.loc[2025]), 2025, True
+        else:
+            a, b, w = s
+            la, lb = (float(self.level.loc[self.measured[y]]) for y in (a, b))
+            now = (1 - w) * la + w * lb                   # the water moves with the picture
+            shown = self.measured[b if w >= 0.5 else a]   # the number is always a measured year's
+            past = t >= self.at[1995]                     # 1374's mark from the forward pass on
+        c.fill(x0, self.ly(now), x1, self.tube_bot, col["water"])
+        c.frame(x0, self.tube_top, x1, self.tube_bot)
+        for m in range(1270, 1279, 2):                    # the scale, left of the tube
+            yy = self.ly(m)
+            c.fill(x0 - 10, yy - 1, x0, yy + 1, th.ink)
+            c.text(x0 - 16, yy + 10, fa(m), FA_TEXT, 30, th.ink, "rs", "rtl")
+        if past:                                          # 1374's level stays as a dashed line
+            yy = self.ly(float(self.level.loc[1995]))
+            for xx in np.arange(x0 - 4, x1 + 8, 12):
+                c.fill(xx, yy - 2, xx + 7, yy + 2, th.ink)
+            c.text(x1 + 12, yy + 10, fa(persian(1995)), FA_TEXT, 28, th.ink, "ls", "rtl")
+        self.say(c, self.gauge_mid, self.head_y, f"{self.words['gauge']} {fa(persian(shown))}", 36, True, th.ink, "ms")
+        v = fa(f"{float(self.level.loc[shown]):.1f}")
+        c.text(self.gauge_mid + 4, self.count_y, f"{v} {self.words['unit']}", FA_BOLD, 52, th.ink, "ms", "rtl")
 
     def sources(self, c: Canvas):
         for k, line in enumerate(self.words["sources"]):
@@ -156,8 +225,8 @@ class UrmiaFilm(Slides):
             assert c.width(line, FA_TEXT, SOURCE_PX, "rtl") <= RIGHT - LEFT, line
 
     def body(self, c: Canvas, t: float):
-        self.pictures(c)
-        self.bars(c, t)
+        self.picture(c, t)
+        self.gauge(c, t)
 
 
 def main() -> None:
@@ -169,12 +238,13 @@ def main() -> None:
     (OUT / "social").mkdir(parents=True, exist_ok=True)
     base = OUT / "social" / f"urmia_{args.theme}_fa"
     for old in (OUT / "social").glob(f"{base.name}_t*.png"):
-        old.unlink()
+        old.unlink()                                      # no stale frames of an earlier cut
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
         st = film.starts
-        for t in (st[0] + 0.0, st[1] + film.later(1) + 1.5, st[2] + film.later(2) + 1.5, st[-1] - 0.1):
+        for t in (0.0, 1.3, 2.5, film.at[1995] + 0.1, st[1] + film.later(1) + 1.0, film.at[2025] + 0.1,
+                  st[2] + film.later(2) + 1.5, st[-1] - 0.1):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
             print("saved", f"{base}_t{t:04.1f}.png")
         return
