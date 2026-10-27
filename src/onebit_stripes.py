@@ -126,10 +126,10 @@ class StripesFilm(Slides):
 
     def later(self, i: int) -> float:
         """The number comes in one beat after the last stripes; in scene 3 one beat after the fade."""
-        if i == 1:
-            return self.bracket_at - float(self.starts[1]) + 0.3
+        if i == 1:                                    # not before the first part is in (0.3-1.5 s)
+            return max(self.bracket_at - float(self.starts[1]) + 0.3, 1.6)
         if i == 2:
-            return max(self.fade_at.values()) - float(self.starts[2]) + 0.3
+            return max(max(self.fade_at.values()) - float(self.starts[2]) + 0.3, 1.6)
         return super().later(i)
 
     def shown(self, year: int, t: float) -> str:
