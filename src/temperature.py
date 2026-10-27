@@ -112,14 +112,18 @@ def era5() -> pd.Series:
     return s.groupby(s.index.year).mean()[n == 12]
 
 
+@functools.cache
+def change_field() -> xr.DataArray:
+    """Change 1951-1980 -> 2016-2025 of the annual mean in every CRU cell (°C), the map's colours."""
+    a = tmp().groupby("time.year").mean()
+    return a.sel(year=slice(*NOW)).mean("year") - a.sel(year=slice(*THEN)).mean("year")
+
+
 def cells() -> np.ndarray:
     """Change 1951-1980 -> 2016-2025 in each Iran cell (°C)."""
-    t = tmp()
-    lon, lat = np.meshgrid(t.lon.values, t.lat.values)
-    inside = enso.iran_mask(lat, lon)
-    a = t.groupby("time.year").mean()
-    d = a.sel(year=slice(*NOW)).mean("year") - a.sel(year=slice(*THEN)).mean("year")
-    return d.values[inside]
+    d = change_field()
+    lon, lat = np.meshgrid(d.lon.values, d.lat.values)
+    return d.values[enso.iran_mask(lat, lon)]
 
 
 def main() -> None:

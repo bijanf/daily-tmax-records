@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np  # noqa: E402
 
+import iranmap  # noqa: E402
 import onebit  # noqa: E402
 import temperature  # noqa: E402
 from onebit import FA_TEXT, OUT, SIZES, SOCIAL_CRF, Canvas, fa  # noqa: E402
@@ -45,8 +46,9 @@ YEARS = (1951, 2025)
 STEPS = (-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75)   # °C: the edges of the ramp's 9 classes
 EXPECT = dict(cru=1.9, era5=2.3)                 # °C, rounded: the published reel
 PACE = dict(bpm=60, bars=(2, 3, 3.5))
-FILL = ((1951, 1980), (1981, 2000), (2001, 2025))  # the stripes come in, one group per beat
-STRIPE, TALL = 11, 400                           # px: a year's width, the stripes' height
+RECENT = (2016, 2025)                            # the bracket over the last ten stripes
+STRIPE, TALL = 11, 180                           # px: a year's width, the stripes' height
+MAP_W = 290                                      # px: Iran, coloured by each cell's warming
 SOURCE, SOURCE_PX = 38, 28                   # line step and size of the sources
 
 
@@ -56,6 +58,7 @@ def words(cru: float, era: float) -> dict:
                         ("۱۰ سالِ گرم‌ترِ ایران: // {همه بعد از ۲۰۰۰}", "")),
                 follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
                 head="نسبت به میانگینِ ۱۹۵۱ تا ۱۹۸۰",
+                map="هر نقطه: ۲۰۱۶ تا ۲۰۲۵",
                 ends=("۲ درجه سردتر", "تقریباً بی‌تغییر", "۲ درجه گرم‌تر"),
                 sources=("منبع: دمای CRU TS 4.10 (دانشگاه ایست‌آنگلیا)",
                          "و ERA5 (کوپرنیکوس) · میانگینِ سالانه‌ی ایران",
@@ -75,16 +78,22 @@ class StripesFilm(Slides):
         era_top = temperature.era5().loc[1951:].sort_values(ascending=False).index[:10]
         assert min(self.top) > 2000 and min(era_top) > 2000, "the ten warmest years after 2000, in both"
         self.cls = {int(y): int(np.searchsorted(STEPS, a, side="right")) for y, a in self.anom.items()}
+        self.map = iranmap.Map(MAP_W)                     # every cell's change, in the stripes' classes
+        v = self.map.sample(temperature.change_field())
+        assert np.isfinite(v[self.map.inside]).all(), "a pixel of Iran without a CRU cell"
+        k = np.searchsorted(STEPS, np.where(self.map.inside, v, 0.0), side="right")
+        self.map_cls = [self.map.inside & (k == j) for j in range(len(STEPS) + 1)]
+        self.hook_at_once = True                          # the first frame carries the whole question
         self.setup(th, "fa", colour, words(cru, era), PACE, "Iran.Warming")
         dots = np.zeros((1920, 1080), bool)              # the sources sit in the window: dots all down
         dots[4::8, 4::8] = dots[5::8, 4::8] = dots[4::8, 5::8] = dots[5::8, 5::8] = True
         self.dots = dots
         self.layout()
         b = self.beat
-        self.fill_at = [float(self.starts[1]) + (1 + k) * b for k in range(len(FILL))]
+        self.bracket_at = float(self.starts[1]) + b
         self.fade_at = float(self.starts[2]) + b
-        self.done = self.fill_at[-1] - float(self.starts[1]) + b
-        assert self.fill_at[-1] + b < 15, "the number must land before 15 s"
+        self.done = self.bracket_at - float(self.starts[1]) + b
+        assert self.bracket_at + b < 15, "the number must land before 15 s"
 
     def layout(self):
         inner_top = RULE + 24
@@ -93,11 +102,13 @@ class StripesFilm(Slides):
         n = YEARS[1] - YEARS[0] + 1
         width = n * STRIPE
         assert width <= RIGHT - LEFT, width
-        block = TALL + 60 + 70 + 46 + 60                 # stripes, years, heading, bar, labels
-        gap = (inner_bot - inner_top - block) / 3
-        assert gap >= 20, "the picture does not fit the window"
+        block = 40 + self.map.h + 30 + TALL + 60 + 70 + 46 + 60   # map heading, map, bracket, stripes, years, legend
+        gap = (inner_bot - inner_top - block) / 4
+        assert gap >= 16, f"the picture does not fit the window ({gap:.0f})"
+        self.map_head = inner_top + gap + 30
+        self.map_at = ((LEFT + RIGHT - self.map.w) / 2, self.map_head + 10)
         self.x_right = (LEFT + RIGHT + width) / 2         # 1951's stripe ends here
-        self.y0 = inner_top + gap
+        self.y0 = self.map_at[1] + self.map.h + gap + 30
         self.years_y = self.y0 + TALL + 44
         self.head_y = self.years_y + 70 + gap / 2
         self.bar_y = self.head_y + 24
@@ -107,7 +118,7 @@ class StripesFilm(Slides):
     def later(self, i: int) -> float:
         """The number comes in one beat after the last stripes; in scene 3 one beat after the fade."""
         if i == 1:
-            return self.fill_at[-1] - float(self.starts[1]) + self.beat
+            return self.bracket_at - float(self.starts[1]) + self.beat
         if i == 2:
             return self.fade_at - float(self.starts[2]) + self.beat
         return super().later(i)
@@ -115,13 +126,8 @@ class StripesFilm(Slides):
     def shown(self, year: int, t: float) -> str:
         """'empty', 'full' or 'faded' for a year's stripe at time t."""
         i = self.scene(t)
-        if not np.isfinite(t):
-            return "full"                             # the cover (the grid's thumbnail): the stripes
-        if i == 0:
-            return "empty"
-        if i == 1:
-            k = next(k for k, (a, b) in enumerate(FILL) if a <= year <= b)
-            return "full" if t >= self.fill_at[k] else "empty"
+        if not np.isfinite(t) or i < 2:
+            return "full"                             # the stripes from the very first frame
         return "full" if (year in self.top or t < self.fade_at) else "empty"
 
     # ── drawing ──
@@ -134,6 +140,13 @@ class StripesFilm(Slides):
             if state == "full":
                 c.fill(right - STRIPE, self.y0, right, self.y0 + TALL, ramp[k])
         c.frame(x1 - len(self.cls) * STRIPE - 2, self.y0 - 2, x1 + 2, self.y0 + TALL + 2)
+        if np.isfinite(t) and self.scene(t) == 1 and t >= self.bracket_at:   # the last ten years
+            a = x1 - (RECENT[1] - YEARS[0] + 1) * STRIPE
+            b = x1 - (RECENT[0] - YEARS[0]) * STRIPE
+            y = self.y0 - 14
+            c.fill(a, y, b, y + 4, self.th.ink)
+            c.fill(a, y, a + 4, y + 12, self.th.ink)
+            c.fill(b - 4, y, b, y + 12, self.th.ink)
         c.text(x1, self.years_y, fa(YEARS[0]), FA_TEXT, 34, self.th.ink, "rs", "rtl")
         c.text(x1 - len(self.cls) * STRIPE, self.years_y, fa(YEARS[1]), FA_TEXT, 34, self.th.ink, "ls", "rtl")
 
@@ -156,7 +169,24 @@ class StripesFilm(Slides):
             c.text(RIGHT, self.source_y + SOURCE * k, line, FA_TEXT, SOURCE_PX, self.th.head, "rs", "rtl")
             assert c.width(line, FA_TEXT, SOURCE_PX, "rtl") <= RIGHT - LEFT, line
 
+    def iran(self, c: Canvas):
+        """Iran, each place in the colour of its warming from 1951-1980 to 2016-2025, four cities."""
+        x, y = self.map_at
+        for mask, colour in zip(self.map_cls, self.colour["ramp"]):
+            if mask.any():
+                c.pixels(x, y, mask, colour)
+        c.pixels(x, y, self.map.border, self.th.ink)
+        self.say(c, RIGHT, self.map_head, self.words["map"], 30, False, self.th.ink)
+        for name, lo, la in iranmap.CITIES:
+            px, py = self.map.place(lo, la)
+            px, py = x + px, y + py
+            c.fill(px - 4, py - 4, px + 4, py + 4, self.th.ink)
+            tw = c.width(name, FA_TEXT, 26, "rtl")
+            c.frame(px + 9, py - 22, px + 9 + tw + 12, py + 10, fill=self.th.field)
+            c.text(px + 15 + tw, py + 3, name, FA_TEXT, 26, self.th.ink, "rs", "rtl")
+
     def body(self, c: Canvas, t: float):
+        self.iran(c)
         self.stripes(c, t)
         self.legend(c)
 

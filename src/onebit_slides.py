@@ -95,6 +95,8 @@ class Slides:
         1.6 s; a line with a break shows its first part over 1.2 s and its second at later(i)."""
         ws = [w for w, _ in words_of(self.S.scenes[i].title, self.th)]
         n = len(ws) - ws.count("//")
+        if i == 0 and getattr(self, "hook_at_once", False):
+            return [-1.0] * n                        # the hook is whole in the very first frame
         if "//" not in ws:
             return [0.3 + 1.6 * k / n for k in range(n)]
         first = ws.index("//")
