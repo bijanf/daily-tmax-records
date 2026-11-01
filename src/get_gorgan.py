@@ -21,10 +21,12 @@ the per-pixel median of the counted passes' reflectance (NaN where no pass is cl
 and NIR08 < 0.10 on clear pixels; a pixel is wet when at least half of its clear passes say so. The bay's
 area is the wet share of the bay's clear pixels times the bay's area, so cloud does not shrink it.
 1995 is one pass only, 8 September 1995 (98 % of the bay clear): the 24 September 1995 scene is Tier 2 and
-reads 281 km2 against 559-563 km2 for the three Tier-1 passes; the 7 and 23 August passes have 54 % and 86 %
-of the bay clear. Years with one pass, two passes that disagree on the wet rule, striped Landsat 7 only, or
-more than a tenth of the bay never clear are flagged in frames.csv: their pictures are shown, their areas
-are uncertain. 2007 has no pass with half the bay clear and is left out.
+reads 281 km2 against 559-563 km2 for the three Tier-1 passes (its open sea reads only 66 % water against
+99.7 %, its mean NIR08 0.083 against 0.038, so the NIR test drops real water); the 7 and 23 August passes
+have 54 % and 86 % of the bay clear. Years with one pass, two passes that disagree on the wet rule,
+striped Landsat 7 only, or more than a tenth of the bay never clear are flagged in frames.csv; their
+pictures and areas are shown, and the film marks as uncertain only the years where the wet rule or the
+unseen share moves the area (gorgan.uncertain). 2007 has no pass with half the bay clear and is left out.
 
 One difference from the feasibility run that the barrier edge came from: its cached JRC extent covered only
 53.38-54.12 E, so its lake mask was cropped, and its 1995-08-23 pass read 78 % clear of the lake (here 49.9 %

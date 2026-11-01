@@ -63,7 +63,9 @@ VMAX, VMIN = 0.2, -3.0                            # m: the plot's range (the 0 m
 FIRST_READING = 1993                              # Gregorian: the first Aug-Sep mean (Persian 1372)
 SOURCE, SOURCE_PX = 38, 30
 MARK_PX = 34                                      # labels, axis and readouts: phone size
-BASE_YEAR, NOW, LOW = 1995, 2026, 2025            # Gregorian: 1374, 1405, 1404 (the cover's west half)
+BASE_YEAR, NOW, LOW = 1995, 2026, 2025            # Gregorian: 1374, 1405, 1404
+FIRST_YEAR = 1986                                 # Gregorian: 1365, "40 years ago" (the rewind's end, the cover's east half)
+SMALL_HOLE = 1500                                 # px of the picture: a land hole smaller than this is filled
 # Places (lon, lat): the gulf's centroid, the barrier's centre (Wikipedia infobox), the two ports (city articles)
 GULF = (53.880, 36.833)
 SEA = (53.78, 36.990)
@@ -133,6 +135,18 @@ def pictures() -> tuple:
             src = pics[y + d]
             fill = hole & np.isfinite(src[0])
             pics[y][:, fill] = src[:, fill]
+    from scipy import ndimage                                # small holes left on land: the same year's nearest
+    for y in pics:                                           # seen pixel; large unseen areas stay hatched
+        hole = np.isnan(pics[y][0]) & ~bay
+        lab, n = ndimage.label(hole)
+        if not n:
+            continue
+        sizes = ndimage.sum(hole, lab, range(1, n + 1))
+        small = np.isin(lab, 1 + np.flatnonzero(sizes < SMALL_HOLE))
+        if small.any():
+            _, (iy, ix) = ndimage.distance_transform_edt(np.isnan(pics[y][0]), return_indices=True)
+            for b in range(3):
+                pics[y][b] = np.where(small, pics[y][b][iy, ix], pics[y][b])
     hatched = {y: float(np.isnan(pics[y][0]).mean()) for y in pics}     # the share of the picture never seen clear
     return pics, bay, hatched
 
@@ -246,22 +260,22 @@ class GorganFilm(Slides):
         s = fa(year)
         w = c.width(s, FA_BOLD, 48, "rtl")
         x0 = x - w - 28 if anchor == "r" else x
-        c.frame(x0, y, x0 + w + 28, y + 64, fill=self.th.field)
-        c.text(x0 + w + 14, y + 50, s, FA_BOLD, 48, self.th.ink, "rs", "rtl")
+        c.frame(x0, y, x0 + w + 28, y + 72, fill=self.th.field)       # year boxes >= 70 px (phone floor)
+        c.text(x0 + w + 14, y + 58, s, FA_BOLD, 48, self.th.ink, "rs", "rtl")
 
     def picture(self, c: Canvas, t: float):
         x, y = LEFT, PIC_Y
         s = self.state(t)
-        if s is None:                                          # the cover: the bay's west half 2025, east 1995
-            west, east = self.photos[LOW], self.photos[BASE_YEAR]
+        if s is None:                                          # the cover, as the hook: west 1405, east 1365
+            west, east = self.photos[NOW], self.photos[FIRST_YEAR]
             half = east.width // 2
             im = west.copy()
             im.paste(east.crop((half, 0, east.width, east.height)), (half, 0))
             c.im.paste(self.scaled(im, c), (c.X(x), c.Y(y)))
             c.fill(x + half - 2, y, x + half + 2, y + PIC_H, self.th.field)
-            self.year_chip(c, x + 14, y + PIC_H - 78, persian(LOW), "l")          # clear of the heading
-            self.label_box(c, x + 14, y + PIC_H - 92, self.words["hatch"], 30, "l", bold=False)
-            self.year_chip(c, x + PIC_W - 14, y + 14, persian(BASE_YEAR), "r")
+            self.year_chip(c, x + 14, y + PIC_H - 86, persian(NOW), "l")          # clear of the heading
+            self.label_box(c, x + 14, y + PIC_H - 100, self.words["hatch"], 30, "l", bold=False)
+            self.year_chip(c, x + PIC_W - 14, y + 14, persian(FIRST_YEAR), "r")
         else:
             a, b, w = s
             im = self.photos[a] if w == 0 else Image.blend(self.photos[a], self.photos[b], w)
@@ -322,7 +336,7 @@ class GorganFilm(Slides):
             c.text(xp(py), y1 + 44, fa(py), FA_TEXT, MARK_PX, th.ink, "ms", "rtl")
         s = self.state(t)
         if s is None:
-            shown = LOW                                                 # the cover: 1404
+            shown = NOW                                                 # the cover: 1405, as its west half
         else:
             a, b, w = s
             shown = b if w >= 0.5 else a

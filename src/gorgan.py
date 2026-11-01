@@ -103,8 +103,9 @@ def uncertain(year: int) -> bool:
 
 
 def on_screen(year: int) -> str:
-    """The area as shown: whole km2 (half up), or 'uncertain' for the years above."""
-    return "uncertain" if uncertain(year) else str(int(np.floor(bay_km2(year) + 0.5)))
+    """The area as shown: to the nearest 10 km2 (half up; partly cloudy passes read up to a third high, a
+    composite a few per cent low), or 'uncertain' for the years above. The checks use the raw values."""
+    return "uncertain" if uncertain(year) else str(int(np.floor(bay_km2(year) / 10 + 0.5)) * 10)
 
 
 @functools.cache
