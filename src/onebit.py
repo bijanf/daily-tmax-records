@@ -48,6 +48,7 @@ Themes recolour the whole scene:
     pesteh  Pesteh          in colour: pale pistachio paper, olive type, pistachio-green accents (pesteh)
     zafaran Zafaran         in colour: pale saffron paper, dark brown type, saffron accents (zafaran)
     namak   Namak           in colour: salt-white paper, slate type, lake-blue accents (namak, salt)
+    naqsh   Naqsh           in colour: warm paper, navy type, Isfahan turquoise accents (naqsh, Naqsh-e Jahan)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -199,6 +200,10 @@ THEMES = {
                      light="#F7EFDD", track="#34200F", cold="#A8520F", hot="#A8520F",
                      levels=("#F7EFDD", "#34200F", "#34200F", "#34200F"), title="#F7EFDD", dots="#E6D9BC",
                      mono=True, mark="#A8520F", town="Tehran"),
+    "naqsh": Theme("Naqsh", field="#F4EFE6", ink="#1B2A3A", head="#1B2A3A", paper="#F4EFE6",
+                   light="#F4EFE6", track="#1B2A3A", cold="#1E7F99", hot="#1E7F99",
+                   levels=("#F4EFE6", "#1B2A3A", "#1B2A3A", "#1B2A3A"), title="#F4EFE6", dots="#E6DFD2",
+                   mono=True, mark="#1E7F99", town="Tehran"),
     "namak": Theme("Namak", field="#F3F2EE", ink="#1E2A33", head="#1E2A33", paper="#F3F2EE",
                    light="#F3F2EE", track="#1E2A33", cold="#2D6A9F", hot="#2D6A9F",
                    levels=("#F3F2EE", "#1E2A33", "#1E2A33", "#1E2A33"), title="#F3F2EE", dots="#E1E0DA",
