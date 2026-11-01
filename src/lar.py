@@ -34,8 +34,13 @@ import get_lar  # noqa: E402
 from wateryear import farvardin1  # noqa: E402
 
 DATA = get_lar.DATA
-GAPS = {2003: "no scene of the dam between 1 September and 15 November",
-        2011: "its only clear pass (3 September) is 28 days before 1 October"}
+NO_PASS = {2003: "no scene of the dam between 1 September and 15 November",
+           2011: "its only clear pass (3 September) is 28 days before 1 October"}
+# Measured (their areas count in the medians and ranks) but not shown: the picture has holes on the lake.
+NOT_SHOWN = {2005: "its only clean-enough pass (Landsat 7, 18 September) has scan gaps over 1 % of the reservoir",
+             2012: "its only pass (Landsat 7, 21 September) has scan gaps over 3 % of the reservoir",
+             2015: "its best pass (22 September) has cloud over 8 % of the reservoir"}
+GAPS = {**NO_PASS, **NOT_SHOWN}                           # the years the film skips
 # Storage as reported (dated; the article's date and the date of its data). The five dams: Amir Kabir,
 # Latyan, Taleghan, Mamloo and Lar. Lar's nominal capacity is about 960 million m3 (the same article).
 OFFICIAL = {
@@ -67,8 +72,8 @@ def frames() -> pd.DataFrame:
 
 
 def years() -> list:
-    """The years with a frame, in order."""
-    return sorted(int(y) for y in frames().index)
+    """The years with a clean frame, in order (GAPS are left out and listed, never filled)."""
+    return sorted(int(y) for y in frames().index if int(y) not in GAPS)
 
 
 def area(year: int) -> float:
@@ -166,20 +171,21 @@ def checks() -> None:
     """The numbers the film states, as asserts."""
     assert (OFFICIAL["five_dams"]["date"] - farvardin1(1405)).days == 186 + 18, "19 Mehr 1405 = 11 Oct 2026"
     assert (OFFICIAL["lar"]["date"] - farvardin1(1405)).days == 186 + 18
-    assert sorted(set(range(1987, 2027)) - set(years())) == sorted(GAPS), "the gaps are 2003 and 2011"
+    assert sorted(set(range(1987, 2027)) - set(years())) == sorted(GAPS), "the years left out are GAPS"
 
 
 def main() -> None:
     checks()
     fr = frames()
     print("LAR RESERVOIR, one autumn Landsat pass a year (lar.py; data/lar, get_lar.py)")
-    print(f"frames: {len(fr)} years, {years()[0]}-{years()[-1]}; no frame for "
-          f"{sorted(set(range(1987, 2027)) - set(years()))}")
-    for y, why in GAPS.items():
-        print(f"  {y} ({persian(y)}): {why}")
+    print(f"measured: {len(fr)} years {fr.index.min()}-{fr.index.max()} (medians and ranks); shown in the film: "
+          f"{len(years())}")
+    for y, why in sorted(GAPS.items()):
+        print(f"  {y} ({persian(y)}): {'no frame' if y in NO_PASS else 'measured, not shown'}: {why}")
+    print("  passes left out of every count: " + "; ".join(f"{k}: {v}" for k, v in get_lar.EXCLUDE.items()))
     med, k, n_years, n_passes = adjusted()
     print(f"drawdown k = {k:.5f} per day ({100 * (np.exp(k) - 1):.2f} % per day) from {n_years} years, "
-          f"{n_passes} accepted passes within 25 days, 1995-09-15 left out")
+          f"{n_passes} accepted passes within 25 days (the excluded passes left out)")
     print("\nyear  persian  date        platform    clear  area km2  grid km2  days  adjusted km2  passes")
     for y in years():
         r = fr.loc[y]

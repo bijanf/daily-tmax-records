@@ -65,11 +65,13 @@ GRID_T = Affine(RES, 0, GRID[0], 0, -RES, GRID[3])
 SHAPE = (round((GRID[3] - GRID[1]) / RES), round((GRID[2] - GRID[0]) / RES))   # (396, 648)
 YEARS = (1987, 2026)
 WINDOW = 25                                          # days either side of 1 October
-PREFER = 0.95                                        # share of the reservoir clear: a pass with it is preferred
+PREFER = 0.99                                        # share of the reservoir clear: a pass with it is preferred
 ACCEPT = (0.85, 0.60)                                # share clear to accept; Landsat 7 after 31 May 2003
 GAP_FREE = 0.995                                     # share of the reservoir with data: fewer gaps preferred
 EXCLUDE = {"LT05_L2SP_164035_19950915_02_T2":
-           "0.26 km2 sixteen days before 9.92 km2 on 1 October 1995: no drawdown explains it"}
+           "0.26 km2 sixteen days before 9.92 km2 on 1 October 1995: no drawdown explains it",
+           "LT05_L2SP_164035_19960917_02_T2":
+           "3.72 km2 sixteen days before 7.15 km2 on 3 October 1996: no drawdown explains it (Tier 2, as 1995's)"}
 SCALE, OFFSET = 0.0000275, -0.2                      # Collection 2 surface reflectance
 QA_BAD = 0b111111                                    # fill, dilated cloud, cirrus, cloud, cloud shadow, snow
 PIX_KM2 = 0.0009                                     # Landsat's 30-m pixel

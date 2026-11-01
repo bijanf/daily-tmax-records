@@ -12,7 +12,7 @@ Measured data only, from lar.py (outputs/lar_log.txt) and get_lar.py:
 A slide on the frame of onebit_slides: one window, one bold line per scene. The Lar picture spans the
 window, the gauge of its water sits under it. The first frame carries the whole hook with the autumn of
 1405 (2026); the film rewinds to 1366 (1987) in 2 s, then plays every autumn forward at an even pace to
-1404 (2025), which arrives before the last scene; 1405 comes in after the last line is whole. The cover
+1404 (2025), which arrives before the last scene; 1405 comes in as the last scene begins. The cover
 splits through the middle of the 2026 water: 1366 on the right, 1405 on the left. Three scenes, 1.5 + 1.5
 + 2 bars of 60 BPM = 20 s, a silent track (music in the app).
 
@@ -41,11 +41,12 @@ from onebit import FA_BOLD, FA_TEXT, OUT, SIZES, SOCIAL_CRF, Canvas, fa  # noqa:
 from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 
 PACE = dict(bpm=60, bars=(1.5, 1.5, 2))
-EXPECT = dict(medians=(7, 3), ratio=(0.35, 0.55))  # rounded 1370s and last-decade medians; their ratio: "about half"
+EXPECT = dict(medians=(7, 3), ratio=(0.38, 0.47))  # rounded 1370s and last-decade medians; ratio 0.43: "less than half"
 REWIND = (0.3, 2.3)                               # s: 2025 back to 1987
 FORWARD = 2.8                                     # s: 1987 forward again, after a short hold
-STEP = 0.245                                      # s per autumn going forward: an even pace, 1404 by about 11.4 s
-LAST = 3.2                                        # s into the last scene: 1405, after its line is whole
+FAST, SLOW, RECENT = 0.19, 0.45, 2017             # s per autumn going forward: quick to 1395, slower through the
+                                                  # last ten autumns (1396 at about 7.4 s, under scene 2's number)
+LAST = 0.2                                        # s into the last scene: 1405, before its line ("this year")
 FADE = 0.10                                       # s: one autumn dissolves into the next (at most half a step)
 STRETCH, GAMMA = 0.30, 1.3                        # reflectance shown as white; one stretch for every year
 PIC_W = WIN[2] - 6                                # px: the picture spans the window's inner width
@@ -64,13 +65,13 @@ def words() -> dict:
     off = lar.OFFICIAL["five_dams"]
     return dict(
         scenes=(("سدِ لار حدودِ ۴۰ سال پیش // چه شکلی بود؟", ""),
-                ("ده پاییزِ اخیر: وسعتِ آب // {حدودِ نصفِ} دهه‌ی ۱۳۷۰", ""),
-                ("امسال بیشتر از پارسال، // هنوز {کمتر از نصفِ} دهه‌ی ۱۳۷۰", "")),
+                ("ده پاییزِ اخیر: وسعتِ آب // {کمتر از نصفِ} دهه‌ی ۱۳۷۰", ""),
+                ("امسال بیشتر از پارسال، // ولی هنوز {کمتر از نصف}", "")),
         follow="این را برای یک تهرانی بفرستید",
         gauge="میانه‌ی دهه‌ی ۱۳۷۰", unit="کیلومترمربع", dam="سدِ لار", scale="۱ کیلومتر",
         store_value=off["value"], store="میلیون مترمکعب", store_name="پنج سدِ تهران", store_date="۱۹ مهر ۱۴۰۵",
         sources=("منبع: لندست (USGS)، هر پاییز یک گذر؛ وسعت: برآورد از تصویر",
-                 "آمارِ سدها: منابع آماریِ آبِ کشور، به گزارشِ مهر، ۱۹ مهر ۱۴۰۵"),
+                 "آمارِ سدها: منابعِ آماریِ آبِ کشور، خبرگزاریِ مهر، ۲۶ مهر ۱۴۰۵"),
     )
 
 
@@ -156,7 +157,8 @@ class LarFilm(Slides):
         return RIGHT - km / KM_MAX * (RIGHT - LEFT)
 
     def schedule(self):
-        """Keyframes (time, year): 1405 at 0 s, the rewind to 1366, forward again at an even pace, 1405 last."""
+        """Keyframes (time, year): 1405 at 0 s, the rewind to 1366, forward again (the last ten autumns
+        slower, under scene 2's number), 1405 as the last scene begins."""
         back = self.years[-2::-1]                          # 2025 ... 1987
         step = (REWIND[1] - REWIND[0]) / (len(back) - 1)
         keys = [(0.0, self.years[-1])] + [(REWIND[0] + k * step, y) for k, y in enumerate(back)]
@@ -164,10 +166,11 @@ class LarFilm(Slides):
         for y in self.years[1:-1]:                         # 1988 ... 2025
             keys.append((t, y))
             self.at[y] = t
-            t += STEP
+            t += FAST if y < RECENT - 1 else SLOW
         assert self.at[2025] < float(self.starts[2]), "1404 must arrive before the last scene"
+        assert abs(self.at[RECENT] - (float(self.starts[1]) + self.later(1))) < 0.6, "the last ten autumns start under scene 2's number"
         keys.append((float(self.starts[2]) + LAST, 2026))
-        assert LAST >= self.later(2) + 1.0, "1405 must come after the last line is whole"
+        assert LAST <= 0.5, "1405 must be on screen before the last line, which speaks of this year"
         self.at[2026] = keys[-1][0]
         self.keys = keys
 
@@ -258,7 +261,8 @@ class LarFilm(Slides):
         for yy in range(self.bar_y - 4, self.bar_y + BAR_H + 6, 12):
             c.fill(xm - 2, yy, xm + 2, yy + 7, th.ink)
         c.text(xm, self.mark_y, f"{self.words['gauge']}: {fa(f'{self.t70:.1f}')}", FA_TEXT, 30, th.ink, "ms", "rtl")
-        c.text(RIGHT, self.val_y, f"{fa(f'{v:.1f}')} {self.words['unit']}", FA_BOLD, 52, th.ink, "rs", "rtl")
+        c.text(RIGHT, self.val_y, f"{fa(persian(year))}: {fa(f'{v:.1f}')} {self.words['unit']}", FA_BOLD, 52,
+               th.ink, "rs", "rtl")                        # the value names its year (the cover is split)
 
     def official(self, c: Canvas):
         """The second counter of the last scene: the five dams' storage as reported, and its date."""
