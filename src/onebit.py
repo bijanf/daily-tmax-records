@@ -210,7 +210,7 @@ THEMES = {
                    light="#F3F2EE", track="#1E2A33", cold="#2D6A9F", hot="#2D6A9F",
                    levels=("#F3F2EE", "#1E2A33", "#1E2A33", "#1E2A33"), title="#F3F2EE", dots="#E1E0DA",
                    mono=True, mark="#2D6A9F", town="Tehran"),
-    # the accents on the paper: pomegranate 6.5:1, indigo 7.0:1 (WCAG relative luminance)
+    # the accents on the paper: pomegranate 6.5:1, indigo 6.9:1 (WCAG relative luminance)
     "anar": Theme("Anar", field="#F6F0EE", ink="#2B1A1D", head="#2B1A1D", paper="#F6F0EE",
                   light="#F6F0EE", track="#2B1A1D", cold="#9C2F3B", hot="#9C2F3B",
                   levels=("#F6F0EE", "#2B1A1D", "#2B1A1D", "#2B1A1D"), title="#F6F0EE", dots="#E8DCD8",
