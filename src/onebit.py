@@ -49,6 +49,8 @@ Themes recolour the whole scene:
     zafaran Zafaran         in colour: pale saffron paper, dark brown type, saffron accents (zafaran)
     namak   Namak           in colour: salt-white paper, slate type, lake-blue accents (namak, salt)
     naqsh   Naqsh           in colour: warm paper, navy type, Isfahan turquoise accents (naqsh, Naqsh-e Jahan)
+    anar    Anar            in colour: pale rose paper, near-black type, pomegranate accents (anar)
+    khazar  Khazar          in colour: shell paper, deep indigo type, Caspian-dusk indigo accents (khazar)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -208,6 +210,15 @@ THEMES = {
                    light="#F3F2EE", track="#1E2A33", cold="#2D6A9F", hot="#2D6A9F",
                    levels=("#F3F2EE", "#1E2A33", "#1E2A33", "#1E2A33"), title="#F3F2EE", dots="#E1E0DA",
                    mono=True, mark="#2D6A9F", town="Tehran"),
+    # the accents on the paper: pomegranate 6.5:1, indigo 7.0:1 (WCAG relative luminance)
+    "anar": Theme("Anar", field="#F6F0EE", ink="#2B1A1D", head="#2B1A1D", paper="#F6F0EE",
+                  light="#F6F0EE", track="#2B1A1D", cold="#9C2F3B", hot="#9C2F3B",
+                  levels=("#F6F0EE", "#2B1A1D", "#2B1A1D", "#2B1A1D"), title="#F6F0EE", dots="#E8DCD8",
+                  mono=True, mark="#9C2F3B", town="Tehran"),
+    "khazar": Theme("Khazar", field="#F3F1EC", ink="#1F2238", head="#1F2238", paper="#F3F1EC",
+                    light="#F3F1EC", track="#1F2238", cold="#4E4A8C", hot="#4E4A8C",
+                    levels=("#F3F1EC", "#1F2238", "#1F2238", "#1F2238"), title="#F3F1EC", dots="#E2DFD8",
+                    mono=True, mark="#4E4A8C", town="Tehran"),
     "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
                      light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
                      levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",

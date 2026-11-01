@@ -41,7 +41,9 @@ COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C761
            "pesteh": dict(land="#D6DEC9", iran="#2a78d6", iraq="#eb6834"),
            "zafaran": dict(land="#E6D9BC", bar="#34200F", now="#A8520F"),
            "namak": dict(land="#E1E0DA", water="#3A7FBE", bed="#CDBF9E", bar="#C9CDD1"),
-           "naqsh": dict(land="#E6DFD2", water="#1E7F99", low="#8FC3CF", dry="#E2D3B3", none="#F4EFE6", line="#B9AE98")}
+           "naqsh": dict(land="#E6DFD2", water="#1E7F99", low="#8FC3CF", dry="#E2D3B3", none="#F4EFE6", line="#B9AE98"),
+           "anar": dict(land="#E8DCD8", water="#2F6E8E", bar="#D4C6C2", now="#9C2F3B", line="#B7A6A2"),
+           "khazar": dict(land="#E2DFD8", water="#3C6E91", bar="#D3D0C8", now="#4E4A8C", line="#A9A6A0")}
 
 
 def span(years, lang: str = "fa") -> str:
