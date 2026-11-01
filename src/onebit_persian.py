@@ -72,6 +72,15 @@ MODES = {
                    "E, F#, G-koron, A, B, C, D: a whole-tone second and a koron third"),
     "homayoun": ("Homayoun", "D4", (0, 100, 400, 500, 700, 800, 1000),
                  "D, Eb, F#, G, A, Bb, C: the augmented second of the Hijaz family"),
+    # Avaz-e Esfahan, an avaz of Homayoun. No source found gives cents for this avaz itself, so these are an
+    # approximation, to tune by ear. The note line used is the Esfahan line of majnuunmusicanddance.com/?p=304,
+    # "C D Eb F G Aqb B C" (Aqb: A quarter-flat), which that page says shares the intervals of Homayoun on
+    # another tonic (its Homayoun sits on G). The Persian Music Scales site (sites.google.com/view/
+    # persianmusicscales) gives one cent value for Esfahan, 850: the quarter-flat A above C, 900 + KORON.
+    # The B is 1086 cents: the modern B "a perfect third from G" on that page, read as the pure major third
+    # (700 + 386). The pre-modern B is a quarter-flat, 1050.
+    "esfahan": ("Esfahan", "C4", (0, 200, 300, 500, 700, 900 + KORON, 1086),
+                "C, D, Eb, F, G, A-koron, B: Avaz-e Esfahan on the Esfahan note line; B a pure third above G"),
 }
 
 _PITCH_CLASS = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}

@@ -1,25 +1,32 @@
-"""The Zayandeh Rud through Isfahan from Landsat: in which months water was seen flowing, every
-year since 1986, and the late-summer picture of the city's river reach.
+"""The Zayandeh Rud at Si-o-se Pol from Landsat: in which months water was seen in the river's
+bed, every year since 1986, and the late-summer picture of the reach.
 
-    data/zayandeh/channel.npz          the river channel on the 30-m grid: JRC Global Surface
-                                        Water's extent (any water 1984-2021), its largest piece
+    data/zayandeh/channel.npz          the reach on the 30-m grid: JRC Global Surface Water's
+                                        extent (any water 1984-2021), its largest connected piece:
+                                        about 6 km of the bed, 2.7 km upstream and 2.5 km
+                                        downstream of Si-o-se Pol (the river's eastern end in the
+                                        box is a separate piece and is left out)
     data/zayandeh/scenes/<item>.json   per Landsat pass over the box: date, platform, path/row, the
-                                        share of the channel seen clear, and the share of that
-                                        which is open water
+                                        share of the reach seen clear, and the share of that which
+                                        is open water (or the error of a pass that failed to read)
     data/zayandeh/calendar.csv         per Persian year and month: the passes that count, how many
-                                        saw the river flowing, and the largest open-water share
+                                        saw water, and the largest open-water share
     data/zayandeh/colour_<year>.npz    the late-summer (20 Aug-10 Oct) true-colour picture
 
 Landsat Collection 2 Level-2 (USGS) from Microsoft's Planetary Computer with its anonymous token
 (the helpers of get_urmia.py), paths 164 and 163, row 037, both covering the whole box. Open water
 = MNDWI > 0 and NIR < 0.10 (the rule that matched JRC's monthly maps at Lake Urmia, fact check of
-27 Oct 2026). A pass counts when at least CLEAR of the channel is in the scene and clear of cloud,
-shadow and cirrus (QA_PIXEL); it saw the river FLOWING when at least FLOW of the clear channel is
-open water (pools behind the weirs and bridges stay below that: see the histogram in the log).
-The pictures leave out Landsat 7 after its scan-line failure (its gaps stripe a 150-m river).
+27 Oct 2026). A pass counts when at least CLEAR of the reach is in the scene and clear of cloud,
+shadow and cirrus (QA_PIXEL), and it is not Landsat 7 after its scan-line failure (31 May 2003):
+its gaps stripe a 120-m river and hide water (2013-2021: see the log of zayandeh.py). It saw
+water when at least FLOW of the clear reach is open water (pools behind the weirs and bridges stay
+below that: see the histogram in the log). The pictures fall back to medians of striped Landsat 7
+passes only in years without any other clear pass (the gaps move from pass to pass).
 
     python -I src/get_zayandeh.py                    # every year (passes are cached)
     python -I src/get_zayandeh.py --years 1995 2025  # some years only
+    python -I src/get_zayandeh.py --calendar         # calendar.csv again from the cached passes
+    python -I src/get_zayandeh.py --pictures 1995    # some pictures again
 """
 
 from __future__ import annotations
@@ -134,13 +141,20 @@ def persian(d: date) -> tuple[int, int]:
     return jy, (n // 31 + 1 if n < 186 else min(12, (n - 186) // 30 + 7))
 
 
+def errors() -> list:
+    """The passes that failed to read (kept on disk, so a re-run does not retry them for ever)."""
+    rows = [json.loads(f.read_text()) for f in sorted((DATA / "scenes").glob("*.json"))]
+    return [r["item"] for r in rows if r.get("error")]
+
+
 def table() -> pd.DataFrame:
     rows = [json.loads(f.read_text()) for f in sorted((DATA / "scenes").glob("*.json"))]
     df = pd.DataFrame([r for r in rows if not r.get("error")])
     df["date"] = pd.to_datetime(df["date"])
     pm = [persian(d) for d in df["date"].dt.date]
     df["jy"], df["jm"] = [x[0] for x in pm], [x[1] for x in pm]
-    df["counts"] = df["clear"] >= CLEAR
+    df["striped"] = (df["platform"] == "landsat-7") & (df["date"] >= "2003-05-31")
+    df["counts"] = (df["clear"] >= CLEAR) & ~df["striped"]
     df["flowing"] = df["counts"] & (df["wet"] >= FLOW)
     return df
 
@@ -198,22 +212,31 @@ def one_year(year: int) -> None:
     print(year, "done", flush=True)
 
 
+def write_calendar() -> None:
+    """calendar.csv from the cached passes (no network)."""
+    df = table()
+    calendar(df).to_csv(DATA / "calendar.csv")
+    c = df[df["counts"]]
+    hist = np.histogram(c["wet"], bins=[0, .05, .1, .2, .3, .4, .5, .7, 1.01])[0]
+    bad = errors()
+    print(f"passes: {len(df)} read, {len(bad)} failed to read {bad}; striped Landsat 7 left out "
+          f"{int(df['striped'].sum())}; counted {len(c)}, saw water {int(c['flowing'].sum())}; wet-share "
+          f"histogram (0,.05,.1,.2,.3,.4,.5,.7,1): {hist.tolist()}")
+
+
 def main(years: list) -> None:
     (DATA / "scenes").mkdir(parents=True, exist_ok=True)
     ch = channel()
     print(f"channel: {int(ch.sum())} cells of about 30 m ({ch.sum() * 0.0009:.1f} km2)", flush=True)
     with ThreadPoolExecutor(4) as pool:
         list(pool.map(one_year, years))
-    df = table()
-    calendar(df).to_csv(DATA / "calendar.csv")
-    c = df[df["counts"]]
-    hist = np.histogram(c["wet"], bins=[0, .05, .1, .2, .3, .4, .5, .7, 1.01])[0]
-    print(f"passes: {len(df)}, counted {len(c)}, flowing {int(c['flowing'].sum())}; wet-share histogram "
-          f"(0,.05,.1,.2,.3,.4,.5,.7,1): {hist.tolist()}")
+    write_calendar()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 2 and sys.argv[1] == "--years":
+    if len(sys.argv) > 1 and sys.argv[1] == "--calendar":
+        write_calendar()
+    elif len(sys.argv) > 2 and sys.argv[1] == "--years":
         main([int(a) for a in sys.argv[2:]])
     elif len(sys.argv) > 2 and sys.argv[1] == "--pictures":
         for y in [int(a) for a in sys.argv[2:]]:
