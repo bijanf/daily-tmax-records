@@ -183,7 +183,8 @@ def checks() -> None:
         print(f"2013-2021, counted passes of {name}: {len(rows)}, with water on 30 % or more: "
               f"{100 * (rows['wet'] >= FULL).mean():.0f} %")
     print("rule sensitivity: full months per year, 1370-1379 | 1400-1404 (months seen per year)")
-    rules = (("as built: clear >= 0.5, full >= 0.30, 1 pass", {}), ("clear >= 0.8", dict(clear=0.8)),
+    rules = (("as built: clear >= 0.5, full >= 0.30, 1 pass", {}), ("clear >= 0.4", dict(clear=0.4)),
+             ("clear >= 0.8", dict(clear=0.8)),
              ("clear >= 0.9", dict(clear=0.9)), ("full >= 0.25", dict(full=0.25)), ("full >= 0.40", dict(full=0.40)),
              ("two passes >= 0.30", dict(passes=2)), ("striped Landsat 7 kept", dict(striped=True)))
     for name, kw in rules:
@@ -203,6 +204,15 @@ def checks() -> None:
     extra = sorted(m for m, x in v.items() if x == "full" and 1393 <= m[0] <= 1405 and m not in wet)
     print(f"full months 1393-1405 with no press report (spring flows were not searched): {len(extra)} "
           + " ".join(f"{jy}-{jm:02d}" for jy, jm in extra))
+    missed = {k: [f"{jy}-{jm:02d}" for jy, jm in sorted(wet) if v.get((jy, jm), "none") == k] for k in ("low", "dry", "none")}
+    print(f"months with water reported but not full: {missed}")
+    e = [v.get((jy, m)) for jy in range(1365, 1370) for m in range(1, 13)]   # the years before the calendar
+    print(f"1365-1369 (left out of the calendar): {sum(x is not None for x in e)} months counted, full "
+          f"{e.count('full')}, low {e.count('low')}, dry {e.count('dry')}")
+    c = df[df["counts"]]
+    for a, b in ((1370, 1379), (1400, 1404)):
+        n = c[(c["jy"] >= a) & (c["jy"] <= b)]
+        print(f"counted passes per year {a}-{b}: {len(n) / (b - a + 1):.1f} (more passes catch more short flows)")
 
 
 def main() -> None:
