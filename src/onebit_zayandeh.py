@@ -40,7 +40,8 @@ from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 PACE = dict(bpm=60, bars=(1.5, 1.5, 2))
 REWIND = (0.3, 2.3)                               # s: 1404 back to 1365
 FORWARD = 2.8                                     # s: 1365 forward again, after a short hold
-STEP = 0.22                                       # s per year going forward
+FAST, SLOW = 0.10, 0.28                           # s per year going forward: the steady years to 1378, then
+STEADY = 1378                                     # the change (Urmia's retention fell while nothing changed)
 FADE = 0.10                                       # s: one year dissolves into the next (at most half a step)
 STRETCH, GAMMA = 0.30, 1.3                        # reflectance shown as white; one stretch for every year
 PIC_H = 790                                       # px: the picture's height
@@ -59,14 +60,14 @@ def persian(year: int) -> int:
 
 
 def words() -> dict:
-    return dict(scenes=(("زاینده‌رود در اصفهان // {چند ماه} از سال آب دارد؟", ""),
-                        ("دهه‌ی ۱۳۷۰: // {حدودِ ۱۰ ماه} از سال", ""),
+    return dict(scenes=(("زاینده‌رود در کدام ماه‌ها // به {اصفهان} می‌رسد؟", ""),
+                        ("دهه‌ی ۱۳۷۰: // {حدودِ ۱۰ ماه} از ۱۲", ""),
                         ("۱۴۰۰ تا ۱۴۰۴: // فقط {حدودِ ۲ ماه}", "")),
-                follow="برای داده‌های اقلیمی بیشتر، دنبال کنید",
+                follow="این را برای یک اصفهانی بفرستید",
                 seasons=("بهار", "تابستان", "پاییز", "زمستان"),
                 key=(("full", "پرآب"), ("low", "کم‌آب"), ("dry", "خشک")),
                 sources=("منبع: تصاویرِ لندست (USGS) · بسترِ رود: JRC",
-                         "پرآب: ماهواره دستِ‌کم ۳۰٪ بستر را آب دید؛ کم‌آب: ۵ تا ۳۰٪"))
+                         "ماهِ پرآب: دستِ‌کم یک بار ۳۰٪ بستر آب؛ کم‌آب: ۵ تا ۳۰٪"))
 
 
 class ZayandehFilm(Slides):
@@ -126,7 +127,7 @@ class ZayandehFilm(Slides):
         for y in upto[1:]:
             keys.append((t, y))
             self.at[y] = t
-            t += STEP
+            t += FAST if persian(y) < STEADY else SLOW
         assert self.at[2025] < float(self.starts[2]), "the years run past the last scene"
         keys.append((float(self.starts[2]) + 0.3, 2026))
         self.at[2026] = keys[-1][0]
