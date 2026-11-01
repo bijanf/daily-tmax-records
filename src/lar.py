@@ -41,29 +41,38 @@ NOT_SHOWN = {2005: "its only clean-enough pass (Landsat 7, 18 September) has sca
              2012: "its only pass (Landsat 7, 21 September) has scan gaps over 2.7 % of the reservoir",
              2015: "its best pass (22 September) has cloud over 7.9 % of the reservoir"}
 GAPS = {**NO_PASS, **NOT_SHOWN}                           # the years the film skips
-# Storage as reported (dated; the article's date and the date of its data). The five dams: Amir Kabir,
-# Latyan, Taleghan, Mamloo and Lar. Lar's nominal capacity is about 960 million m3 (the same article).
+# Storage as reported (dated; the article's date and the date of its data), the newest first. The five
+# dams: Amir Kabir, Latyan, Taleghan, Mamloo and Lar. Re-read the press on the posting day.
 OFFICIAL = {
-    "five_dams": dict(date=date(2026, 10, 11), value=383, unit="million m3", label="five Tehran dams, storage",
-                      source="Mehr News 6981337, 26 Mehr 1405 (18 Oct 2026), citing the national water "
-                             "statistics; data to 19 Mehr 1405 (11 Oct 2026)"),
-    "lar": dict(date=date(2026, 10, 11), value=35, unit="million m3", label="Lar dam, storage",
-                source="the same article (Lar 4 % full; nominal capacity about 960 million m3)"),
+    "five_dams": dict(date=date(2026, 10, 23), value=359, last_year=217, long_term=548, unit="million m3",
+                      label="five Tehran dams, storage",
+                      source="Mehr News 6989418, 4 Aban 1405 (26 Oct 2026), data of the Tehran Regional Water "
+                             "Company for 1 Aban 1405 (23 Oct 2026); the same date last year 217, the long-term "
+                             "average 548"),
+    "lar": dict(date=date(2026, 10, 23), value=29, last_year=16, long_term=79, unit="million m3",
+                label="Lar dam, storage",
+                source="the same article; nominal capacity 920 million m3 (the company's deputy, same article) "
+                       "or about 960 (Mehr News 6981337)"),
 }
+EARLIER = ("Mehr News 6981337, 26 Mehr 1405 (18 Oct 2026), citing the national water statistics: 383 million m3 "
+           "for the five dams and 35 for Lar on 19 Mehr 1405 (11 Oct 2026)")
 # Figures seen in the Persian press but not used on screen: a different date and total, to be settled.
 NOT_USED = ("Tehran water and wastewater spokesman, 17 Mehr 1405 (9 Oct 2026): 391 million m3 'at the start of "
             "Mehr' for the five dams (Mehr News: 383 on 19 Mehr)")
+MONTHS = ("Farvardin", "Ordibehesht", "Khordad", "Tir", "Mordad", "Shahrivar", "Mehr", "Aban", "Azar", "Dey",
+          "Bahman", "Esfand")
 
 
 def persian(year: int) -> int:
     return year - 621                                     # the autumn of Y lies in Persian year Y - 621
 
 
-def mehr(d: date) -> str:
-    """A date of Mehr 1405 as the Persian press writes it: 19 Mehr 1405 = 11 October 2026."""
-    day = (d - farvardin1(1405)).days - 185               # Mehr 1 is the 187th day of the year
-    assert 1 <= day <= 30, d
-    return f"{day} Mehr 1405"
+def jalali(d: date) -> str:
+    """A date of 1405 as the Persian press writes it: 1 Aban 1405 = 23 October 2026."""
+    n = (d - farvardin1(1405)).days                       # days since 1 Farvardin 1405
+    assert 0 <= n < 365, d
+    jm, day = (n // 31, n % 31 + 1) if n < 186 else (6 + (n - 186) // 30, (n - 186) % 30 + 1)
+    return f"{day} {MONTHS[jm]} 1405"
 
 
 @functools.cache
@@ -190,8 +199,8 @@ def lowest_since(series: pd.Series, y: int) -> int:
 
 def checks() -> None:
     """The numbers the film states, as asserts."""
-    assert (OFFICIAL["five_dams"]["date"] - farvardin1(1405)).days == 186 + 18, "19 Mehr 1405 = 11 Oct 2026"
-    assert (OFFICIAL["lar"]["date"] - farvardin1(1405)).days == 186 + 18
+    assert jalali(OFFICIAL["five_dams"]["date"]) == "1 Aban 1405", "1 Aban 1405 = 23 Oct 2026"
+    assert jalali(OFFICIAL["lar"]["date"]) == "1 Aban 1405" and jalali(date(2026, 10, 11)) == "19 Mehr 1405"
     assert sorted(set(range(1987, 2027)) - set(years())) == sorted(GAPS), "the years left out are GAPS"
 
 
@@ -238,8 +247,9 @@ def main() -> None:
     print(f"  adjusted index: {av26:.3f} against {av25:.3f}: {100 * (av26 / av25 - 1):+.1f} %")
     print("\nOFFICIAL (storage as reported; not an area)")
     for o in OFFICIAL.values():
-        print(f"  {o['label']}: {o['value']} {o['unit']} on {o['date']:%d %b %Y} ({mehr(o['date'])}); "
+        print(f"  {o['label']}: {o['value']} {o['unit']} on {o['date']:%d %b %Y} ({jalali(o['date'])}); "
               f"source: {o['source']}")
+    print(f"  earlier: {EARLIER}")
     print(f"  not used: {NOT_USED}")
 
 

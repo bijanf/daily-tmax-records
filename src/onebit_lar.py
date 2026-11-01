@@ -7,7 +7,7 @@ Measured data only, from lar.py (outputs/lar_log.txt) and get_lar.py:
 - The area of open water in that pass (km2): MNDWI > 0 and NIR < 0.10 on the clear pixels of the reservoir.
   One pass per year, so every year's number is one estimate.
 - The 1370s median of the passes (autumn 1991-2000) and the median of the last ten autumns (2017-2026).
-- The storage of the five Tehran dams as reported on 19 Mehr 1405 (11 October 2026): 383 million m3.
+- The storage of the five Tehran dams as reported for 1 Aban 1405 (23 October 2026): 359 million m3.
 
 A slide on the frame of onebit_slides: one window, one bold line per scene. The Lar picture spans the
 window, the gauge of its water sits under it. The first frame carries the whole hook with the autumn of
@@ -66,12 +66,12 @@ def words() -> dict:
     return dict(
         scenes=(("سدِ لار حدودِ ۴۰ سال پیش // چه شکلی بود؟", ""),
                 ("ده پاییزِ اخیر: وسعتِ آب // {کمتر از نصفِ} دهه‌ی ۱۳۷۰", ""),
-                ("امسال بیشتر از پارسال، // ولی هنوز {کمتر از نصف}", "")),
+                ("امسال بیشتر از پارسال، // هنوز {کمتر از نصفِ} دهه‌ی ۱۳۷۰", "")),
         follow="این را برای یک تهرانی بفرستید",
         gauge="میانه‌ی دهه‌ی ۱۳۷۰", unit="کیلومترمربع", dam="سدِ لار", scale="۱ کیلومتر",
-        store_value=off["value"], store="میلیون مترمکعب", store_name="پنج سدِ تهران", store_date="۱۹ مهر ۱۴۰۵",
-        sources=("منبع: لندست (USGS)، هر پاییز یک گذر؛ وسعت: برآورد از تصویر",
-                 "آمارِ سدها: منابعِ آماریِ آبِ کشور، خبرگزاریِ مهر، ۲۶ مهر ۱۴۰۵"),
+        store_value=off["value"], store="میلیون مترمکعب", store_name="پنج سدِ تهران", store_date="۱ آبان ۱۴۰۵",
+        sources=("منبع: لندست (USGS)، هر سال گذرِ نزدیک به ۹ مهر؛ وسعت: برآورد",
+                 "آمارِ سدها: شرکتِ آبِ منطقه‌ای تهران، خبرگزاریِ مهر، ۴ آبان ۱۴۰۵"),
     )
 
 
@@ -102,7 +102,7 @@ class LarFilm(Slides):
         assert self.area[2026] / t70 * 1.2 < 0.5, "scene 3: 1405 still under half of the 1370s, even +20 %"
         assert min(self.area, key=self.area.get) != 2025, "1404 is not the lowest year"
         off = lar.OFFICIAL["five_dams"]
-        assert lar.mehr(off["date"]) == "19 Mehr 1405" and off["value"] == 383, off
+        assert lar.jalali(off["date"]) == "1 Aban 1405" and off["value"] == 359, off
         self.t70, self.recent = t70, recent
         self.pic_size = picture_size(BOX)
         self.photos = {y: self.photo(y, th) for y in self.years}
