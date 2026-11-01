@@ -38,7 +38,15 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "gorgan"
 YEARS = (1986, 2026)
 NO_PICTURE = {2007: "no pass with half the bay clear (the one pass of 17 Sep 2007 is striped Landsat 7 with 69 % "
-                    "cloud and none of the bay clear)"}
+                    "cloud and none of the bay clear)",
+              # measured, but the picture is not clean enough to show (final check, 1 Nov 2026)
+              1992: "one of its two passes (15 Sep) is half cloud and reads 0.1 km2: the median shows cloud",
+              2002: "one Landsat 7 pass with 21 % of the bay never clear",
+              2003: "one striped Landsat 7 pass (9 % of the bay unseen)",
+              2004: "one striped Landsat 7 pass (8 % of the bay unseen)",
+              2005: "one striped Landsat 7 pass (37 % of the bay unseen)",
+              2006: "one striped Landsat 7 pass (9 % of the bay unseen)",
+              2008: "one striped Landsat 7 pass (7 % of the bay unseen)"}
 BASE, LOW, NOW = 1995, 2025, 2026              # Gregorian years: Persian 1374, 1404, 1405
 RULE_GAP, UNSEEN = 5.0, 10.0                   # per cent: wet-rule gap, and share of the bay never seen clear
 EXPECT = dict(area={1995: 555.0, 2025: 286.0}, tol=5.0,        # km2, the published values (+-5)
@@ -193,6 +201,7 @@ def checks() -> list:
                                                        round(float(lv.loc[LOW, "augsep"]), 3)),
          float(lv.loc[NOW, "augsep"]) >= float(lv.loc[LOW, "augsep"])),
         ("2007 has no picture", 2007 not in years(), 2007 not in years()),
+        ("the unclean pictures are skipped", not set(NO_PICTURE) & set(years()), True),
         (f"fall {NOW} against {BASE}, same calendar month: 2.5 to 2.7 m", tuple(round(v, 3) for v in fall_range()),
          round(fall_range()[0], 1) == 2.5 and round(fall_range()[1], 1) == 2.7),
     ]

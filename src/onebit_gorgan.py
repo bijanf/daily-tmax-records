@@ -6,10 +6,11 @@ Measured data only, from gorgan.py (outputs/gorgan_log.txt) and get_gorgan.py:
   and 30 September over path 163 row 034; 1995 is one pass (8 September). Where no pass sees a pixel clear,
   the bay is hatched (never filled); land and sea outside the bay are filled from the nearest year.
 - Bay area: the wet share of the bay's clear pixels times the bay's area (588 km2), in whole km2 on screen.
-  1992, 1993, 1997, 2002 and 2005 are shown as uncertain (gorgan.uncertain): their pictures stay.
+  1993 and 1997 are shown as uncertain (gorgan.uncertain).
 - Caspian Sea: NASA GWM lake 270 (EGM2008), the Aug-Sep mean of each year against 1995 (1374). The gauge
   starts in 1372, the first Aug-Sep reading; before it the gauge is blank and says "satellite from 1371".
-  2007 has no picture (no pass with half the bay clear) and is skipped.
+  2007 has no picture; 1992, 2002-2006 and 2008 are measured but their pictures (cloud, Landsat 7 stripes)
+  are not shown (gorgan.NO_PICTURE): those years are skipped, never filled.
 
 A slide on the frame of onebit_slides: one window, one bold line per scene. The picture of the bay runs
 across the window's text width, with its heading and year at the top, the area and a 10-km scale at the
@@ -48,7 +49,7 @@ from onebit_slides import COLOURS, LEFT, RIGHT, RULE, WIN, Slides  # noqa: E402
 PACE = dict(bpm=60, bars=(1.5, 1.5, 2))          # 6 + 6 + 8 s = 20 s at 60 BPM
 REWIND = (0.3, 2.3)                               # s: 2025 back to 1986 (Persian 1365), in 2 s
 FORWARD = 2.8                                     # s: 1986 forward again, after a short hold
-FAST, SLOW = 0.13, 0.388                          # s per year: 1987-2009 (the rise and the plateau), 2010-2025
+FAST, SLOW = 0.19, 0.388                          # s per year: 1987-2009 (the rise and the plateau), 2010-2025
 SLOW_FROM = 2010                                  # the decline: Persian 1389 on
 LAST = 3.2                                        # s into the last scene: 2026 (1405), after its line is whole
 FADE = 0.12                                       # s: one year dissolves into the next (at most half a step)
@@ -78,7 +79,7 @@ SCENES = (("خلیجِ گرگان {۴۰ سال} پیش // چه شکلی بود؟
           ("از ۱۳۷۴ تا ۱۴۰۵: // مساحتِ آب {حدودِ نصف} شد", ""),
           # the placeholder "۲٫۵ تا ۳ متر" set the upper bound with June 1995 against January 2026 (2.99 m), which
           # is not like for like. The same calendar month, 2026 against 1995 (ten months): 2.49 to 2.71 m.
-          ("دریای خزر از ۱۳۷۴: // {۲٫۵ تا ۲٫۷ متر} پایین" + ZWNJ + "تر", ""))
+          ("دریای خزر نسبت به ۱۳۷۴: // {۲٫۵ تا ۲٫۷ متر} پایین" + ZWNJ + "تر", ""))
 SOURCES = ("منبع: تصاویرِ لندست (USGS)، اواخرِ تابستان",
            "تراز: آلتیمتریِ ماهواره" + ZWNJ + "ایِ ناسا؛ تغییر نسبت به ۱۳۷۴")
 
@@ -349,6 +350,8 @@ class GorganFilm(Slides):
             c.d.line([(c.X(px), c.Y(py)) for px, py in pts], fill=col["water"], width=max(2, round(5 * c.k)))
         dx, dy = pts[-1]
         r = 10 * c.k
+        if np.isfinite(t) and t >= self.at[NOW]:                        # the last hold breathes: the dot of 1405
+            r *= 1 + 0.35 * np.sin(2 * np.pi * (t - self.at[NOW]) / 1.0) ** 2   # swells once a second
         c.d.ellipse([c.X(dx) - r, c.Y(dy) - r, c.X(dx) + r, c.Y(dy) + r], fill=col["now"], outline=th.field,
                     width=max(1, round(2 * c.k)))
         v = self.level[shown]
