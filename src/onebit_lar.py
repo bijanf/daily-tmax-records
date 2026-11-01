@@ -45,7 +45,7 @@ EXPECT = dict(medians=(7, 3), ratio=(0.38, 0.47))  # rounded 1370s and last-deca
 REWIND = (0.3, 2.3)                               # s: 2025 back to 1987
 FORWARD = 2.8                                     # s: 1987 forward again, after a short hold
 FAST, SLOW, RECENT = 0.19, 0.45, 2017             # s per autumn going forward: quick to 1395, slower through the
-                                                  # last ten autumns (1396 at about 7.4 s, under scene 2's number)
+                                                  # last ten autumns (1396 at about 7.6 s, under scene 2's number)
 LAST = 0.2                                        # s into the last scene: 1405, before its line ("this year")
 FADE = 0.10                                       # s: one autumn dissolves into the next (at most half a step)
 STRETCH, GAMMA = 0.30, 1.3                        # reflectance shown as white; one stretch for every year

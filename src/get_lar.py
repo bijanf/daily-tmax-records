@@ -9,7 +9,7 @@ and NIR < 0.10 on clear pixels. Area = water / clear pixels x the reservoir's pi
 
 A pass is accepted when the whole reservoir lies in the scene and at least 85 % of it is clear of cloud,
 cloud shadow, cirrus and snow (60 % for Landsat 7 after its scan-line corrector failed on 31 May 2003). One
-pass per year: the nearest to 1 October within 25 days, preferring a pass with at least 95 % of the reservoir
+pass per year: the nearest to 1 October within 25 days, preferring a pass with at least 99 % of the reservoir
 clear, then one without stripe gaps over the reservoir (at least 99.5 % of it with data), however near the
 striped pass is. That is what gives the two September passes of 2006 and 2009 (Landsat 7 with stripes over
 the reservoir is taken only when nothing gap-free is clear). 1995-09-15 is left out: 0.26 km2 sixteen days

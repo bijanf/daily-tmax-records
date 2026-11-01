@@ -38,8 +38,8 @@ NO_PASS = {2003: "no scene of the dam between 1 September and 15 November",
            2011: "its only clear pass (3 September) is 28 days before 1 October"}
 # Measured (their areas count in the medians and ranks) but not shown: the picture has holes on the lake.
 NOT_SHOWN = {2005: "its only clean-enough pass (Landsat 7, 18 September) has scan gaps over 1 % of the reservoir",
-             2012: "its only pass (Landsat 7, 21 September) has scan gaps over 3 % of the reservoir",
-             2015: "its best pass (22 September) has cloud over 8 % of the reservoir"}
+             2012: "its only pass (Landsat 7, 21 September) has scan gaps over 2.7 % of the reservoir",
+             2015: "its best pass (22 September) has cloud over 7.9 % of the reservoir"}
 GAPS = {**NO_PASS, **NOT_SHOWN}                           # the years the film skips
 # Storage as reported (dated; the article's date and the date of its data). The five dams: Amir Kabir,
 # Latyan, Taleghan, Mamloo and Lar. Lar's nominal capacity is about 960 million m3 (the same article).
@@ -93,14 +93,29 @@ def water(year: int) -> np.ndarray:
     return np.load(DATA / f"{year}.npz")["water"]
 
 
+SPECK = 60                                                 # px: a gap this small takes the same pass's nearest pixel
+
+
 @functools.cache
 def picture(year: int) -> np.ndarray:
-    """The year's picture: its pass in true colour, with the land that has no clear view taken from the
-    nearest year with one (as the Urmia and Zayandeh pictures are). The reservoir is never filled, and
-    the areas never use these values: they come from the pass alone."""
+    """The year's picture (display only: the areas come from the pass alone). Gaps of a few pixels
+    (cloud-mask specks, the shore's flagged pixels, inside the reservoir too) take the same pass's nearest
+    clear pixel. Larger gaps on land take the nearest year with a clear view, its tones matched band by
+    band to this pass over the land both saw clearly (as the Urmia and Zayandeh pictures fill land); the
+    reservoir never takes another year's data."""
+    from scipy import ndimage
     rgb = colour(year).copy()
     roi = np.load(DATA / f"{year}.npz")["roi"]
+    gap = np.isnan(rgb).any(axis=0)
+    lab, n = ndimage.label(gap)
+    if n:
+        sizes = ndimage.sum(gap, lab, range(1, n + 1))
+        speck = np.isin(lab, 1 + np.flatnonzero(sizes <= SPECK))
+        if speck.any():
+            _, (iy, ix) = ndimage.distance_transform_edt(gap, return_indices=True)
+            rgb[:, speck] = rgb[:, iy[speck], ix[speck]]
     hole = np.isnan(rgb).any(axis=0) & ~roi
+    seen = ~np.isnan(rgb).any(axis=0) & ~roi
     for d in (1, -1, 2, -2, 3, -3, 4, -4):
         other = year + d
         if not hole.any():
@@ -108,8 +123,14 @@ def picture(year: int) -> np.ndarray:
         if not (DATA / f"{other}.npz").exists():
             continue
         src = colour(other)
-        ok = hole & ~np.isnan(src).any(axis=0)
-        rgb[:, ok] = src[:, ok]
+        valid = ~np.isnan(src).any(axis=0)
+        both = seen & valid
+        ok = hole & valid
+        if both.sum() > 1000:                             # match the tones over the land both passes saw
+            gain = np.nanmedian(rgb[:, both], axis=1) / np.maximum(np.nanmedian(src[:, both], axis=1), 1e-4)
+            rgb[:, ok] = src[:, ok] * gain[:, None]
+        else:
+            rgb[:, ok] = src[:, ok]
         hole &= ~ok
     return rgb
 
