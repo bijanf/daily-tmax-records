@@ -147,6 +147,13 @@ def channel() -> np.ndarray:
     return np.load(DATA / "channel.npz")["channel"]
 
 
+@functools.cache
+def water(year: int) -> np.ndarray:
+    """The open water of the year's picture inside the reach (the calendar's rule, MNDWI > 0 and
+    NIR < 0.10, on the window's median MNDWI and NIR): drawn in the calendar's blue on the picture."""
+    return np.load(DATA / f"colour_{year}.npz")["water"].astype(bool) & channel()
+
+
 def variant(df: pd.DataFrame, clear=0.5, full=FULL, passes=1, striped=False) -> dict:
     """The calendar under another rule: {(jy, jm): 'full' | 'low' | 'dry'}."""
     c = df[(df["clear"] >= clear) & (striped | ~df["striped"])]
@@ -229,6 +236,8 @@ def main() -> None:
         print(f"  {a}-{b}: full months per year {decade(a, b):.1f} (of {s:.1f} seen)")
     checks()
     have = years()
+    print("the pictures' open water (blue on the picture), share of the reach: "
+          + " ".join(f"{y - 621}:{100 * water(y).sum() / channel().sum():.0f}%" for y in have))
     striped = [y for y in have if bool(np.load(DATA / f"colour_{y}.npz").get("striped", False))]
     print(f"pictures: {len(have)} years {have[0]}-{have[-1]}; none for "
           f"{sorted(set(range(YEARS[0], YEARS[1] + 1)) - set(have))}; striped Landsat 7 medians {striped}")

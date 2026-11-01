@@ -165,7 +165,8 @@ def calendar(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def picture(year: int) -> None:
-    """The late-summer river reach in true colour: the per-pixel median of the clear passes."""
+    """The late-summer river reach in true colour: the per-pixel median of the clear passes; and its
+    open water, the same rule as the calendar (MNDWI > 0 and NIR < 0.10) on the median MNDWI and NIR."""
     t, shape = grid()
     window = [f for f in search(year, cloud=80)
               if f"{year}-{WINDOW[0]}" <= f["properties"]["datetime"][:10] <= f"{year}-{WINDOW[1]}"]
@@ -173,13 +174,17 @@ def picture(year: int) -> None:
     striped = not feats                                    # 2004-2012: only Landsat 7 after its failure;
     if striped:                                            # its gaps move from pass to pass, so the
         feats = window                                     # median of several fills them
-    stack, items = [], []
+    stack, index, items = [], [], []
     for f in feats:
-        b = read(f, ("red", "green", "blue", "qa_pixel"))
-        clear = (b["red"] > 0) & (b["green"] > 0) & (b["blue"] > 0) & ((b["qa_pixel"] & 0b11110) == 0)
+        b = read(f, ("red", "green", "blue", "nir08", "swir16", "qa_pixel"))
+        clear = ((b["red"] > 0) & (b["green"] > 0) & (b["blue"] > 0) & (b["nir08"] > 0) & (b["swir16"] > 0)
+                 & ((b["qa_pixel"] & 0b11110) == 0))
         if clear.mean() < (0.3 if striped else 0.6):
             continue
         stack.append(np.stack([np.where(clear, sr(b[k]), np.nan) for k in ("red", "green", "blue")]))
+        g, s, n = sr(b["green"]), sr(b["swir16"]), sr(b["nir08"])
+        index.append(np.stack([np.where(clear, (g - s) / np.where(g + s == 0, 1, g + s), np.nan),
+                               np.where(clear, n, np.nan)]))
         items.append(f["id"])
     if not stack:
         print(f"picture {year}: no clear pass", flush=True)
@@ -187,13 +192,17 @@ def picture(year: int) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         med = np.nanmedian(np.stack(stack), axis=0)
+        mndwi, nir = np.nanmedian(np.stack(index), axis=0)
     if striped and len(items) < 3:
         print(f"picture {year}: only {len(items)} striped passes, left out", flush=True)
         return
+    water = (mndwi > 0) & (nir < 0.10)                     # NaN compares False: unseen is not water
     np.savez_compressed(DATA / f"colour_{year}.npz", rgb=med.astype(np.float16), items=np.array(items),
-                        striped=striped)
+                        striped=striped, water=water)
+    ch = channel()
     print(f"picture {year}: {len(items)} {'striped ' if striped else ''}passes, unseen "
-          f"{100 * np.isnan(med[0]).mean():.1f} % (channel {100 * np.isnan(med[0])[channel()].mean():.1f} %)", flush=True)
+          f"{100 * np.isnan(med[0]).mean():.1f} % (channel {100 * np.isnan(med[0])[ch].mean():.1f} %), "
+          f"open water on {100 * water[ch].mean():.0f} % of the reach", flush=True)
 
 
 def one_year(year: int) -> None:

@@ -67,7 +67,7 @@ def words() -> dict:
                         ("دهه‌ی ۱۳۷۰: // {حدودِ ۱۰ ماه} از ۱۲", ""),
                         ("۱۴۰۰ تا ۱۴۰۴: // {حدودِ ۲ ماه} از ۱۲", "")),
                 follow="این را برای یک اصفهانی بفرستید",
-                ends=("فروردین", "اسفند"),
+                ends=("فروردین", "اسفند"), blue="آبِ رود",
                 key=(("full", "پرآب"), ("low", "کم‌آب"), ("dry", "خشک"), ("none", "بدونِ داده")),
                 sources=("منبع: لندست (USGS)؛ ۶ کیلومتر از بستر پیرامونِ سی‌وسه‌پل (JRC)",
                          "پرآب: دستِ‌کم یک بار آب در ۳۰٪ بسترِ دیده‌شده؛ کم‌آب: ۵ تا ۳۰٪"))
@@ -81,7 +81,7 @@ class ZayandehFilm(Slides):
         self.cal = {jy: zayandeh.months(jy) for jy in self.rows}
         self.decades = {k: zayandeh.decade(a, b) for k, (a, b) in EXPECT.items()}
         assert {k: round(v) for k, v in self.decades.items()} == {"1370s": 10, "1400-1404": 2}, self.decades
-        self.photos = {y: self.photo(y, th) for y in self.years}
+        self.photos = {y: self.photo(y, th, colour) for y in self.years}
         self.pic_w = self.photos[self.years[-1]].width
         self.hook_at_once = True
         self.setup(th, "fa", colour, words(), PACE, "Zayandeh.Rud")
@@ -93,12 +93,15 @@ class ZayandehFilm(Slides):
         self.done = 0.6
         assert float(self.starts[1]) + self.later(1) < 8, "scene 2's number must land by 8 s"
 
-    def photo(self, year: int, th) -> Image.Image:
-        """The year's reach, one stretch for all years, squeezed from the lon/lat grid to its true shape."""
+    def photo(self, year: int, th, colour: dict) -> Image.Image:
+        """The year's reach, one stretch for all years, squeezed from the lon/lat grid to its true shape;
+        the open water of the reach in the calendar's blue (the same rule as the calendar)."""
         rgb = zayandeh.colour(year)
         v = np.clip(rgb / STRETCH, 0, 1) ** (1 / GAMMA)
         field = np.array([int(th.field[k:k + 2], 16) / 255 for k in (1, 3, 5)])[:, None, None]
         v = np.where(np.isnan(v), field, v)
+        blue = np.array([int(colour["water"][k:k + 2], 16) / 255 for k in (1, 3, 5)])[:, None, None]
+        v = np.where(zayandeh.water(year)[None], blue, v)
         im = Image.fromarray((np.moveaxis(v, 0, -1) * 255 + 0.5).astype(np.uint8))
         h0, w0 = rgb.shape[1:]
         w = round(PIC_H * w0 * np.cos(np.deg2rad((BOX[1] + BOX[3]) / 2)) / h0)
@@ -196,6 +199,12 @@ class ZayandehFilm(Slides):
             im = self.photos[a] if w == 0 else Image.blend(self.photos[a], self.photos[b], w)
             c.im.paste(self.scaled(im, c), (c.X(x), c.Y(y)))
             self.chip(c, x + self.pic_w - 14, y + 14, fa(persian(b if w >= 0.5 else a)))
+        s_ = self.words["blue"]                           # what the blue on the picture is: a swatch and a word
+        tw = c.width(s_, FA_TEXT, BRIDGE_PX, "rtl")
+        x1 = x + 14 + 26 + 10 + tw + 28
+        c.frame(x + 14, y + PIC_H - 62, x1, y + PIC_H - 14, fill=self.th.field)
+        c.fill(x1 - 14 - 26, y + PIC_H - 51, x1 - 14, y + PIC_H - 25, self.colour["water"])
+        c.text(x1 - 14 - 26 - 10, y + PIC_H - 26, s_, FA_TEXT, BRIDGE_PX, self.th.ink, "rs", "rtl")
         lon, lat, name = BRIDGE                           # Si-o-se Pol, a dot and its name
         bx = x + (lon - BOX[0]) / (BOX[2] - BOX[0]) * self.pic_w
         by = y + (BOX[3] - lat) / (BOX[3] - BOX[1]) * PIC_H
