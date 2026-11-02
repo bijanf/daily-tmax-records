@@ -81,6 +81,10 @@ MODES = {
     # (700 + 386). The pre-modern B is a quarter-flat, 1050.
     "esfahan": ("Esfahan", "C4", (0, 200, 300, 500, 700, 900 + KORON, 1086),
                 "C, D, Eb, F, G, A-koron, B: Avaz-e Esfahan on the Esfahan note line; B a pure third above G"),
+    # Dastgah-e Mahur, commonly described as the dastgah nearest to the Western major scale; its gushes (Delkash,
+    # Shekasteh) bend the sixth and the seventh, which this set does not do.
+    "mahur": ("Mahur", "C4", (0, 200, 400, 500, 700, 900, 1100),
+              "C, D, E, F, G, A, B: the dastgah nearest to the major scale"),
 }
 
 _PITCH_CLASS = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}

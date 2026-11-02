@@ -51,6 +51,7 @@ Themes recolour the whole scene:
     naqsh   Naqsh           in colour: warm paper, navy type, Isfahan turquoise accents (naqsh, Naqsh-e Jahan)
     anar    Anar            in colour: pale rose paper, near-black type, pomegranate accents (anar)
     khazar  Khazar          in colour: shell paper, deep indigo type, Caspian-dusk indigo accents (khazar)
+    abi     Abi             in colour: pale water-blue paper, deep navy type, matte blue accents (abi)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -219,6 +220,11 @@ THEMES = {
                     light="#F3F1EC", track="#1F2238", cold="#4E4A8C", hot="#4E4A8C",
                     levels=("#F3F1EC", "#1F2238", "#1F2238", "#1F2238"), title="#F3F1EC", dots="#E2DFD8",
                     mono=True, mark="#4E4A8C", town="Tehran"),
+    # the accent on the paper: matte blue 5.76:1 (WCAG relative luminance, both colours measured)
+    "abi": Theme("Abi", field="#E9F2F6", ink="#14283F", head="#14283F", paper="#E9F2F6",
+                 light="#E9F2F6", track="#14283F", cold="#2B6289", hot="#2B6289",
+                 levels=("#E9F2F6", "#14283F", "#14283F", "#14283F"), title="#E9F2F6", dots="#D3E3EC",
+                 mono=True, mark="#2B6289", town="Tehran"),
     "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
                      light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
                      levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",
