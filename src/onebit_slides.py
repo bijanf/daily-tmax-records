@@ -45,7 +45,9 @@ COLOURS = {"kashi": dict(land="#E2E5E7", snow="#5B9BC8", ramp=("#E39A63", "#C761
            "anar": dict(land="#E8DCD8", water="#2F6E8E", bar="#D4C6C2", now="#9C2F3B", line="#B7A6A2"),
            "khazar": dict(land="#E2DFD8", water="#3C6E91", bar="#D3D0C8", now="#4E4A8C", line="#A9A6A0"),
            # the accent 5.76:1 on the paper (as onebit.THEMES["abi"]); the lake is drawn in the accent
-           "abi": dict(land="#D3E3EC", water="#2B6289", bar="#C4D8E4", now="#14283F", line="#9DB8C8")}
+           "abi": dict(land="#D3E3EC", water="#2B6289", bar="#C4D8E4", now="#14283F", line="#9DB8C8"),
+           # the accent 5.40:1 on the paper (as onebit.THEMES["firuze"]); the lake is drawn in the accent
+           "firuze": dict(land="#D5E8E4", water="#087069", bar="#C2DFD9", now="#0F2B2D", line="#9CC7BF")}
 
 
 def span(years, lang: str = "fa") -> str:

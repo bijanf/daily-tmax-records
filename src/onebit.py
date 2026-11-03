@@ -52,6 +52,7 @@ Themes recolour the whole scene:
     anar    Anar            in colour: pale rose paper, near-black type, pomegranate accents (anar)
     khazar  Khazar          in colour: shell paper, deep indigo type, Caspian-dusk indigo accents (khazar)
     abi     Abi             in colour: pale water-blue paper, deep navy type, matte blue accents (abi)
+    firuze  Firuze          in colour: pale turquoise-white paper, deep teal-black type, turquoise accents (firuze)
     flieder Flieder         in colour: lavender, deep plum type, violet accents (lilac)
 """
 
@@ -225,6 +226,11 @@ THEMES = {
                  light="#E9F2F6", track="#14283F", cold="#2B6289", hot="#2B6289",
                  levels=("#E9F2F6", "#14283F", "#14283F", "#14283F"), title="#E9F2F6", dots="#D3E3EC",
                  mono=True, mark="#2B6289", town="Tehran"),
+    # the accent on the paper: turquoise-teal 5.40:1 (WCAG relative luminance, both colours measured)
+    "firuze": Theme("Firuze", field="#EDF6F4", ink="#0F2B2D", head="#0F2B2D", paper="#EDF6F4",
+                    light="#EDF6F4", track="#0F2B2D", cold="#087069", hot="#087069",
+                    levels=("#EDF6F4", "#0F2B2D", "#0F2B2D", "#0F2B2D"), title="#EDF6F4", dots="#D5E8E4",
+                    mono=True, mark="#087069", town="Tehran"),
     "flieder": Theme("Flieder", field="#F4F0F8", ink="#2B1D44", head="#2B1D44", paper="#F4F0F8",
                      light="#F4F0F8", track="#2B1D44", cold="#6A45A6", hot="#6A45A6",
                      levels=("#F4F0F8", "#2B1D44", "#2B1D44", "#2B1D44"), title="#F4F0F8", dots="#DDD5E8",
