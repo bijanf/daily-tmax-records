@@ -1,27 +1,26 @@
-"""The score of the five-dam reel (tehran5_kahgel_fa, 24 s): an original track in Chahargah, built from the Persian
+"""The score of the five-dam reel (tehran5_kahgel_fa, 28 s): an original track in Chahargah, built from the Persian
 sound kit (onebit_persian) and timed to the film's own clock. Everything is synthesized here: no samples, no voices.
 
 The data are the music's data. Each dam has one bar of the film (4 s): its 1405 storage as a share of its long-term
-average (film: tehran5.DAMS) is the pitch of its pluck, on a log scale between the lowest share (Mamlu, 30 %) and the
-highest (Karaj, 119 %), quantized to nine steps from C3. A small share plucks low and dry, a large one high and
-ringing. The groove follows the same share: thin for the dams below two thirds of their average, mid for Taleqan
-(68 %), full only at Karaj (119 %). The stacked total of the last bar (65.5 % of the average) lands on an open chord,
-G and B, with no tonic: no full cadence.
+average (film: tehran5.DAMS) is the pitch of its pluck on the bar line, on a log scale between the lowest share (Mamlu,
+30 %) and the highest (Karaj, 119 %), quantized to nine steps from C3. The groove follows the same share: thin for the
+dams below two thirds of their average, mid for Taleqan (68 %), full only at Karaj. The total of the last bar (65.5 %
+of the average) lands on an open chord, G and B, with no tonic: no full cadence.
 
-    0.00-8.00 s      the hook, two bars on santur (C, E, G, E, D), from the first frame
-    0.00-20.00 s     the groove, one bar line every 2 s, its level from the dam on screen
-    each 4 s         a soft tick when a dam's picture appears (1404); at 1.2 s its flip: a tick and the pluck
-    9.60 s           scene 2's number lands: an impact, a daf stroke and a santur chord on C, E and G
-    20.00 s          the stack lands: an impact, a daf stroke and the open chord G and B
-    22.00 s          the last chord, G and B again, no tonic; the master's fade takes the tails to 24 s
+    0.00-4.00 s      bar 1, the hook: two bars on santur (C, E, G, E, D), from the first frame
+    0.20-2.00 s      the five 1405 lakes appear one by one, a soft tick each (0.4 s apart)
+    4 + 4k s         bar 2+k, one dam (Mamlu, Lar, Latyan, Taleqan, Karaj): its bar line, one pluck on its share
+    4-24 s           the groove, one bar line every 2 s, its level from the dam's share (the total for bar 7)
+    24.00 s          bar 7: the total lands on the open chord G and B, with an impact and a daf stroke
+    28.00 s          the master's fade takes the tails to the end
 
-(the times are the film's, read by timing(); the numbers are those of the cut the score was last run on)
+(the times are the film's, read from film_mod; the numbers are those of the cut the score was last run on)
 
-Mix: -14 LUFS integrated, true peak -1.5 dBTP in the WAV. The top octave (above 12 kHz) is taken out before the
-master: the AAC encoding of the drums' transients adds an error above 6 kHz that lifted the decoded peaks by about
-2 dB, and the decoded audio must stay at -1 dBTP or below. After the master the bass below 120 Hz is averaged to
-one channel in the spectrum, so the sub is mono. The plucks have a ping-pong echo; the hook and the pad have a room,
-and are ducked under the kick.
+Mix: -14 LUFS integrated; the WAV's true peak at -6 dBTP, because the kick and the sub overshoot in AAC (at -1.5 and
+-4 dBTP the decoded audio peaked at +1.1 and -0.3 dBTP): the decoded audio must stay at -1 dBTP or below. The top
+octave (above 12 kHz) is taken out before the master, and after the master the bass below 120 Hz is one channel in
+the spectrum, so the sub is mono. The plucks have a ping-pong echo; the hook and the pad have a room, and are ducked
+under the kick.
 
     python -I src/onebit_score_tehran5.py
 
@@ -65,7 +64,7 @@ PLUCK_TONIC = kit.note_hz("C3")
 HOOK_TONIC = kit.note_hz("C4")                 # the hook, the chords and the sting: C4 and up, G3 and below
 KICK, SUB = kit.note_hz("C1"), kit.note_hz("C2")
 TAIL = 3.0                                     # s of room past the end, for the reverb and the echo
-LUFS, TP = -14.0, -6.0                         # the kick and the sub overshoot in AAC (about 4 dB at -4 dBTP): -6 keeps the decoded audio under -1
+LUFS, TP = -14.0, -6.0                         # the kick and the sub overshoot in AAC: -6 keeps the decoded audio under -1
 AIR = 12000.0                                  # Hz: above this the mix has no content (the AAC overshoot)
 BASS = 120.0                                   # Hz: below this the two channels are one
 MAX_OFFSET = 0.030                             # s: a hit may sit at most this far from its event
@@ -73,7 +72,7 @@ BASE = "tehran5_kahgel_fa"
 BUSES = ("intro", "ticks", "pluck", "drum", "kick", "pad", "hook", "sub", "fx")
 SEED = 37
 HOOK = ((0, 0.0, 1.0), (2, 1.0, 1.0), (4, 2.0, 2.0), (2, 4.0, 1.0), (1, 5.0, 3.0))  # (step, beat, length in beats)
-PAD_CHORD = ((0, -1), (4, -1))                 # C3 and G3: the open fifth under the groove until the stack
+PAD_CHORD = ((0, -1), (4, -1))                 # C3 and G3: the open fifth under the groove of the dams
 END_CHORD = ((4, -1), (6, -1))                 # G3 and B3: an open chord with no tonic, no cadence
 MID, FULL = 0.6, 1.0                           # the groove's levels: the share of the average on screen at the bar
                                                # line; full at the average or above, mid from 60 %, thin below
@@ -91,15 +90,12 @@ def block_geo_stack() -> None:
 # ── the film's clock, the dams and the shares on screen ──────────────────────
 
 def timing(film) -> dict:
-    """The film's own times, read every time: the four scene starts, the dams' bars (picture and flip), the stack and
-    the two accents (the scene starts plus film.later: scene 2's number, and scene 3's total at the stack)."""
-    st = [float(s) for s in film.starts]
-    tm = dict(starts=st, end=st[-1], bars=[k * film_mod.SEG for k in range(len(film_mod.ORDER))],
-              flips=[k * film_mod.SEG + film_mod.FLIP for k in range(len(film_mod.ORDER))],
-              stack=float(film_mod.STACK), accent1=st[1] + float(film.later(1)),
-              accent2=st[2] + float(film.later(2)))
-    assert abs(tm["accent2"] - tm["stack"]) < 1e-9, tm            # scene 3's total lands with the stack
-    assert tm["flips"][-1] < tm["stack"] < tm["end"], tm
+    """The film's own times: the hook's five lakes, the dams' bar lines (4 + 4k s), the total's bar (24 s), the end."""
+    tm = dict(lakes=[film_mod.HL_STEP * k for k in range(len(film_mod.ORDER))],
+              bars=[film_mod.DAM_T0 + film_mod.SEG * k for k in range(len(film_mod.ORDER))],
+              stack=float(film_mod.STACK), end=float(film_mod.END))
+    assert tm["bars"][0] == film_mod.SEG and tm["stack"] == tm["bars"][-1] + film_mod.SEG, tm
+    assert [float(s) for s in film.starts] == [4.0 * k for k in range(8)], film.starts
     return tm
 
 
@@ -114,15 +110,19 @@ def total_share() -> float:
 
 
 def shown_share(film, t: float) -> float:
-    """The share of the average on screen at time t (the dam's bar as the film moves it; the stack after 20 s)."""
+    """The share of the average on screen at time t: a bar grows once from 0 to its value over GROW s, then holds;
+    the total's bar at the stack."""
+    if t < film_mod.DAM_T0:
+        return 0.0
     if t >= film_mod.STACK:
-        return total_share()
-    k = min(int(t // film_mod.SEG), len(film_mod.ORDER) - 1)
+        p = min(max((t - film_mod.STACK) / film_mod.GROW, 0.0), 1.0)
+        p = p * p * (3 - 2 * p)
+        return total_share() * p
+    k = min(int((t - film_mod.DAM_T0) // film_mod.SEG), len(film_mod.ORDER) - 1)
     d = {x["key"]: x for x in tehran5.DAMS}[film_mod.ORDER[k]]
-    p = min(max((t - k * film_mod.SEG - film_mod.FLIP) / film_mod.MOVE, 0.0), 1.0)
+    p = min(max((t - film_mod.DAM_T0 - k * film_mod.SEG) / film_mod.GROW, 0.0), 1.0)
     p = p * p * (3 - 2 * p)
-    v = d["last_year"] + (d["value"] - d["last_year"]) * p
-    return v / d["long_term"]
+    return d["value"] * p / d["long_term"]
 
 
 def share_curve(film, end: float) -> np.ndarray:
@@ -202,6 +202,7 @@ def _compose(film, rec: list):
     snare, hat = kit.snare(), kit.hat(False)
     bam = kit.daf("bam", pitch=kit.note_hz("C2"))
     tak = kit.daf("tak", pitch=kit.note_hz("G3"))
+    n_dams = len(film_mod.ORDER)
 
     def event(label, t, items):
         """items: (bus name, sound, gain, pan). Placed at t, and logged for the check."""
@@ -220,30 +221,27 @@ def _compose(film, rec: list):
     def pad_of(pairs, **kw):
         return kit.pad([kit.degree(MODE, s, o, tonic_hz=HOOK_TONIC) for s, o in pairs], **kw)
 
-    n_dams = len(film_mod.ORDER)
-    # the hook: five notes in two bars on santur, C E G E D; the last note rings on
+    # bar 1, the hook: five notes in two bars on santur, C E G E D; the last note rings on
     for step, beat, length in HOOK:
         s = tone(step, 0, dur=length * BEAT + 1.6, vel=0.7, t60=2.2)
         event(f"hook step {step}", beat * BEAT, [("hook", s, 0.75, 0.0)])
 
-    # each dam: its picture appears (a soft tick), and at its flip its pluck, on the pitch of its 1405 share
+    # the five lakes appear one by one: a soft tick each
+    for k, t in enumerate(tm["lakes"]):
+        event(f"lake {k}: appears", t, [("ticks", tick, 0.30, pan_of(k, n_dams))])
+
+    # bars 2-6: one dam each, on its bar line: one pluck on its 1405 share
     for k in range(n_dams):
         pan = pan_of(k, n_dams)
-        t0 = tm["bars"][k]
-        event(f"dam {k}: its picture (1404)", t0, [("ticks", tick, 0.30, pan)])
-        event(f"dam {k}: 1405, its pluck", tm["flips"][k],
-              [("ticks", tick, 0.36, pan), ("pluck", pluck(k), 1.0, pan)])
+        event(f"dam {k}: its bar, its pluck", tm["bars"][k], [("ticks", tick, 0.36, pan), ("pluck", pluck(k), 1.0, pan)])
 
-    # scene 2's number lands: an impact, a daf stroke, a santur chord on C, E and G
-    items = [("fx", kit.impact(2.2, vel=0.8, pitch=kit.note_hz("C1")), 1.0, 0.0), ("fx", bam, 0.7, 0.0)]
-    items += [("fx", tone(s, 0, dur=3.0, vel=0.55, t60=2.6), 0.9, 0.0) for s in (0, 2, 4)]
-    event("scene 2's number lands: impact, daf, chord", tm["accent1"], items)
-
-    # the groove on each bar line, its level from the dam on screen: the dam's share (its 1405 bar) for its bar,
-    # the stack's share for the last bar; the pad is the open fifth, and the open chord after the stack
-    for b0 in np.arange(0.0, end - 1e-9, BAR):
-        k = min(int(b0 // film_mod.SEG), n_dams - 1) if b0 < tm["stack"] else None
-        share = sh[k] if k is not None else total_share()
+    # the groove on each bar line from the first dam on: its level from the dam's share, the total's for bar 7
+    for b0 in np.arange(tm["bars"][0], end - 1e-9, BAR):
+        if b0 < tm["stack"]:
+            k = min(int((b0 - tm["bars"][0]) // film_mod.SEG), n_dams - 1)
+            share = sh[k]
+        else:
+            share = total_share()
         lvl = level_of(share)
         levels.append((float(b0), share, lvl))
         for t in ([b0] if lvl == "thin" else [b0, b0 + 1.25]):
@@ -259,18 +257,15 @@ def _compose(film, rec: list):
                 kit.place(bus["drum"], hat, b0 + 0.5 * j, 0.10, 0.25 if j % 2 else -0.25)
         if lvl in ("mid", "full"):
             kit.place(bus["sub"], kit.sub(SUB, dur=BAR + 0.03, vel=0.8), b0, 0.35)
-            chord = PAD_CHORD if b0 < tm["stack"] else END_CHORD
-            kit.place(bus["pad"], pad_of(chord, dur=BAR + 0.25, vel=0.3, width=0.9, cutoff=1800.0, attack=0.3,
+            kit.place(bus["pad"], pad_of(PAD_CHORD, dur=BAR + 0.25, vel=0.3, width=0.9, cutoff=1800.0, attack=0.3,
                                          release=0.25), b0, 1.0)
 
-    # the stack lands on an open chord, G and B: an impact, a daf stroke, the chord (no tonic, no cadence)
+    # bar 7: the total lands on an open chord, G and B, with an impact and a daf stroke (no tonic, no cadence)
     items = [("fx", kit.impact(2.2, vel=0.7, pitch=kit.note_hz("G1")), 0.9, 0.0), ("fx", tak, 0.6, 0.0)]
     items += [("fx", tone(s, o, dur=3.5, vel=0.5, t60=2.8), 0.9, 0.0) for s, o in END_CHORD]
-    event(f"{tm['stack']:.0f} s: the stack lands on G and B", tm["stack"], items)
-
-    # the last bar line: G and B again, with no tonic; the master's fade takes the tails to the end
-    event(f"{end - BAR:.0f} s: the last chord, G and B", end - BAR,
-          [("fx", tone(s, o, dur=4.0, vel=0.45, t60=3.2), 0.9, 0.0) for s, o in END_CHORD])
+    event(f"{tm['stack']:.0f} s: the total lands on G and B", tm["stack"], items)
+    kit.place(bus["pad"], pad_of(END_CHORD, dur=end - tm["stack"], vel=0.22, width=0.9, cutoff=1500.0, attack=1.2,
+                                 release=1.5), tm["stack"], 1.0)
     return bus, kicks, levels
 
 
@@ -390,8 +385,8 @@ def check_audio(film, wav, out, log: list, mix, curve: np.ndarray, levels: list)
     aac_lufs, aac_tp = kit.integrated_lufs(dec), kit.aac_true_peak(out)
     a_dur = [float(s["duration"]) for s in _probe(out)["streams"] if s["codec_type"] == "audio"][0]
     tm = timing(film)
-    print(f"times from the film: starts {tm['starts']}, dams at {tm['bars']}, flips {tm['flips']}, "
-          f"scene 2's number {tm['accent1']:.2f} s, stack {tm['stack']:.2f} s, end {tm['end']:.2f} s")
+    print(f"times from the film: lakes {[round(v, 2) for v in tm['lakes']]}, dam bars {tm['bars']}, "
+          f"total bar {tm['stack']:.2f} s, end {tm['end']:.2f} s")
     print(f"durations: WAV {len(x) / SR:.3f} s; muxed MP4 audio {a_dur:.3f} s")
 
     print("\n(1) loudness and true peak")
@@ -427,7 +422,9 @@ def check_audio(film, wav, out, log: list, mix, curve: np.ndarray, levels: list)
     print(f"    thin below {MID:.0%}, mid from {MID:.0%}, full from {FULL:.0%} of the average; the stack is "
           f"{total_share():.1%}")
     got = {round(b0): lvl for b0, _s, lvl in levels}
-    assert all(got[b] == "thin" for b in (0, 4, 8)) and got[12] == "mid" and got[16] == "full" and got[20] == "mid"
+    # Mamlu 4-8 s, Lar 8-12, Latyan 12-16 thin; Taleqan 16-20 mid; Karaj 20-24 full; the total's bar 24-28 mid
+    assert all(got[b] == "thin" for b in (4, 6, 8, 10, 12, 14)) and got[16] == "mid" and got[18] == "mid"
+    assert got[20] == "full" and got[22] == "full" and got[24] == "mid" and got[26] == "mid", got
 
     print("\n(5) RMS per 1 s of the WAV (dBFS) against the share on screen (mean over the second)")
     rms = [_db(x[k * SR:(k + 1) * SR]) for k in range(int(len(x) / SR))]
