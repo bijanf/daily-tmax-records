@@ -1,28 +1,23 @@
-"""WINTER NO2 OVER TEHRAN, FROM SPACE: the tropospheric NO2 column that Sentinel-5P sees over Tehran and the
-Alborz foothills, in the winter of 2025/26 against its summer. A full-screen film in the style of mapped.earth:
-a real-relief base filling the frame, the data glowing, one big counter, a month dial, a two-line title.
+"""WINTER NO2 OVER IRAN, FROM SPACE: the tropospheric NO2 column that Sentinel-5P sees over the whole country, the
+winter of 1404 (Azar to Bahman) against the summer (Tir to Shahrivar 1405), the twelve Jalali months in between.
 
-Measured data only, from air.py (the granules of get_air.py): valid pixels with qa >= 0.75, the Tehran-Karaj box
-(51.0-51.8 E, 35.4-36.0 N). The counter is a month's pixel mean over the summer reference (JJA 2026, x1.0); the
-winter state is DJF 2025/26 pooled (x3 as shown: 3.3 in the box). The glow is each month's mean field on the frame.
-The dial runs the twelve months November 2025 to October 2026, the latest complete year, at 1.3 months a second.
+A static camera on Iran: a darkened hillshaded relief (Copernicus GLO-30 tiles on a 0.04-degree grid, coarse by
+design), the border as a thin line, the NO2 field as the glow in one colour scale for every month.
 
-    0.0 s         the end state: the winter field glowing, the counter x3 and the whole two-line title
-    1.0-1.5 s     the reset: the summer reference (x1.0); the glow fades from the winter to the summer field
-    1.5-9.96 s    the dial from November 2025 to October 2026 at 1.3 months a second; the counter is that
-                  month's value over the summer reference
-    9.96-10.86 s  October turns back to the winter state (x3)
-    0.3-0.7 s     Tehran, Karaj and the Alborz pop in, once, in the first second of the dial
-    11.0 s        the reason, in Persian (longer NO2 life in winter; cold air held under the Alborz)
-    16.0 s        what this is not: NO2 is not the fine dust (PM2.5) behind the school closures
-    24.0 s        the end, held on the winter state
+Measured data only, from air.py (the granules of get_air.py, the full Iran box, valid pixels qa >= 0.75):
+  the counter is the Tehran-Karaj box's month mean over the summer reference (Tir to Shahrivar 1405, pooled);
+  the held counter is the same box's Azar-Bahman 1404 mean over that reference (asserted: 3.36, shown as x3).
 
-Three bars of 4 s at 60 BPM (the score: src/onebit_score_air.py).
+    0.0 s         the Azar-Bahman 1404 field over Iran, the hook and the held counter
+    1.0-9.46 s    the Jalali months Aban 1404 to Mehr 1405 at 1.3 months a second; the counter is that month
+    9.46-10.06 s  the turn back to the Azar-Bahman field
+    10.6-19.06 s  the months again, from Aban 1404 to Mehr 1405
+    19.06-19.66 s the turn back; from about 20 s the Azar-Bahman field is held to the end, the counter held
 
-    outputs/onebit/social/air_tehran_fa_reel.mp4, _cover.png, _t*.png
+Colour: one scale for all months (VMIN..VMAX, GAMMA), the same function for the glow and the legend.
 
-    python -I src/onebit_air.py
-    python -I src/onebit_air.py --stills
+    python -I src/onebit_air.py              # the film (the video is rendered by the driver)
+    python -I src/onebit_air.py --stills     # the cover and the stills, no video
 """
 
 from __future__ import annotations
@@ -31,10 +26,9 @@ import argparse
 import math
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -44,89 +38,65 @@ from onebit import FA_BOLD, FA_TEXT, OUT, SIZES, SOCIAL_CRF, fa  # noqa: E402
 
 W, H = air.W, air.H
 DURATION = 24.0                                  # s
-PACE = dict(bpm=60, bars=(1.5, 2.0, 2.5))        # three parts of the reel in bars (4 s a bar at 60 BPM)
-RESET = 1.0                                      # s: the summer reference comes in
-DIAL_START = 1.5                                 # s: November 2025
 RATE = 1.3                                       # months a second
-TURN = 0.9                                       # s: October turns back to the winter state
-POP = (0.30, 0.50, 0.70)                         # s: Tehran, Karaj and the Alborz pop in
-WHY_AT, PM_AT = 11.0, 16.0                       # s: the two lines of the hold
-VMIN, VMAX, GAMMA = 15.0, 60.0, 1.2              # 1e15 molec/cm2: the glow's range (as the fact check)
+PASS_LEN = 11 / RATE                             # s: Aban 1404 to Mehr 1405 (twelve months, eleven steps)
+DIAL_STARTS = (1.0, 10.6)                        # s: the months play twice, from Aban 1404 each time
+TURN = 0.6                                       # s: back to the Azar-Bahman field after each pass
+FADE = 0.4                                       # s: the glow comes in from the Azar-Bahman field at each start
+TURNS = tuple(s + PASS_LEN for s in DIAL_STARTS) # s: the start of each turn (Mehr 1405 each time)
+DIAL_END = TURNS[-1]                             # s: the end of the second pass (Mehr 1405)
+HOLD = DIAL_END + TURN                           # s: the Azar-Bahman field is held from here to the end (about 20 s)
+VMIN, VMAX, GAMMA = 2.0, 60.0, 0.5               # 1e15 molec/cm2: one scale for the map, the glow and the bar: sqrt((v-2)/58)
 ORANGE = np.array([255, 120, 30], np.float32)
 HOT = np.array([255, 214, 140], np.float32)
 PAPER, SHADOW, AMBER = (250, 246, 238, 255), (8, 10, 14, 255), (255, 150, 60, 255)
 MONTHS = air.DIAL_JK                             # Aban 1404 to Mehr 1405 (Jalali keys "YYYY-MM")
-TERRAIN = air.DATA / "terrain.npz"
+BLOOM_PX = 3.0                                   # px: the glow's halo at this scale
+# the country view: Iran's grid on the frame, Iran's width about 980 px, Tehran in the upper middle
+VIEW = dict(lon=53.65, lat=32.5, yA=700.0, km=1.945)
+CITIES = (("تهران", 51.39, 35.69), ("مشهد", 59.61, 36.30), ("اصفهان", 51.67, 32.65), ("تبریز", 46.29, 38.08),
+          ("شیراز", 52.53, 29.59), ("اهواز", 48.67, 31.32))
+TITLE = ("زمستان، ایران از فضا:", "دی‌اکسیدِ نیتروژن کجا جمع می‌شود؟")
 SOURCES = "منبع: Sentinel-5P (ESA/Copernicus)؛ ارتفاع: Copernicus DEM"
-UNIT = "ستونِ دی‌اکسیدِ نیتروژن، ۱۰¹⁵ مولکول بر سانتی‌مترِ مربع"
-TITLE = ("دی‌اکسیدِ نیتروژنِ تهران از فضا", "آذر تا بهمن: حدودِ سه برابرِ تابستان")
-SUB = "آذر تا بهمن به تیر تا شهریور"
-NUMWORD = {2: "دو", 3: "سه", 4: "چهار"}
-STORY = {WHY_AT: ("در زمستان این گاز دیرتر از میان می‌رود", "و هوای سردِ سنگین زیرِ لایه‌ای گرم‌تر می‌ماند"),
-         PM_AT: ("این گازِ دی‌اکسیدِ نیتروژن است، نه گردِ ریزِ PM2.5",)}
-STORY_UNTIL = {WHY_AT: PM_AT - 0.5, PM_AT: DURATION}      # one pair of lines at a time: the first gives way
-SAFE = (80, 930)                                         # px: x of the dial, legend and text below y 1000
-PLACES = {"تهران": (51.39, 35.69), "کرج": (50.97, 35.84), "البرز": (50.85, 36.10)}
-MAX_LINE = 960                                   # px: the widest line on the frame (a 60 px gutter a side)
+HOLD_WORD = "آذر تا بهمن ۱۴۰۴"
 # the layout, in px (baselines unless stated)
-Y_TITLE = (262, 336)
-Y_COUNTER, Y_SUB = 640, 760
-Y_SCALE = 1130
-Y_MONTH, Y_STRIP, Y_NUM = 1176, 1202, 1250
-Y_UNIT, Y_BAR, Y_TICK = 1300, 1314, 1376
-Y_STORY = 1398                                            # top of the story pill (two lines, 40 px)
-Y_SOURCES = 1560
+Y_TITLE = (150, 225)
+Y_COUNTER, Y_MONTH = 1290, 1378
+COUNTER_PX = 180                                 # px: «تهران ×۳» on one line, inside x 150-930 (the buttons' column)
+Y_BAR, Y_BAR_NUM, Y_SOURCES = 1424, 1476, 1565
+BAR_X = (150, 880)                               # px: the colour bar's ends (the numbers stay inside x 930)
+FA_MONTH_NAMES = air.JALALI_NAMES
+GRID_LON0, GRID_LAT0, GRID_STEP = air.IRAN_GRID["lon0"], air.IRAN_GRID["lat0"], air.IRAN_GRID["step"]
 
 
-def font(path, px: int) -> ImageFont.FreeTypeFont:
+def font(path, px: int):
+    from PIL import ImageFont
     return ImageFont.truetype(str(path), px)
 
 
 def pct(v: float) -> str:
-    return "×" + fa(f"{v:.1f}")                  # one decimal on the dial: ×۱٫۰
+    return "×" + fa(f"{v:.1f}")                  # one decimal: ×۴٫۲
 
 
-def glow_of(f: np.ndarray) -> np.ndarray:
-    """A month's field as glow, 0-1 (no data: 0). The fact check's glow: a stretch from 15 to 60, a bloom."""
-    from scipy import ndimage
-    i = np.where(np.isfinite(f), np.clip((np.nan_to_num(f) - VMIN) / (VMAX - VMIN), 0, 1) ** GAMMA, 0.0)
-    bloom = ndimage.gaussian_filter(i, 10) * 0.9
-    return np.clip(0.85 * i + 0.6 * bloom, 0, 1).astype(np.float32)
+def intensity(raw):
+    """The one colour scale: NO2 (1e15 molec/cm2) to 0-1. The glow and the legend both use this."""
+    return np.clip((np.asarray(raw, float) - VMIN) / (VMAX - VMIN), 0, 1) ** GAMMA
 
 
-def line_layer(s: str, path, px: int, fill=PAPER, stroke: int = 4) -> Image.Image:
-    """One Persian line on a transparent layer (RTL, raqm), for pops and fades."""
+def smoothstep(x: float) -> float:
+    x = min(max(x, 0.0), 1.0)
+    return x * x * (3 - 2 * x)
+
+
+def text(im, x, y, s, path, px, anchor="ms", fill=PAPER, stroke=4):
     f = font(path, px)
-    probe = ImageDraw.Draw(Image.new("L", (1, 1)))
-    bb = probe.textbbox((0, 0), s, font=f, anchor="ls", direction="rtl", language="fa", stroke_width=stroke)
-    im = Image.new("RGBA", (bb[2] - bb[0] + 4, bb[3] - bb[1] + 4), (0, 0, 0, 0))
-    ImageDraw.Draw(im).text((2 - bb[0], 2 - bb[1]), s, font=f, fill=fill, anchor="ls", direction="rtl",
-                            language="fa", stroke_width=stroke, stroke_fill=SHADOW)
-    return im
-
-
-def text(im: Image.Image, x: float, y: float, s: str, path, px: int, anchor: str = "rs", direction="rtl",
-         fill=PAPER, stroke: int = 4) -> float:
-    """Draws s on im at (x, y) with an anchor (rs: right edge at x, baseline y; ms: centred); returns its width."""
-    f = font(path, px)
-    d = ImageDraw.Draw(im)
-    d.text((x, y), s, font=f, fill=fill, anchor=anchor, direction=direction, language="fa",
-           stroke_width=stroke, stroke_fill=SHADOW)
-    return d.textlength(s, font=f, direction=direction, language="fa")
-
-
-def pill_w(s: str, path, px: int) -> float:
-    return font(path, px).getlength(s, direction="rtl", language="fa")
-
-
-def box(im: Image.Image, x0, y0, x1, y1, alpha: int = 200):
-    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
-    ImageDraw.Draw(layer).rounded_rectangle([x0, y0, x1, y1], radius=18, fill=(8, 10, 14, alpha))
-    im.alpha_composite(layer)
+    ImageDraw.Draw(im).text((x, y), s, font=f, fill=fill, anchor=anchor, direction="rtl", language="fa",
+                            stroke_width=stroke, stroke_fill=SHADOW)
+    return f.getlength(s, direction="rtl", language="fa")
 
 
 class AirFilm:
-    """The film: draw(1, t) is the frame at t seconds (t = inf: the end state, the cover)."""
+    """The film: draw(1, t) is the frame at t seconds (t = inf: the end state)."""
 
     def __init__(self):
         m = air.monthly()
@@ -134,24 +104,17 @@ class AirFilm:
         self.ratio = {jk: float(r) for jk, r in zip(m.jk, m.ratio)}
         self.winter = float(m.attrs["winter"])
         self.ref = float(m.attrs["ref"])
+        self.fields, self.cover = air.iran_glow()
+        rel = np.load(air.DATA / "iran_relief.npz")
+        self.rel = {k: rel[k] for k in ("hs", "elev", "water", "inside", "border")}
         self.checks()
-        fields = air.fields()
-        self.glow = {k: glow_of(v) for k, v in fields.items() if k in MONTHS or k in ("winter", "summer")}
-        ter = np.load(TERRAIN)
-        self.base = self.make_base(ter["hs"], ter["elev"])
-        self.L = SimpleNamespace(end=DURATION)
-        self.starts = np.array([0.0, 4.0 * PACE["bars"][0], 4.0 * sum(PACE["bars"][:2])])
-        self.bpm = PACE["bpm"]
-        self.dial_end = DIAL_START + (len(MONTHS) - 1) / RATE
-        assert self.dial_end < 10.0 and self.dial_end + TURN < WHY_AT, (self.dial_end, WHY_AT)
-        assert PM_AT >= WHY_AT + 3.0 and PM_AT + 3.0 <= DURATION, (WHY_AT, PM_AT)
-        self.pins = {k: self.place(lon, lat) for k, (lon, lat) in PLACES.items()}
-        self.labels = {k: line_layer(k, FA_BOLD, 42) for k in PLACES}
-        self.story = {at: [line_layer(x, FA_TEXT, 40) for x in pair] for at, pair in STORY.items()}
-        for at, lays in self.story.items():
-            for lay, x in zip(lays, STORY[at]):
-                assert lay.width - 4 <= SAFE[1] - SAFE[0] - 40, (x, lay.width)
-        assert pill_w(SUB, FA_TEXT, 48) <= SAFE[1] - SAFE[0] and pill_w(UNIT, FA_TEXT, 38) <= SAFE[1] - SAFE[0]
+        self.L = type("L", (), {"end": DURATION})()
+        self.dial_end = DIAL_END
+        self.yy, self.xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        self.base = self.make_base()
+        self.glow = {k: self.make_glow(k) for k in MONTHS + ["winter", "summer"]}
+        self.static = self.make_static()
+        self.assert_scale()
 
     # ── checks: every number on the screen ──
 
@@ -160,192 +123,167 @@ class AirFilm:
         assert list(m.jk) == MONTHS, list(m.jk)
         assert (m.n_pix > 1000).all() and (m.n_days >= 5).all(), m[["jk", "n_pix", "n_days"]]
         summer = [r[jk] for jk in air.REF_JK]
-        assert all(0.7 < v < 1.3 for v in summer), summer              # Tir to Shahrivar: about x1.0
-        assert 2.5 <= self.winter <= 4.5, self.winter
-        self.held = int(round(self.winter))                            # the held counter: the box ratio, rounded
-        assert self.held == 3 and NUMWORD[self.held] in TITLE[1], (self.held, TITLE[1])
-        assert max(r, key=r.get) == "1404-10", r                       # the peak month is Dey (x4.2)
-        assert r["1404-12"] < r["1404-09"] and r["1404-11"] < r["1404-09"], r   # Bahman and Esfand are below Azar
+        assert all(0.7 < v < 1.3 for v in summer), summer
+        assert 3.20 <= self.winter <= 3.26, self.winter          # the Tehran-Karaj box, OFFL+NRTI: 3.23
+        self.held = int(round(self.winter))
+        assert self.held == 3, self.winter                       # the held counter: x3
+        assert max(r, key=r.get) == "1404-09", r                 # Azar is the peak month (OFFL+NRTI: 3.63, Dey 3.59)
+        assert r["1404-12"] < r["1404-09"] and r["1404-11"] < r["1404-09"], r
+        # the share of Iran's land cells with no data, per month (after the NRTI fill); fails above 10 %
+        land = self.rel["inside"] > 0.5
+        self.empty_share = {}
+        for k in air.DIAL_JK + ["winter", "summer"]:
+            self.empty_share[k] = float((land & ~self.cover[k]).sum() / land.sum())
+        print("share of Iran's land cells with no data, per month:")
+        for k, v in self.empty_share.items():
+            print(f"    {k}  {100 * v:5.1f} %")
+        worst = max(self.empty_share, key=self.empty_share.get)
+        assert self.empty_share[worst] <= 0.10, (worst, self.empty_share[worst])
+
+    def assert_scale(self):
+        """The country view and the close-up use one colour scale: the legend's ends are the scale's ends."""
+        assert intensity(np.array([VMIN]))[0] == 0.0 and intensity(np.array([VMAX]))[0] == 1.0
+        assert (VMIN, VMAX, GAMMA) == (2.0, 60.0, 0.5)
+        # the legend's colour at any value is the glow's: one function, one scale
+        for v in (2.0, 15.0, 30.0, 60.0):
+            c = float(intensity(v))
+            assert abs(c - np.sqrt((v - 2.0) / 58.0)) < 1e-9, (v, c)
+
+    # ── geometry ──
+
+    def lonlat(self):
+        v = VIEW
+        lon = v["lon"] + (self.xx + 0.5 - W / 2) * v["km"] / (111.32 * math.cos(math.radians(v["lat"])))
+        lat = v["lat"] - (self.yy + 0.5 - v["yA"]) * v["km"] / 110.574
+        return lon, lat
+
+    def place(self, lon: float, lat: float) -> tuple:
+        v = VIEW
+        x = W / 2 + (lon - v["lon"]) * v["km"] ** -1 * 111.32 * math.cos(math.radians(v["lat"])) - 0.5
+        y = v["yA"] - (lat - v["lat"]) * 110.574 / v["km"] - 0.5
+        return x, y
 
     @staticmethod
-    def place(lon: float, lat: float) -> tuple:
-        x, y = air.px_of(lon, lat)
-        return int(round(x)), int(round(y))
+    def sample(arr, lon, lat):
+        from scipy import ndimage
+        fi = (lon - GRID_LON0) / GRID_STEP - 0.5
+        fj = (GRID_LAT0 - lat) / GRID_STEP - 0.5
+        return ndimage.map_coordinates(arr, [fj, fi], order=1, mode="nearest")
 
-    @staticmethod
-    def make_base(hs: np.ndarray, elev: np.ndarray) -> np.ndarray:
-        """The real relief, darkened: a blue-grey hillshade (sun from the north-west) with a faint altitude tint."""
-        base = np.zeros((H, W, 3), np.float32)
+    # ── layers ──
+
+    def make_base(self) -> np.ndarray:
+        """The relief of Iran, dimmed outside the country, the sea dark, the border as a thin line."""
+        lon, lat = self.lonlat()
+        from scipy import ndimage
+        hs = self.sample(self.rel["hs"], lon, lat)
+        el = self.sample(self.rel["elev"], lon, lat)
+        ins = self.sample(self.rel["inside"], lon, lat)
+        hs = hs * ins + ndimage.gaussian_filter(hs, 4) * (1 - ins)   # soft outside the country: no tile seams
+        wat = self.sample(self.rel["water"], lon, lat)
+        brd = np.clip(2.0 * self.sample(self.rel["border"], lon, lat), 0, 1)
+        base = np.empty((H, W, 3), np.float32)
         base[:] = np.array([58, 70, 84], np.float32) * (0.16 + 0.95 * hs[..., None])
-        base += (np.clip(elev, 0, 5000)[..., None] / 5000.0) * np.array([10, 9, 6], np.float32)
+        base += (np.clip(el, 0, 3000)[..., None] / 3000.0) * np.array([10, 9, 6], np.float32)
+        base *= (0.30 + 0.70 * ins)[..., None]
+        base = base * (1 - wat[..., None]) + np.array([12, 18, 26], np.float32) * wat[..., None]
+        base = base * (1 - 0.8 * brd[..., None]) + np.array([205, 212, 220], np.float32) * (0.8 * brd[..., None])
         return base
+
+    def make_glow(self, key: str) -> np.ndarray:
+        """A field as the glow, 0-1: the one colour scale, a soft halo of BLOOM_PX."""
+        from scipy import ndimage
+        lon, lat = self.lonlat()
+        raw = self.sample(self.fields[key], lon, lat)
+        i = intensity(raw)
+        bloom = ndimage.gaussian_filter(i, BLOOM_PX) * 0.9
+        return np.clip(0.85 * i + 0.6 * bloom, 0, 1).astype(np.float32)
+
+    def make_static(self) -> Image.Image:
+        """The title, the six city dots and labels, the colour bar with its two ends, the sources line."""
+        im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        for s, y in zip(TITLE, Y_TITLE):
+            w = text(im, 540, y, s, FA_BOLD, 58, stroke=5)
+            assert w <= 960, (s, w)
+        for name, lon, lat in CITIES:
+            x, y = self.place(lon, lat)
+            x, y = int(round(x)), int(round(y))
+            d = ImageDraw.Draw(im)
+            d.ellipse([x - 9, y - 9, x + 9, y + 9], fill=PAPER, outline=SHADOW, width=2)
+            f = font(FA_BOLD, 34)
+            tw = f.getlength(name, direction="rtl", language="fa")
+            ox = x + 18 if x < 700 else x - 18 - tw
+            d.rounded_rectangle([ox - 10, y - 26, ox + tw + 10, y + 12], radius=12, fill=(8, 10, 14, 200))
+            text(im, ox, y + 2, name, FA_BOLD, 34, anchor="ls", stroke=3)
+        d = ImageDraw.Draw(im)
+        x0, x1 = BAR_X
+        for xx in range(x0, x1):
+            c = float(intensity(VMIN + (xx - x0) / (x1 - x0) * (VMAX - VMIN)))
+            col = tuple(int(q) for q in ORANGE * (1 - c) + HOT * c) + (255,)
+            d.line([(xx, Y_BAR), (xx, Y_BAR + 16)], fill=col)
+        d.rectangle([x0, Y_BAR, x1, Y_BAR + 16], outline=PAPER, width=2)
+        text(im, x0, Y_BAR_NUM, fa(int(VMIN)), FA_TEXT, 32, anchor="ms", stroke=3)
+        text(im, x1, Y_BAR_NUM, fa(int(VMAX)), FA_TEXT, 32, anchor="ms", stroke=3)
+        text(im, 540, Y_SOURCES, SOURCES, FA_TEXT, 28, stroke=3)
+        return im
 
     # ── time ──
 
     def state(self, t: float):
-        """(glow A, glow B, blend, counter value, dial label, dial position, phase) at t seconds."""
-        win = self.glow["winter"]
-        if not np.isfinite(t) or t < RESET or t >= self.dial_end + TURN:
-            return win, win, 0.0, self.winter, "winter", 1.0, "winter"
-        if t < DIAL_START:                          # the reset: the reference is the summer itself, x1.0
-            w = min((t - RESET) / 0.5, 1.0)
-            return win, self.glow["summer"], w, 1.0, "ref", 0.0, "reset"
-        if t < self.dial_end:
-            p = min((t - DIAL_START) * RATE, len(MONTHS) - 1)
-            a = int(math.floor(p))
-            b = min(a + 1, len(MONTHS) - 1)
-            k = int(round(p))
-            return self.glow[MONTHS[a]], self.glow[MONTHS[b]], p - a, self.ratio[MONTHS[k]], MONTHS[k], p, "dial"
-        w = min((t - self.dial_end) / TURN, 1.0)    # the turn: October to the winter
-        last = MONTHS[-1]
-        return self.glow[last], win, w, self.ratio[last] + (self.winter - self.ratio[last]) * w, "turn", \
-            len(MONTHS) - 1, "turn"
+        """(glow A, glow B, blend, counter value, month word, phase) at t seconds."""
+        win = "winter"
+        if not np.isfinite(t) or t < DIAL_STARTS[0] or t >= HOLD:
+            return win, win, 0.0, self.winter, "hold", "hold"
+        for s, e in zip(DIAL_STARTS, TURNS):
+            if t < s:                                  # between the passes: the Azar-Bahman field
+                return win, win, 0.0, self.winter, "hold", "hold"
+            if t < e:                                  # a pass: the months, a fade in from the winter at its start
+                p = min((t - s) * RATE, len(MONTHS) - 1)
+                a = int(math.floor(p))
+                b = min(a + 1, len(MONTHS) - 1)
+                k = int(round(p))
+                if t - s < FADE:
+                    return win, MONTHS[0], smoothstep((t - s) / FADE), self.ratio[MONTHS[0]], MONTHS[0], "dial"
+                return MONTHS[a], MONTHS[b], p - a, self.ratio[MONTHS[k]], MONTHS[k], "dial"
+            if t < e + TURN:                           # the turn back to the Azar-Bahman field
+                w = (t - e) / TURN
+                last = MONTHS[-1]
+                value = self.ratio[last] + (self.winter - self.ratio[last]) * smoothstep(w)
+                return last, win, smoothstep(w), value, last, "turn"
+        return win, win, 0.0, self.winter, "hold", "hold"
 
-    # ── drawing ──
+    def schedule(self) -> dict:
+        """The film's clock, for the score: each month's tick (s, Jalali key), the turns (s), the hold (s)."""
+        ticks = [(s + k / RATE, ym) for s in DIAL_STARTS for k, ym in enumerate(MONTHS)]
+        return dict(ticks=ticks, turns=list(TURNS), hold=HOLD, end=DURATION)
 
-    def compose(self, gA, gB, w) -> Image.Image:
-        g = gA if w <= 0 else (1 - w) * gA + w * gB
-        col = ORANGE[None, None] + (HOT - ORANGE)[None, None] * g[..., None]
-        img = self.base + g[..., None] * col
-        return Image.fromarray(np.clip(img + 0.5, 0, 255).astype(np.uint8)).convert("RGBA")
+    @staticmethod
+    def month_word(key: str) -> str:
+        y, m = int(key[:4]), int(key[5:])
+        return f"{air.JALALI_NAMES[m - 1]} {fa(y)}"
+
+    # ── frame ──
 
     def draw_frame(self, t: float) -> Image.Image:
-        gA, gB, w, value, label, p, phase = self.state(t)
-        im = self.compose(gA, gB, w)
-        self.title(im)
-        self.counter(im, value, phase)
-        self.scale_bar(im)
-        self.labels_on(im, t)
-        self.dial_strip(im, label, p, phase)
-        self.legend(im)
-        self.hold_lines(im, t)
-        self.sources(im)
+        ga, gb, w, value, key, phase = self.state(t)
+        g = (1 - w) * self.glow[ga] + w * self.glow[gb]
+        img = self.base + g[..., None] * (ORANGE[None, None] + (HOT - ORANGE)[None, None] * g[..., None])
+        im = Image.fromarray(np.clip(img + 0.5, 0, 255).astype(np.uint8)).convert("RGBA")
+        im.alpha_composite(self.static)
+        if phase == "hold":                          # the held Azar-Bahman field: x3 (the box ratio, rounded)
+            s, word = "×" + fa(f"{self.held}"), HOLD_WORD
+        elif phase == "dial":                        # a month: one decimal, its month word and year
+            s, word = pct(value), self.month_word(key)
+        else:                                        # the turn: Mehr to Azar-Bahman
+            s = pct(value) if value < 2.5 else "×" + fa(f"{value:.0f}")
+            word = self.month_word(key) if w < 0.5 else HOLD_WORD
+        text(im, 540, Y_COUNTER, "تهران " + s, FA_BOLD, COUNTER_PX, anchor="ms", fill=AMBER, stroke=6)
+        text(im, 540, Y_MONTH, word, FA_BOLD, 60, anchor="ms")
         return im.convert("RGB")
-
-    def title(self, im: Image.Image):
-        for s, y in zip(TITLE, Y_TITLE):
-            w = text(im, 540, y, s, FA_BOLD, 58, anchor="ms", stroke=5)
-            assert w <= MAX_LINE, (s, w)
-
-    def counter(self, im: Image.Image, value: float, phase: str):
-        s = "×" + fa(f"{value:.0f}") if phase in ("winter", "turn") and value >= 2.5 else pct(value)
-        text(im, 540, Y_COUNTER, s, FA_BOLD, 270, anchor="ms", direction="ltr", fill=AMBER[:3] + (255,), stroke=6)
-        w = pill_w(SUB, FA_TEXT, 48)
-        box(im, 540 - w / 2 - 22, Y_SUB - 50, 540 + w / 2 + 22, Y_SUB + 14)
-        text(im, 540, Y_SUB, SUB, FA_TEXT, 48, anchor="ms", stroke=0)
-
-    def scale_bar(self, im: Image.Image):
-        km = 20.0 / air.KMPP                                   # px: 20 km at the frame's scale
-        x0 = 80
-        d = ImageDraw.Draw(im)
-        d.rectangle([x0, Y_SCALE, x0 + km, Y_SCALE + 10], fill=PAPER)
-        text(im, x0 + km / 2, Y_SCALE - 14, "۲۰ کیلومتر", FA_TEXT, 36, anchor="ms", stroke=3)
-
-    def labels_on(self, im: Image.Image, t: float):
-        for k, (name, (x, y)) in enumerate(self.pins.items()):
-            p = (t - POP[k]) / 0.30 if np.isfinite(t) else 1.0
-            if p <= 0:
-                continue
-            s = min(p, 1.0)
-            sc = 0.6 + 0.4 * s + 0.08 * math.sin(s * math.pi) * (1 - s)     # a pop: overshoot, then settle
-            lab = self.labels[name]
-            ww, hh = max(1, int(lab.width * sc)), max(1, int(lab.height * sc))
-            pad = 16
-            ox, oy = x - 20 - ww - pad, y - hh // 2 - pad
-            layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
-            ImageDraw.Draw(layer).rounded_rectangle([ox, oy, ox + ww + 2 * pad, oy + hh + 2 * pad], radius=18,
-                                                    fill=(8, 10, 14, 200))
-            layer.alpha_composite(lab.resize((ww, hh), Image.LANCZOS), (int(ox + pad), int(oy + pad)))
-            im.alpha_composite(layer)
-            r = 9
-            ImageDraw.Draw(im).ellipse([x - r, y - r, x + r, y + r], fill=PAPER, outline=SHADOW, width=2)
-
-    def dial_strip(self, im: Image.Image, label: str, p: float, phase: str):
-        x0, x1 = SAFE[0] + 30, SAFE[1] - 30
-        if label in MONTHS:                                  # the year once: at Aban and at Farvardin
-            name = air.JALALI_NAMES[int(label[5:]) - 1]
-            if label in ("1404-08", "1405-01"):
-                name += " " + fa(label[:4])
-        elif label == "ref":
-            name = "مرجع: تیر تا شهریور ۱۴۰۵"
-        else:
-            name = "آذر تا بهمن ۱۴۰۴"
-        text(im, 540, Y_MONTH, name, FA_BOLD, 50, anchor="ms", stroke=4)
-        d = ImageDraw.Draw(im)
-        d.line([(x0, Y_STRIP), (x1, Y_STRIP)], fill=PAPER, width=3)
-        step = (x1 - x0) / (len(MONTHS) - 1)
-        for k, ym in enumerate(MONTHS):
-            xx = x0 + k * step
-            d.line([(xx, Y_STRIP - 8), (xx, Y_STRIP + 8)], fill=PAPER, width=3)
-            text(im, xx, Y_NUM, fa(int(ym[5:])), FA_TEXT, 32, anchor="ms", stroke=3)
-        if phase == "dial":
-            xp = x0 + p * step
-            d.ellipse([xp - 12, Y_STRIP - 12, xp + 12, Y_STRIP + 12], fill=AMBER, outline=SHADOW, width=2)
-        elif phase in ("winter", "turn"):                       # the winter: a box round December to February
-            xa, xb = x0 + 1 * step, x0 + 3 * step
-            d.rectangle([xa - 8, Y_STRIP - 14, xb + 8, Y_STRIP + 14], outline=AMBER, width=3)
-
-    def legend(self, im: Image.Image):
-        x0, x1 = SAFE
-        d = ImageDraw.Draw(im)
-        for xx in range(x0, x1):
-            v = VMIN + (xx - x0) / (x1 - x0) * (VMAX - VMIN)
-            c = np.clip((v - VMIN) / (VMAX - VMIN), 0, 1) ** GAMMA
-            d.line([(xx, Y_BAR), (xx, Y_BAR + 24)], fill=tuple(int(q) for q in ORANGE * (1 - c) + HOT * c) + (255,))
-        d.rectangle([x0, Y_BAR, x1, Y_BAR + 24], outline=PAPER, width=2)
-        for v in (15, 30, 45, 60):
-            xx = x0 + (v - VMIN) / (VMAX - VMIN) * (x1 - x0)
-            d.line([(xx, Y_BAR + 24), (xx, Y_BAR + 34)], fill=PAPER, width=2)
-            text(im, xx, Y_TICK, fa(v), FA_TEXT, 32, anchor="ms", stroke=3)
-        self.unit(im)
-
-    def unit(self, im: Image.Image):
-        """The unit with a raised 15 (Vazirmatn has no superscript five): ستونِ دی‌اکسیدِ نیتروژن، ۱۰¹⁵ مولکول…"""
-        f, fs = font(FA_TEXT, 38), font(FA_TEXT, 24)
-        right = SAFE[1] - 6
-        seg_a = "ستونِ دی‌اکسیدِ نیتروژن، "
-        seg_c = " مولکول بر سانتی‌مترِ مربع"
-        wa = f.getlength(seg_a, direction="rtl", language="fa")
-        wc = f.getlength(seg_c, direction="rtl", language="fa")
-        w10, w15 = f.getlength("۱۰"), fs.getlength("۱۵")
-        x_c = right - wa
-        d = ImageDraw.Draw(im)
-        d.text((right, Y_UNIT), seg_a, font=f, fill=PAPER, anchor="rs", direction="rtl", language="fa",
-               stroke_width=3, stroke_fill=SHADOW)
-        d.text((x_c, Y_UNIT), "۱۰", font=f, fill=PAPER, anchor="rs", stroke_width=3, stroke_fill=SHADOW)
-        d.text((x_c - w10 + 0.0, Y_UNIT - 22), "۱۵", font=fs, fill=PAPER, anchor="rs", stroke_width=2,
-               stroke_fill=SHADOW)
-        d.text((x_c - w10 - w15 - 4, Y_UNIT), seg_c, font=f, fill=PAPER, anchor="rs", direction="rtl",
-               language="fa", stroke_width=3, stroke_fill=SHADOW)
-
-    def hold_lines(self, im: Image.Image, t: float):
-        for at, lays in self.story.items():
-            if not np.isfinite(t) or t < at or t >= STORY_UNTIL[at]:
-                continue
-            a = min((t - at) / 0.5, 1.0)                        # a fade in over half a second
-            cx = (SAFE[0] + SAFE[1]) / 2
-            layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
-            hh = max(lay.height for lay in lays)
-            ww = max(lay.width for lay in lays) - 4
-            x0, y0 = int(cx - ww / 2) - 18, int(Y_STORY)
-            ImageDraw.Draw(layer).rounded_rectangle([x0, y0, x0 + ww + 36, y0 + len(lays) * hh + 16], radius=18,
-                                                    fill=(8, 10, 14, int(200 * a)))
-            for k, lay in enumerate(lays):
-                if a < 1.0:
-                    lay = lay.copy()
-                    lay.putalpha(Image.fromarray((np.array(lay.getchannel("A"), np.float32) * a).astype(np.uint8)))
-                layer.alpha_composite(lay, (int(cx - (lay.width - 4) / 2), int(y0 + 8 + k * hh)))
-            im.alpha_composite(layer)
-
-    def sources(self, im: Image.Image):
-        w = text(im, 540, Y_SOURCES, SOURCES, FA_TEXT, 30, anchor="ms", stroke=3)
-        assert w <= SAFE[1] - SAFE[0], w
-
-    # ── film interface ──
 
     def draw(self, s: int, t: float = np.inf, size=SIZES["reel"]) -> Image.Image:
         assert s == 1 and tuple(size) == (W, H), (s, size)
-        return self.draw_frame(t)
+        return self.draw_frame(0.0 if not np.isfinite(t) else t)
 
 
 def main() -> None:
@@ -358,10 +296,10 @@ def main() -> None:
     base = OUT / "social" / f"air_{args.theme}_fa"
     for old in (OUT / "social").glob(f"{base.name}_t*.png"):
         old.unlink()
-    film.draw(1).save(f"{base}_cover.png", optimize=True)
+    film.draw(1, 0.0).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
-        for t in (0.0, 1.5, 3.04, 7.65, 23.9):           # the start, the reset, Dey (the peak), Tir (summer), the end
+        for t in (0.0, 2.54, 7.15, 7.92, 23.9):      # the hook, Dey (peak), Tir, Mordad, the hold
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
             print("saved", f"{base}_t{t:04.1f}.png")
         return

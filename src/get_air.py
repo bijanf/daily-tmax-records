@@ -36,6 +36,7 @@ FACT_SEASONS = ("DJF2425", "DJF2526", "JJA2025", "JJA2026")
 STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
 SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/sentinel-5p-l2-netcdf"
 DEM_SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/cop-dem-glo-30"
+DEM90_SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/cop-dem-glo-90"
 IRAN = [43.0, 24.5, 65.0, 41.5]                  # W, S, E, N: the granule box
 KEEP = (50.3, 34.2, 52.4, 37.2)                  # W, S, E, N: pixels kept (the frame and its margin)
 FILL = 1e30
@@ -243,11 +244,89 @@ def terrain(path: Path) -> None:
     np.savez_compressed(path, hs=hs_f, elev=elev_f)
 
 
+IRAN_GRID = dict(lon0=43.0, lat0=40.2, step=0.04, nx=525, ny=385)   # the country grid (air.iran_glow shares it)
+
+
+def iran_relief(path: Path) -> None:
+    """Relief of Iran on the country grid (0.04 deg, coarse by design): Copernicus GLO-30 tiles averaged to the grid,
+    the hillshade (VE x2, sun NW at 20 degrees), the elevation, the sea (no tile or elevation <= 0), Iran's pixels and
+    border (Natural Earth 50 m, enso.country_mask)."""
+    import rasterio
+    from scipy import ndimage
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import enso
+    g = IRAN_GRID
+    token30 = json.loads(urllib.request.urlopen(DEM_SAS, timeout=120).read())["token"]
+    token90 = json.loads(urllib.request.urlopen(DEM90_SAS, timeout=120).read())["token"]
+    LAT = g["lat0"] - (np.arange(g["ny"]) + 0.5) * g["step"]
+    LON = g["lon0"] + (np.arange(g["nx"]) + 0.5) * g["step"]
+    G = np.full((g["ny"], g["nx"]), np.nan, np.float32)
+    missing, failed = [], []
+    for lat0 in range(24, 41):
+        for lon0 in range(43, 64):
+            rows = np.flatnonzero((LAT >= lat0) & (LAT < lat0 + 1))
+            cols = np.flatnonzero((LON >= lon0) & (LON < lon0 + 1))
+            if rows.size == 0 or cols.size == 0:
+                continue
+            # GLO-30 first; a tile GLO-30 lacks (not found) is read from GLO-90 (coarser: fine on this grid)
+            cands = [("COP30_hh", f"Copernicus_DSM_COG_10_N{lat0:02d}_00_E{lon0:03d}_00_DEM", token30),
+                     ("COP90_hh", f"Copernicus_DSM_COG_30_N{lat0:02d}_00_E{lon0:03d}_00_DEM", token90)]
+            a, kind = None, "sea"
+            for folder, tile, tok in cands:
+                url = f"https://elevationeuwest.blob.core.windows.net/copernicus-dem/{folder}/{tile}.tif?{tok}"
+                for attempt in range(4):                  # 429 (busy) is retried
+                    try:
+                        with rasterio.open("/vsicurl/" + url) as src:
+                            a = src.read(1, out_shape=(25, 25), resampling=rasterio.enums.Resampling.average).astype(np.float32)
+                        break
+                    except Exception as ex:  # noqa: BLE001
+                        if "404" in str(ex) or "does not exist" in str(ex).lower():
+                            break
+                        kind = "failed"
+                        time.sleep(15 * (attempt + 1))
+                if a is not None:
+                    kind = folder
+                    break
+            if a is None:
+                (missing if kind == "sea" else failed).append(f"{lat0}N{lon0}E")
+                continue
+            ti = np.clip(np.floor((lat0 + 1 - LAT[rows]) / g["step"]).astype(int), 0, 24)
+            tj = np.clip(np.floor((LON[cols] - lon0) / g["step"]).astype(int), 0, 24)
+            G[np.ix_(rows, cols)] = a[np.ix_(ti, tj)]
+    print("tiles without data (sea):", len(missing), missing, flush=True)
+    print("tiles that failed after retries:", failed, flush=True)
+    assert not failed, failed
+    water = ~np.isfinite(G) | (G <= 0)
+    elev = np.where(water, 0.0, G).astype(np.float32)
+    dy_m = g["step"] * 110574.0
+    dx_m = g["step"] * 111320.0 * np.cos(np.radians(LAT))
+    z = elev * VE
+    gy = np.gradient(z, dy_m, axis=0)
+    gx = np.gradient(z, axis=1) / dx_m[:, None]
+    slope = np.arctan(np.hypot(gx, gy))
+    aspect = np.arctan2(-gx, gy)
+    az, alt = np.radians(SUN[0]), np.radians(SUN[1])
+    hs = np.clip(np.sin(alt) * np.cos(slope) + np.cos(alt) * np.sin(slope) * np.cos(az - aspect), 0, 1)
+    LA, LO = np.meshgrid(LAT, LON, indexing="ij")
+    inside = enso.country_mask(["Iran"], LA, LO)
+    empty = inside & ~np.isfinite(G)                  # a land cell with no relief is a gap: none allowed
+    print("land cells with no relief:", int(empty.sum()), flush=True)
+    assert empty.sum() == 0, int(empty.sum())
+    border = inside & ~ndimage.binary_erosion(inside, iterations=1)
+    np.savez_compressed(path, elev=elev, hs=hs.astype(np.float32), water=water.astype(np.float32),
+                        inside=inside.astype(np.float32), border=border.astype(np.float32))
+    print("saved", path, "inside cells", int(inside.sum()), flush=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--no-net", action="store_true", help="use only what is cached")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--iran-relief", action="store_true", help="build data/air/iran_relief.npz and stop")
     args = ap.parse_args()
+    if args.iran_relief:
+        iran_relief(DATA / "iran_relief.npz")
+        return
     GRANULES.mkdir(parents=True, exist_ok=True)
     for season in FACT_SEASONS:                     # the fact check's items, for the reproduction (optional copy)
         if (FACT_CACHE / f"items_{season}.json").exists():

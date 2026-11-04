@@ -9,14 +9,13 @@ soft tick sounds at each month of the dial, and the drone's pitch changes at the
 brightness falls with the counter: its upper partials are taken away as the winter arrives, so the sound darkens
 with the air.
 
-    0.00 s           the drone on step 6: the winter's pitch, as the picture opens
-    1.00 s           the reset: the drone falls to step 0 (the summer reference) and one soft tick
-    1.50-9.96 s      the dial, November 2025 to October 2026 at 1.3 months a second: a tick per month
-                     (1.50, 2.27, ... 9.96 s), the drone's pitch on that month's step
-    9.96 s           the turn back to the winter: the pad of D, F, A (dark, at the low octave) swells in
-                     through 1.5 s, the drone to step 6
-    11.00 s          the first line of the winter's reason: a santur chord, D, F, A
-    16.00 s          the second line (what this is not): a santur chord on E-koron and G
+    0.00 s           the drone on step 6: the Azar-Bahman field, the hook of the film
+    1.00-9.46 s      the Jalali months Aban 1404 to Mehr 1405 at 1.3 months a second: a tick per month
+                     (1.00, 1.77, ... 9.46 s), the drone's pitch on that month's step
+    9.46-10.06 s     the turn back to the winter; the drone to step 6 at 10.06 s
+    10.60-19.06 s    the months again, the same ticks and steps (10.60, 11.37, ... 19.06 s)
+    19.06 s          the last turn: the pad of D, F, A (dark, at the low octave) swells in through 1.5 s
+    19.66 s          the hold: a santur chord, D, F, A, the Azar-Bahman field held
     21.00 s          the open ending: A and E-koron (steps 4 and 1), no tonic; the master's fade takes the tails
                      to 24 s
 
@@ -65,8 +64,7 @@ BASS = 120.0                                    # Hz: below this the two channel
 MAX_OFFSET = 0.030                              # s: a hit may sit at most this far from its event
 BASE = "air_tehran_fa"
 SEED = 41
-ACCENTS = {"why": (onebit_air.WHY_AT, ((0, 0), (2, 0), (4, 0))),        # santur: D, F, A
-           "pm": (onebit_air.PM_AT, ((1, 0), (3, 0))),                  # santur: E-koron, G
+ACCENTS = {"hold": (onebit_air.HOLD, ((0, 0), (2, 0), (4, 0))),         # santur: D, F, A, as the Azar-Bahman field returns
            "end": (21.0, ((4, 0), (1, 0)))}                              # santur: A, E-koron (open)
 LUFS, TP = -14.0, -1.5                          # -1.5 dBTP: the decoded AAC stays under -1 once the top octave is cut
 
@@ -81,33 +79,34 @@ def freq_of(step: int, octave: int = 0) -> float:
 
 
 def timing(film) -> dict:
-    """The film's clock, read from the film: the reset, the twelve month ticks, the turn and the end."""
-    ticks = [onebit_air.DIAL_START + k / onebit_air.RATE for k in range(len(onebit_air.MONTHS))]
-    tm = dict(reset=onebit_air.RESET, ticks=ticks, turn=film.dial_end, end=float(film.L.end),
-              months=list(onebit_air.MONTHS))
-    assert abs(tm["ticks"][-1] - tm["turn"]) < 1e-9 and tm["turn"] + onebit_air.TURN < 11.0, tm
-    assert tm["end"] == 24.0 and ACCENTS["why"][0] > tm["turn"] + 1.0, tm
+    """The film's clock, read from the film: the twelve month ticks of each of the two passes, the turns and the hold."""
+    sch = film.schedule()
+    tm = dict(ticks=[t for t, _ in sch["ticks"]], months=[ym for _, ym in sch["ticks"]], turns=list(sch["turns"]),
+              turn=sch["turns"][-1], hold=float(sch["hold"]), end=float(sch["end"]))
+    assert len(tm["ticks"]) == 2 * len(onebit_air.MONTHS) and tm["turn"] == onebit_air.DIAL_END, tm
+    assert all(a < b for a, b in zip(tm["ticks"], tm["ticks"][1:])), tm["ticks"]
+    assert abs(tm["hold"] - (tm["turn"] + onebit_air.TURN)) < 1e-9 and tm["end"] == 24.0, tm
+    assert ACCENTS["hold"][0] == onebit_air.HOLD and ACCENTS["end"][0] > ACCENTS["hold"][0], tm
     return tm
 
 
 def counter_steps(film, tm) -> list:
-    """(time, step) of the drone: the start on the winter, the reset, each month's step, the turn to the winter."""
+    """(time, step, label) of the drone: the held field at the start, each month's step, and the step to the winter
+    when each turn is done (the month before the turn is heard for its 0.6 s)."""
     winter = step_of(film.winter)
-    out = [(0.0, winter), (tm["reset"], step_of(1.0))]          # the reset: the summer reference, x1.0
-    out += [(t, step_of(film.ratio[ym])) for t, ym in zip(tm["ticks"], tm["months"])]
-    out += [(tm["turn"], winter)]
-    return out
+    out = [(0.0, winter, "hold")]
+    out += [(t, step_of(film.ratio[ym]), ym) for t, ym in zip(tm["ticks"], tm["months"])]
+    out += [(t + onebit_air.TURN, winter, "turn") for t in tm["turns"]]
+    return sorted(out, key=lambda k: k[0])
 
 
 def counter_level(film, tm, t: np.ndarray) -> np.ndarray:
     """The counter as a share of the way to winter (0 summer, 1 winter), per sample: the brightness of the drone."""
-    tt, vals = [0.0, tm["reset"]], [film.winter, 1.0]
-    for t_k, ym in zip(tm["ticks"], tm["months"]):
-        tt.append(t_k)
-        vals.append(film.ratio[ym])
-    tt.append(tm["turn"] + onebit_air.TURN)
-    vals.append(film.winter)
-    level = np.interp(t, tt, vals)
+    pts = [(0.0, film.winter)]
+    pts += [(t_k, film.ratio[ym]) for t_k, ym in zip(tm["ticks"], tm["months"])]
+    pts += [(t_turn + onebit_air.TURN, film.winter) for t_turn in tm["turns"]]
+    pts.sort(key=lambda p: p[0])
+    level = np.interp(t, [p[0] for p in pts], [p[1] for p in pts])
     return np.clip((level - 1.0) / (film.winter - 1.0), 0.0, 1.0)
 
 
@@ -116,7 +115,7 @@ def drone(film, tm, n: int) -> tuple:
     t = np.arange(n) / SR
     keys = counter_steps(film, tm)
     target = np.empty(n)
-    for k, (t0, step) in enumerate(keys):
+    for k, (t0, step, _) in enumerate(keys):
         t1 = keys[k + 1][0] if k + 1 < len(keys) else np.inf
         target[(t >= t0) & (t < t1)] = freq_of(step)
     a = math.exp(-1.0 / (SR * GLIDE))
@@ -188,8 +187,7 @@ def compose(film, rec: list):
     bus["drone"][:, 1] += d
     rec.append(("drone: attack", 0.0, 0.0, []))
 
-    # the reset tick, and one soft tick per month of the dial
-    event("reset: tick", tm["reset"], [("ticks", tick, 0.36, 0.0)])
+    # one soft tick per month of the dial
     for t, ym in zip(tm["ticks"], tm["months"]):
         event(f"month {ym}: tick", t, [("ticks", tick, 0.36, 0.0)])
 
@@ -306,8 +304,9 @@ def check_audio(film, wav, out, log: list, mix, bus) -> None:
     aac_lufs, aac_tp = kit.integrated_lufs(dec), kit.aac_true_peak(out)
     a_dur = [float(s["duration"]) for s in _probe(out)["streams"] if s["codec_type"] == "audio"][0]
     tm = timing(film)
-    print(f"times from the film: reset {tm['reset']:.2f} s, dial {tm['ticks'][0]:.2f}-{tm['ticks'][-1]:.2f} s "
-          f"({len(tm['ticks'])} ticks), turn {tm['turn']:.2f} s, end {tm['end']:.2f} s")
+    print(f"times from the film: months {tm['ticks'][0]:.2f}-{tm['ticks'][11]:.2f} s and "
+          f"{tm['ticks'][12]:.2f}-{tm['ticks'][-1]:.2f} s ({len(tm['ticks'])} ticks), turns {tm['turns'][0]:.2f} s and "
+          f"{tm['turn']:.2f} s, hold {tm['hold']:.2f} s, end {tm['end']:.2f} s")
     print(f"durations: WAV {len(x) / SR:.3f} s; muxed MP4 audio {a_dur:.3f} s")
 
     print("\n(1) loudness and true peak")
@@ -341,7 +340,7 @@ def check_audio(film, wav, out, log: list, mix, bus) -> None:
     drone_track = bus["drone"].mean(axis=1)
     keys = counter_steps(film, tm)
     worst = 0.0
-    for k, (t0, step) in enumerate(keys[:-1]):
+    for k, (t0, step, label) in enumerate(keys[:-1]):
         t1 = keys[k + 1][0]
         if t1 - t0 < 0.75:
             continue
@@ -349,13 +348,12 @@ def check_audio(film, wav, out, log: list, mix, bus) -> None:
         f_want = freq_of(step)
         cents = 1200 * math.log2(f_meas / f_want)
         worst = max(worst, abs(cents))
-        ym = "start" if k == 0 else ("reset" if k == 1 else tm["months"][k - 2] if k - 2 < len(tm["months"]) else "turn")
-        ratio = film.ratio.get(ym, film.winter if ym == "turn" else float("nan"))
-        print(f"    {t0:6.2f} s  {ym:>8}  counter x{ratio:4.2f}  step {step}  {f_want:7.1f} Hz  "
+        ratio = film.ratio.get(label, film.winter)
+        print(f"    {t0:6.2f} s  {label:>8}  counter x{ratio:4.2f}  step {step}  {f_want:7.1f} Hz  "
               f"measured {f_meas:7.1f} Hz  ({cents:+5.1f} cents)")
     print(f"    largest error {worst:.1f} cents (limit 25)")
     assert worst <= 25.0, worst
-    steps_seen = [s for _, s in keys]
+    steps_seen = [s for _, s, _ in keys]
     assert len(set(steps_seen)) >= 4, steps_seen
 
     print("\n(5) the bass in mono: the side against the mid in the spectrum of the WAV, below each frequency")

@@ -133,6 +133,18 @@ def records(rows: list) -> pd.DataFrame:
     return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=cols)
 
 
+def nrti_ids() -> set:
+    """The NRTI granules that fill the days with no OFFL granule over Iran (data/air/nrti_fill.json)."""
+    f = DATA / "nrti_fill.json"
+    return set(json.loads(f.read_text())["granules"]) if f.exists() else set()
+
+
+def window_rows_filled() -> list:
+    """The window's granules with the NRTI fill counted as OFFL: the product of the film's counter and its maps."""
+    ids = nrti_ids()
+    return [dict(r, mode="OFFL") if r["id"] in ids else r for r in window_rows()]
+
+
 def window_rows() -> list:
     return json.loads((DATA / "items_window.json").read_text())
 
@@ -185,7 +197,7 @@ def monthly() -> pd.DataFrame:
     """Per dial month (Jalali, Aban 1404 to Mehr 1405): the Tehran-Karaj pixel mean, its pixel count and days, and
     the ratio to the summer reference (Tir to Shahrivar 1405, pooled). The attributes hold the reference (its pixel
     mean) and the winter ratio (Azar to Bahman 1404, pooled, over the same reference)."""
-    df = records(window_rows())
+    df = records(window_rows_filled())
     ref = box_stats(df[df.jk.isin(REF_JK)], TEHRAN_KARAJ)["pix_mean"]
     out = []
     for jk in DIAL_JK:
@@ -242,6 +254,65 @@ def fields() -> dict:
     out["winter"] = field(df[df.jk.isin(WINTER_JK)])
     out["summer"] = field(df[df.jk.isin(REF_JK)])
     return out
+
+
+IRAN_GRID = dict(lon0=43.0, lat0=40.2, step=0.04, nx=525, ny=385)   # the country grid (get_air.IRAN_GRID)
+
+
+def iran_glow() -> tuple:
+    """Country-wide NO2 fields on IRAN_GRID (1e15 molec/cm2): the dial months (Jalali keys), 'winter' (Azar to Bahman
+    1404) and 'summer' (Tir to Shahrivar 1405). Bin means of the valid pixels of the full Iran box (cells with at least
+    CNT_MIN pixels), smoothed as the box field, zero outside Iran and where there is no data. Returns (fields, cover):
+    the fields and, per key, the boolean cover. Cached in data/air/iran_glow.npz."""
+    from scipy import ndimage
+    path = DATA / "iran_glow.npz"
+    g = IRAN_GRID
+    nx, ny, step = g["nx"], g["ny"], g["step"]
+    inside = np.load(DATA / "iran_relief.npz")["inside"] > 0.5
+    if path.exists():
+        z = np.load(path)
+        keys = [k for k in z.files if not k.startswith("cov_")]
+        return {k: z[k] for k in keys}, {k: z["cov_" + k] for k in keys}
+    acc = {}
+    nrti = set(json.loads((DATA / "nrti_fill.json").read_text())["granules"]) if (DATA / "nrti_fill.json").exists() else set()
+    for it in window_rows():
+        # OFFL everywhere; NRTI only on the days with no OFFL granule over Iran (data/air/nrti_fill.json)
+        if it["mode"] != "OFFL" and it["id"] not in nrti:
+            continue
+        f = DATA / "granules" / f"{it['id']}.npz"
+        if not f.exists():
+            continue
+        z = np.load(f)
+        lat, lon, no2 = z["lat"].astype(float), z["lon"].astype(float), z["no2"].astype(float) * K
+        ix = np.floor((lon - g["lon0"]) / step).astype(int)
+        iy = np.floor((g["lat0"] - lat) / step).astype(int)
+        ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
+        idx, v = iy[ok] * nx + ix[ok], no2[ok]
+        jk = jkey(it["datetime"][:10])
+        keys = [jk] + (["winter"] if jk in WINTER_JK else []) + (["summer"] if jk in REF_JK else [])
+        for key in keys:
+            s, c = acc.setdefault(key, (np.zeros(nx * ny), np.zeros(nx * ny)))
+            s += np.bincount(idx, weights=v, minlength=nx * ny)
+            c += np.bincount(idx, minlength=nx * ny)
+    fields, cover, save = {}, {}, {}
+    for key, (s, c) in acc.items():
+        s, c = s.reshape(ny, nx), c.reshape(ny, nx)
+        mean = np.where(c >= CNT_MIN, s / np.maximum(c, 1), np.nan)
+        have = np.isfinite(mean).astype(float)
+        wgt = ndimage.gaussian_filter(have, SMOOTH)
+        sm = ndimage.gaussian_filter(np.where(have > 0, mean, 0.0), SMOOTH) / np.maximum(wgt, 1e-6)
+        # a sparse month (few pixels per bin, e.g. the summer's Mordad) fills its holes from a wider smoothing
+        wgt_w = ndimage.gaussian_filter(have, 3.0)
+        sm_w = ndimage.gaussian_filter(np.where(have > 0, mean, 0.0), 3.0) / np.maximum(wgt_w, 1e-9)
+        local = wgt > 0.2
+        near = ndimage.binary_dilation(have > 0, iterations=4)     # within about 16 km of a bin with data
+        cv = (local | near) & inside
+        fields[key] = np.where(cv, np.where(local, sm, sm_w), 0.0).astype(np.float32)
+        cover[key] = cv
+        save[key] = fields[key]
+        save["cov_" + key] = cv
+    np.savez_compressed(path, **save)
+    return fields, cover
 
 
 def main() -> None:
