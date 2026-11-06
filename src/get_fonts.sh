@@ -54,3 +54,22 @@ if [ ! -f "$DEST/Vazirmatn-Bold.ttf" ]; then
        "$TMP/vazirmatn/OFL.txt" "$DEST/"
     echo "Vazirmatn installed in $DEST"
 fi
+
+# the display weights of the full-screen Persian reels (onebit_tehranwater.py): Vazirmatn Black and ExtraBold for
+# numbers and labels, Lalezar (Borna Izadpanah, SIL OFL) for the two-to-four-word gold headlines
+DEST="$FONTS/vazirmatn"
+if [ ! -f "$DEST/Vazirmatn-Black.ttf" ]; then
+    curl -sS -L -m 120 -o "$DEST/Vazirmatn-Black.ttf" \
+        https://github.com/rastikerdar/vazirmatn/raw/v33.003/fonts/ttf/Vazirmatn-Black.ttf
+    curl -sS -L -m 120 -o "$DEST/Vazirmatn-ExtraBold.ttf" \
+        https://github.com/rastikerdar/vazirmatn/raw/v33.003/fonts/ttf/Vazirmatn-ExtraBold.ttf
+    echo "Vazirmatn Black and ExtraBold installed in $DEST"
+fi
+
+DEST="$FONTS/lalezar"
+if [ ! -f "$DEST/Lalezar-Regular.ttf" ]; then
+    mkdir -p "$DEST"
+    curl -sS -L -m 120 -o "$DEST/Lalezar-Regular.ttf" https://github.com/google/fonts/raw/main/ofl/lalezar/Lalezar-Regular.ttf
+    curl -sS -L -m 120 -o "$DEST/OFL.txt" https://github.com/google/fonts/raw/main/ofl/lalezar/OFL.txt
+    echo "Lalezar installed in $DEST"
+fi
