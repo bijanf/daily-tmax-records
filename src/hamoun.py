@@ -4,7 +4,7 @@ year 1985-2026: one true-colour picture a year and the open water's area, from g
 Measured data only (every rule is in get_hamoun.py's docstring):
 - Area: the Hamoun lakes (JRC's extent of any water 1984-2021, its main body: Puzak, Sabari, Hirmand,
   4,267 km2; the Chah-nimeh reservoirs, rivers and canals left out), measured at 30 m on each accepted pass
-  of Landsat path 157 (rows 038 + 039, one date) between 1 May and 15 June (widened to 15 April - 30 June
+  of Landsat path 157 (rows 038 + 039, one date) between 1 May and 15 June (widened to 15 April - 20 June
   where fewer than two passes are accepted), the year's median over its passes.
 - RULE, chosen against JRC's Monthly Water History (1987-2021, 32 years with a JRC month that saw at least
   half the lakes) and the true colour: water = MNDWI > 0 and SWIR1 < 0.15. In the 23 wet years (JRC >= 500
@@ -53,17 +53,19 @@ RULE = "mndwi0_swir15"                            # MNDWI > 0 and SWIR1 < 0.15: 
 SLC = ("only Landsat 7 after its scan-line failure (31 May 2003): its passes have their stripe gaps in nearly the "
        "same places, so the median changes tone along them and stripes show on the land at the scenes' edges")
 NO_PICTURE = {                                    # year -> why it has no picture (its area stays in the series)
-    2002: "its passes span April's flood pulse (18 and 26 April: 182 and 308 km2) and June's dry bed (13 and 29 "
-          "June: 0): the median picture is a ghost of both",
+    2002: "its passes span April's flood pulse (18 and 26 April: 182 and 308 km2) and June's dry bed (13 June: 0): "
+          "the median picture is a ghost of both",
     2003: "one accepted pass (7 May 2003): clouds over Hamoun-e Hirmand leave 9 % of the lakes unseen",
     2004: SLC, 2005: SLC, 2006: SLC, 2007: SLC, 2012: SLC,
-    1994: "two passes (22 May, 23 June) both flag Hamoun-e Hirmand's north shore and differ there: 1.0 % of the "
-          "lakes unseen, black spots in the picture",
+    2008: "two passes 24 days apart (4 May, Landsat 7 with its stripes: 839 km2; 28 May, Landsat 5: 430 km2): the "
+          "median picture blends two shorelines, with a blocky patch where the stripes fall",
+    1994: "one pass (22 May; 23 June is past 31 Khordad): 3.5 % of the lakes unseen under its cloud flags, black "
+          "holes in the picture",
     2009: "two passes (29 April, 15 May) both flag the south-east of Hamoun-e Puzak and differ there: 1.0 % of "
           "the lakes unseen, black spots in the picture",
 }
 LEFT_OUT = {1985: "no Landsat scene of the lakes in the archive after 26 March 1985 (path 157: January-March only)",
-            1986: "no pass with 85 % of the lakes clear between 15 April and 30 June: 30 April has row 039 only "
+            1986: "no pass with 85 % of the lakes clear between 15 April and 20 June: 30 April has row 039 only "
                   "(41 % of the lakes), 16 May 81 % clear with whole tiles under cloud, 17 June 54 % clear"}
 FEATHER = 8                                       # px: two layers blend over this width where they meet
 SPECK = 25                                        # px (0.5 km2): a hole in the lakes this small is filled from its neighbours
@@ -349,7 +351,7 @@ def flags(y: int) -> list:
     r = s.loc[y]
     out = []
     if r.window == "wide":
-        out.append("window widened to 15 Apr-30 Jun")
+        out.append("window widened to 15 Apr-20 Jun")
     if r.n_passes == 1:
         out.append("one pass")
     used = df[df.counts & (df.year == y)]

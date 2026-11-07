@@ -16,7 +16,8 @@ Farah Rud and Harut Rud channels and small ponds. Water outside the lakes is not
 
 WHEN. Late spring: 1 May to 15 June (11 Ordibehesht to 25 Khordad), when the spring flood has arrived and
 before the summer's heat and 120-day wind dry the shallow lakes. A year with fewer than 2 accepted passes in
-that window is widened to 15 April - 30 June (recorded in the table: window "wide").
+that window is widened to 15 April - 20 June (recorded in the table: window "wide"; 26 Farvardin to 30 or 31
+Khordad: every counted pass lies in the Persian spring, so a year's picture and number are its «بهار»).
 
 ONE PATH SEES IT ALL. WRS-2 path 157 rows 038 and 039, taken in the same pass (seconds apart), together cover
 all of the lakes; the areas use only these passes, so no area joins two dates. A pass is the two rows of
@@ -136,7 +137,7 @@ DATA = ROOT / "data" / "hamoun"
 WGS, UTM = CRS.from_epsg(4326), CRS.from_epsg(32641)
 YEARS = (1985, 2026)
 WINDOW = ("05-01", "06-15")                          # late spring
-WIDE = ("04-15", "06-30")                            # for a year with too few accepted passes
+WIDE = ("04-15", "06-20")                            # for a year with too few accepted passes (still spring)
 MIN_PASSES = 2
 PATH, ROWS = "157", ("038", "039")
 FILLS = ("158038", "158039", "156038", "156039")     # the picture's land outside path 157
@@ -644,7 +645,8 @@ def table() -> pd.DataFrame:
     df["in_window"] = [in_window(d, WINDOW) for d in df["date"]]
     n = df[df.accepted & df.in_window].groupby("year").size()
     df["window"] = ["default" if n.get(y, 0) >= MIN_PASSES else "wide" for y in df.year]
-    df["counts"] = df.accepted & (df.in_window | (df.window == "wide"))
+    in_wide = pd.Series([in_window(d, WIDE) for d in df["date"]], index=df.index)
+    df["counts"] = df.accepted & (df.in_window | ((df.window == "wide") & in_wide))
     return df
 
 
