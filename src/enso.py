@@ -106,7 +106,7 @@ def iran_rain() -> tuple[pd.Series, xr.DataArray]:
     """Iran's monthly rain (mm, cos-lat mean of the cells inside Iran) and the cells themselves."""
     files = sorted(CRU.glob("cru_ts4.10.*.pre.dat.nc"))
     assert len(files) == 13, f"CRU TS 4.10 precipitation: {len(files)} of 13 files (src/get_water.py)"
-    pre = xr.concat([xr.open_dataset(f)["pre"].sel(lon=slice(BOX[0], BOX[1]), lat=slice(BOX[2], BOX[3])).load()
+    pre = xr.concat([xr.open_dataset(f, engine="netcdf4")["pre"].sel(lon=slice(BOX[0], BOX[1]), lat=slice(BOX[2], BOX[3])).load()
                      for f in files], "time").sortby("time")
     lon, lat = np.meshgrid(pre.lon.values, pre.lat.values)
     inside = xr.DataArray(iran_mask(lat, lon), dims=("lat", "lon"), coords=dict(lat=pre.lat, lon=pre.lon))
@@ -136,7 +136,7 @@ def classes(o: pd.Series, threshold: float) -> pd.Series:
 
 def shuffle_p(rain: pd.Series, cls: pd.Series, rng) -> float:
     """Two-sided permutation p of the El Niño minus neutral difference of mean rain."""
-    r, c = rain.values, cls.values
+    r, c = rain.to_numpy(float), cls.to_numpy(dtype=str)   # plain arrays (pandas may hand back Arrow ones)
     obs = r[c == "El Niño"].mean() - r[c == "neutral"].mean()
     perm = np.argsort(rng.random((SHUFFLES, len(c))), axis=1)
     cp = c[perm]
