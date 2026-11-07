@@ -7,10 +7,13 @@ labels), and on top the Persian type drawn here: a gold two-line headline (Lalez
 and its period, the colour key, the counter with its chip, the town labels, one sources line, and in the narrated
 cut the subtitles. Every number comes from data/subsidence/timeline.json (src/subsidence.py), asserted here.
 
-    0.0 s        the end state: Iran glowing, the hook, the counter «؟»
-    1.2-7.8 s    the counter counts the sinking area up while the labels appear; 7.8 s it lands: ۵۶٬۰۰۰ km2
+    0.0 s        the end state: Iran glowing, the hook, the counter «؟», the newest headline (Karaj) over the map
+    1.2-7.8 s    the counter counts the sinking area up while the labels appear; 7.8 s it lands: ۵۶٬۰۰۰ km2;
+                 the headline leaves at 2.2-2.6 s
     8.6-13.0 s   the dive to the Tehran-Karaj plain; 13.0 s: up to 15-20 cm a year
-    17.6 s       the cause; 20.5-26 s back out to Iran, 23.4 s the question; 26 s = frame 0 (a loop)
+    17.6 s       the cause; 20.5-26 s back out to Iran, 23.4 s the question
+    26-31 s      the news: three headlines over the dimmed map (Karaj, south-west Tehran, Kerman); 30.4-31 s the
+                 end eases into frame 0 (the Karaj card stays where it opens the reel): a loop
 
     python -I src/onebit_subsidence.py --stills          # cover and stills
     python -I src/onebit_subsidence.py                   # the silent reel (music-only cut, no subtitles)
@@ -68,6 +71,22 @@ SUBTITLES = ((0.15, 2.75, "ماهواره‌ها فرونشستِ زمین را 
              (17.60, 23.10, "علتِ اصلی: برداشتِ آبِ زیرزمینی؛ و بیشترِ این فرونشست برگشت‌ناپذیر است."),
              (23.40, 25.70, "شهرِ شما روی این نقشه هست؟"))
 LABEL_EVERY = 0.6                                  # s between the national labels' entrances (from 1.6 s)
+# the news: three headlines, verbatim, each read on the outlet's own page on 7 Nov 2026 (links in the first comment).
+# Only headlines about the slow sinking of the ground that the map measures: the Islamshahr underpass collapses of
+# 1404 were sinkholes (an old qanat, a broken pipe), a different thing, and are left out. The newest opens the reel
+# over the map (0-2.6 s); all three close it after the question, over the map dimmed (26-31 s).
+NEWS = (("خبرگزاری صداوسیما", "۲۳ مهر ۱۴۰۵", "مهرشهر کرج سالانه ۱۴ سانتی‌متر پایین می‌رود"),
+        ("تابناک", "۱۸ خرداد ۱۴۰۴", "وضعیت قرمز فرونشست زمین در جنوب‌غرب تهران"),
+        ("خبرگزاری مهر", "۱۰ آبان ۱۴۰۵", "قطعی و افت فشار آب در کرمان؛ فرونشست خودنمایی کرد"))
+NEWS_X, NEWS_TILT = (500, 508, 494), (-1.6, 1.2, -0.8)   # the cards' centres (x, px) and tilts (degrees)
+NEWS_TOP, NEWS_OVERLAP = 572, 22                   # px: the first card's top; each card overlaps the one above
+NEWS_IN = (26.0, 26.7, 27.4)                       # s: the closing cards' entrances (the first with the strike)
+NEWS_NOTE = "در خبرها"
+OPEN_OUT = (2.2, 2.6)                              # s: the opening card leaves
+END = 31.0                                         # s: the reel; the 3D loop is 26 s, the last 5 s hold its end
+LIFT = (30.4, 31.0)                                # s: cards 2-3 go, the map lightens into frame 0 (the loop)
+PAPER, PAPER_INK, PAPER_DIM = (246, 242, 233, 255), (24, 18, 14, 255), (112, 102, 94, 255)
+OUTLET_RED = (168, 32, 40, 255)
 
 
 def font(path: Path, px: int) -> ImageFont.FreeTypeFont:
@@ -109,6 +128,59 @@ def ease(x: float) -> float:
     return x * x * (3 - 2 * x)
 
 
+def wrap(s: str, path: Path, px: int, w: float) -> list:
+    """The headline in lines no wider than w: two lines balanced (the cut that makes the wider line narrowest) when
+    two are enough, else greedy."""
+    words = s.split(" ")
+    if width(s, path, px) <= w:
+        return [s]
+    digits = set("0123456789۰۱۲۳۴۵۶۷۸۹")                # a number stays on the line of its unit
+    two = [(" ".join(words[:k]), " ".join(words[k:])) for k in range(1, len(words)) if not set(words[k - 1]) <= digits]
+    fits = [p for p in two if max(width(p[0], path, px), width(p[1], path, px)) <= w]
+    if fits:
+        return list(min(fits, key=lambda p: max(width(p[0], path, px), width(p[1], path, px))))
+    lines, cur = [], ""
+    for wd in words:
+        trial = f"{cur} {wd}".strip()
+        if cur and width(trial, path, px) > w:
+            lines.append(cur)
+            cur = wd
+        else:
+            cur = trial
+    return lines + [cur]
+
+
+def card(outlet: str, date: str, head: str, tilt: float, w: int = 780) -> Image.Image:
+    """A news clipping: off-white paper, the outlet (right) and the date (left) over a rule, the headline in two lines
+    of Vazirmatn Black, a soft shadow; turned by tilt degrees. No logo and no photograph: only the outlet's words."""
+    pad, px, lead, sh = 30, 44, 60, 24
+    lines = wrap(head, BLACK, px, w - 2 * pad)
+    h = pad + 44 + 14 + 46 + (len(lines) - 1) * lead + 14 + pad
+    im = Image.new("RGBA", (w + 2 * sh, h + 2 * sh), (0, 0, 0, 0))
+    shadow = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle([sh, sh + 10, sh + w, sh + h + 10], radius=10, fill=(0, 0, 0, 130))
+    im.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(12)))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([sh, sh, sh + w, sh + h], radius=10, fill=PAPER)
+    x0, x1, y = sh + pad, sh + w - pad, sh + pad
+    d.text((x1, y + 30), outlet, font=font(BLACK, 28), fill=OUTLET_RED, anchor="rs", direction="rtl", language="fa")
+    d.text((x0, y + 30), date, font=font(MEDIUM, 26), fill=PAPER_DIM, anchor="ls", direction="rtl", language="fa")
+    d.line([(x0, y + 44), (x1, y + 44)], fill=(205, 194, 182, 255), width=2)
+    for k, s in enumerate(lines):
+        d.text((x1, y + 44 + 14 + 46 + k * lead), s, font=font(BLACK, px), fill=PAPER_INK, anchor="rs",
+               direction="rtl", language="fa")
+    return im.rotate(tilt, resample=Image.BICUBIC, expand=True)
+
+
+def fade(im: Image.Image, a: float) -> Image.Image:
+    """im with its alpha scaled by a."""
+    if a >= 1.0:
+        return im
+    out = im.copy()
+    out.putalpha(im.getchannel("A").point(lambda v: int(v * a)))
+    return out
+
+
 class SubsidenceFilm:
     def __init__(self, voice: bool):
         self.voice = voice
@@ -121,7 +193,20 @@ class SubsidenceFilm:
         assert tl["shown_range"] == [15, 20]
         peaks = [s["max"] for s in tl["stats"].values()]
         assert 14.5 <= min(peaks) and max(peaks) <= 20.5, peaks
-        self.L = type("L", (), {"end": tl["duration"]})()
+        assert tl["duration"] == 26.0 and NEWS_IN[0] == tl["duration"] and END - NEWS_IN[-1] >= 3.0
+        self.L = type("L", (), {"end": END})()
+        self.cards, self.card_at, top = [], [], NEWS_TOP   # the clippings, stacked from the top, each a little over
+        for (outlet, date, head), x, tilt in zip(NEWS, NEWS_X, NEWS_TILT):   # the one above
+            im = card(outlet, date, head, tilt)
+            cx, cy = x, top + im.height / 2 - 24          # 24: the shadow's margin
+            assert 60 <= cx - im.width / 2 + 20 and cx + im.width / 2 - 20 <= 930, (head, cx, im.width)
+            self.cards.append(im)
+            self.card_at.append((cx, cy))
+            top = cy + im.height / 2 - 24 - NEWS_OVERLAP
+        assert NEWS_TOP >= 540 and top + NEWS_OVERLAP <= 1420, top   # clear of the key above, the subtitle below
+        c0 = self.card_at[0]
+        self.keepout = (c0[0] - self.cards[0].width / 2, c0[1] - self.cards[0].height / 2,
+                        c0[0] + self.cards[0].width / 2, c0[1] + self.cards[0].height / 2)
         b = tl["beats"]
         self.beats = [(0.0, HOOK), (b[0], ("بیش از چهار برابرِ", "استانِ تهران")),
                       (b[1], ("کرج و جنوب‌غربِ تهران:", "نزدیکِ یک وجب در سال")),
@@ -194,7 +279,36 @@ class SubsidenceFilm:
             md.line([(0, y), (W, y)], fill=int(255 * amount * min(1.0, (y - 1250) / 380)))
         return Image.composite(blur, im, mask)
 
-    def draw(self, s: int = 1, t: float = 0.0, size=SIZES["reel"]) -> Image.Image:
+    # ── the news ──
+    @staticmethod
+    def lift(t: float) -> float:
+        """0 to 1 over LIFT: the end eases into frame 0 (the loop)."""
+        return ease((t - LIFT[0]) / (LIFT[1] - LIFT[0]))
+
+    def tail(self, t: float) -> float:
+        """How far the closing (26-31 s) has dimmed the map and hidden the labels and the counter."""
+        return 0.0 if t < NEWS_IN[0] else ease((t - NEWS_IN[0]) / 0.35) * (1 - self.lift(t))
+
+    def news(self, k: int, t: float, cover: bool) -> tuple:
+        """(opacity, vertical offset px) of card k at t."""
+        if t < NEWS_IN[0]:
+            if k or cover:
+                return 0.0, 0.0
+            a = 1 - ease((t - OPEN_OUT[0]) / (OPEN_OUT[1] - OPEN_OUT[0]))
+            return a, -30 * (1 - a)
+        u = ease((t - NEWS_IN[k]) / 0.3)
+        return u * (1 if k == 0 else 1 - self.lift(t)), 40 * (1 - u)
+
+    @staticmethod
+    def layer(im: Image.Image, a: float, paint) -> None:
+        """paint(ImageDraw) on a clear layer, composited at opacity a."""
+        if a <= 0:
+            return
+        ly = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        paint(ImageDraw.Draw(ly))
+        im.alpha_composite(fade(ly, a))
+
+    def draw(self, s: int = 1, t: float = 0.0, size=SIZES["reel"], cover: bool = False) -> Image.Image:
         t = 0.0 if not np.isfinite(t) else t
         im, m = self.frame(t)
         close = min(1.0, max(0.0, (np.log(300) - np.log(m["dist"])) / (np.log(300) - np.log(100))))
@@ -207,25 +321,52 @@ class SubsidenceFilm:
         for y in range(1060, H):
             sd.line([(0, y), (W, y)], fill=(0, 0, 0, int(160 * min(1, (y - 1060) / 480))))
         im.alpha_composite(shade)
+        tail, lift = self.tail(t), self.lift(t)
+        if tail > 0:                                       # the map dimmed under the closing cards
+            im.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, int(150 * tail))))
         d = ImageDraw.Draw(im)
         tl = self.tl
         _, lines = self.beat(t)
-        text(d, 540, Y_TITLE[0], lines[0], LALEZAR, 96, GOLD, 7)
-        text(d, 540, Y_TITLE[1], lines[1], LALEZAR, 96, GOLD if lines is HOOK else WHITE, 7)
-        note = CAUSE_NOTE if tl["beats"][2] <= t < tl["beats"][3] else NOTE
-        text(d, 540, Y_NOTE, note, XBOLD, 30, WHITE, 4)
+
+        def title(lines):
+            return lambda dr: (text(dr, 540, Y_TITLE[0], lines[0], LALEZAR, 96, GOLD, 7),
+                               text(dr, 540, Y_TITLE[1], lines[1], LALEZAR, 96, GOLD if lines is HOOK else WHITE, 7))
+
+        def note(s):
+            return lambda dr: text(dr, 540, Y_NOTE, s, XBOLD, 30, WHITE, 4)
+
+        mid = (LIFT[0] + LIFT[1]) / 2                      # the end: the question out, then frame 0's hook in
+        out_, in_ = ease((t - LIFT[0]) / (mid - LIFT[0])), ease((t - mid) / (LIFT[1] - mid))
+        self.layer(im, 1 - out_, title(lines))
+        self.layer(im, in_, title(HOOK))
+        if t < NEWS_IN[0]:
+            self.layer(im, 1 - ease((t - (NEWS_IN[0] - 0.3)) / 0.3),
+                       note(CAUSE_NOTE if tl["beats"][2] <= t < tl["beats"][3] else NOTE))
+        else:
+            self.layer(im, ease((t - NEWS_IN[0]) / 0.3) * (1 - out_), note(NEWS_NOTE))
+            self.layer(im, in_, note(NOTE))
         self.key(d)
+        k0 = 0.0 if cover else self.news(0, t, cover)[0]
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))   # the labels on their own layer: their fades blend
-        self.annotate(ImageDraw.Draw(layer), t, m)
+        self.annotate(ImageDraw.Draw(layer), t, m, 1 - tail, k0)
         im.alpha_composite(layer)
         c = self.counter(t)
-        if c is None:
-            text(d, 540, Y_COUNTER, "؟", LALEZAR, 170, WHITE, 8)
-        elif c[0]:
-            value, unit, chip = c
-            pill(d, 540, Y_CHIP, chip, BLACK, 44, fill=(255, 205, 60, 235), colour=INK)
-            text(d, 540, Y_COUNTER, value, LALEZAR, 150 if "تا" in value else 170, WHITE, 8)
-            text(d, 540, Y_UNIT, unit, BLACK, 44, WHITE, 5)
+
+        def count(dr):
+            if c is None:
+                text(dr, 540, Y_COUNTER, "؟", LALEZAR, 170, WHITE, 8)
+            elif c[0]:
+                value, unit, chip = c
+                pill(dr, 540, Y_CHIP, chip, BLACK, 44, fill=(255, 205, 60, 235), colour=INK)
+                text(dr, 540, Y_COUNTER, value, LALEZAR, 150 if "تا" in value else 170, WHITE, 8)
+                text(dr, 540, Y_UNIT, unit, BLACK, 44, WHITE, 5)
+
+        self.layer(im, 1.0 if t < NEWS_IN[0] else 1 - ease((t - NEWS_IN[0]) / 0.35), count)
+        self.layer(im, lift, lambda dr: text(dr, 540, Y_COUNTER, "؟", LALEZAR, 170, WHITE, 8))
+        for k, (cim, (cx, cy)) in enumerate(zip(self.cards, self.card_at)):   # the clippings, over the map
+            a, dy = self.news(k, t, cover)
+            if a > 0:
+                im.alpha_composite(fade(cim, a), (int(round(cx - cim.width / 2)), int(round(cy - cim.height / 2 + dy))))
         if self.voice:
             sub = [s for a, b, s in self.subs if a <= t < b]
             if sub:
@@ -248,10 +389,11 @@ class SubsidenceFilm:
             text(d, x, y0 + h + 30, lab, BLACK, 26, WHITE, 4)
         text(d, x1 + 14, y0 + h - 1, KEY_TITLE, XBOLD, 26, WHITE, 4, anchor="ls")
 
-    def annotate(self, d: ImageDraw.ImageDraw, t: float, m: dict):
-        """The national labels (far: their entrance one after another from 1.6 s), and the towns close up."""
+    def annotate(self, d: ImageDraw.ImageDraw, t: float, m: dict, show: float = 1.0, under: float = 0.0):
+        """The national labels (far: their entrance one after another from 1.6 s), and the towns close up. show scales
+        them all (the closing hides them); a label under the first card is scaled by 1 - under (that card's opacity)."""
         tl = self.tl
-        far = min(1.0, max(0.0, (m["dist"] - 250) / 350))
+        far = min(1.0, max(0.0, (m["dist"] - 250) / 350)) * show
         if far > 0:
             for k, (lab, (x, y, z)) in enumerate(zip(tl["labels"], m["labels"])):
                 t_in = 1.6 + k * LABEL_EVERY               # frame 0 = the end state: every label; they fade at
@@ -264,7 +406,7 @@ class SubsidenceFilm:
                 a *= far
                 if a <= 0 or not (40 < x < W - 40 and 470 < y < 1120):
                     continue
-                self.label(d, x, y, lab["text"], lab["side"], lab["dy"], a, 30)
+                self.label(d, x, y, lab["text"], lab["side"], lab["dy"], a, 30, (self.keepout, under))
         near = min(1.0, max(0.0, (160 - m["dist"]) / 80))
         if near > 0:
             for lab, (x, y, z) in zip(tl["local"], m["local"]):
@@ -272,9 +414,7 @@ class SubsidenceFilm:
                     self.label(d, x, y, lab["text"], 1 if x < 620 else -1, -18, near, 32)
 
     @staticmethod
-    def label(d, x, y, s, side, dy, a, px):
-        col = (255, 255, 255, int(255 * a))
-        ink = (16, 10, 6, int(255 * a))
+    def label(d, x, y, s, side, dy, a, px, hide=None):
         r = 7
         w = width(s, BLACK, px)
         if side > 0 and x + 24 + w > 925 or side < 0 and x - 24 - w < SAFE[0]:
@@ -287,6 +427,15 @@ class SubsidenceFilm:
                         stroke_width=4)
         if bb[1] < 520 or bb[3] > 1095 or y < 520 or y > 1095:   # clear of the key above and the chip below
             return
+        if hide is not None and hide[1] > 0:              # under the opening card: it fades as the card leaves
+            k = hide[0]
+            x0, y0, x1, y1 = min(bb[0], x - r), min(bb[1], y - r), max(bb[2], x + r), max(bb[3], y + r)
+            if x0 < k[2] and x1 > k[0] and y0 < k[3] and y1 > k[1]:
+                a *= 1 - hide[1]
+        if a <= 0:
+            return
+        col = (255, 255, 255, int(255 * a))
+        ink = (16, 10, 6, int(255 * a))
         d.ellipse([x - r, y - r, x + r, y + r], outline=col, width=3)
         d.ellipse([x - 2.5, y - 2.5, x + 2.5, y + 2.5], fill=col)
         d.line([(x + side * (r + 2), y), (lx if side > 0 else lx + w, ty - px * 0.35)], fill=col, width=2)
@@ -304,10 +453,11 @@ def main() -> None:
     base = OUT / "social" / ("subsidence_fa_voice" if args.voice else "subsidence_fa")
     for old in (OUT / "social").glob(f"{base.name}_t*.png"):
         old.unlink()
-    film.draw(1, 0.0).save(f"{base}_cover.png", optimize=True)
+    film.draw(1, 0.0, cover=True).save(f"{base}_cover.png", optimize=True)   # the cover: the map, no card
     print("saved", f"{base}_cover.png")
     if args.stills:
-        for t in (0.0, 3.0, 5.5, 7.9, 10.5, 13.2, 16.0, 19.0, 22.0, 24.0):
+        for t in (0.0, 1.5, 2.4, 3.0, 5.5, 7.9, 10.5, 13.2, 16.0, 19.0, 22.0, 24.0, 25.9, 26.2, 26.9, 27.6, 28.5,
+                  30.6, 30.97):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
             print("saved", f"{base}_t{t:04.1f}.png")
         return
