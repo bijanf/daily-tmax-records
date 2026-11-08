@@ -1,9 +1,9 @@
 """EL NIÑO, VERSION B: THE SELF-DESCRIBING REEL OF THE NOAH'S-FLOOD HOOK, in the five-dam grammar (iran_elnino26s_fa).
 
-Five bars of 60 BPM, 27.5 s: S1 0-4.5 s the hook (the tropical Pacific, the week's warm water, the ONI bar); S2
-[1/3] 4.5-10.5 s the 26 autumns, one drop each; S3 [2/3] 10.5-16 s the Iran map and the autumn rain bar (74 mm
-against the mean of 60); S4 [3/3] 16-21 s the 22 winters; S5 21-27.5 s the answer and the question. Measured data only,
-no forecast. Every number comes from src/elnino26s.py (asserted there and read back from numbers.json here).
+Five bars of 60 BPM, 35.5 s, each scene holding its narration (the owner's own voice, elnino26s_voice.py) plus
+0.8-1.0 s: S1 0-7 s the hook (the tropical Pacific, the week's warm water, the ONI bar); S2 [1/3] 7-14.75 s the 26
+autumns, one drop each; S3 [2/3] 14.75-18.75 s the Iran map and the autumn rain bar (74 mm against the mean of 60);
+S4 [3/3] 18.75-26.75 s the 22 winters; S5 26.75-35.5 s the answer and the question. Measured data only, no forecast. Every number comes from src/elnino26s.py (asserted there and read back from numbers.json here).
 
 The Pacific (S1): the tropical Pacific from 120 E to 80 W, 30 S to 30 N, equirectangular, the Blue Marble darkened
 and tinted where NOAA OISST v2.1's daily anomaly (vs 1991-2020), averaged over 17-23 October 2026, is at least +1.5 °C
@@ -44,8 +44,8 @@ from onebit_slides import COLOURS, LEFT, RIGHT, WIN, Slides  # noqa: E402
 
 BASE = "elnino26s_fa"
 AUTUMN, WINTER = "OND", "JFM"
-PACE = dict(bpm=60, bars=(1.125, 1.5, 1.375, 1.25, 1.625))     # 4.5, 6, 5.5, 5, 6.5 s: 27.5 s
-END = 27.5
+PACE = dict(bpm=60, bars=(1.75, 1.9375, 1.0, 2.0, 2.1875))     # 7, 7.75, 4, 8, 8.75 s: 35.5 s
+END = 35.5                                           # s: the reel's length (the scenes above)
 BARH = 64                                          # px: the title bar of the window
 RULE_Y = 664                                       # px: the rule under the headline (as onebit_elnino2)
 SOURCE_Y = 1540                                    # px: the sources' baseline, clear of the bottom UI band
@@ -56,7 +56,7 @@ CELL = el2.CELL
 DROP = el2.DROP
 WET_T0 = {AUTUMN: 1.0, WINTER: 0.8}                # s into a scene: the first drop turns
 WET_SPAN = {AUTUMN: 3.6, WINTER: 3.2}              # s: the drops turn over this span
-COUNT_T = {AUTUMN: 5.0, WINTER: 4.5}               # s into a scene: the count is written
+COUNT_T = {AUTUMN: 4.8, WINTER: 4.8}               # s into a scene: the count is written as the line's count ends
 # the Pacific: 120 E to 80 W (the box of elnino26s), its pixels on the film's map
 PAC_BOX = (120.0, 280.0, -30.0, 30.0)
 PAC_W, PAC_H = RIGHT - LEFT, 311                   # px: 828 wide, 160 deg at 5.175 px a degree
@@ -78,7 +78,7 @@ SOURCE = 42                                        # px: the sources line (44 px
 LABEL = 48                                         # px: the key and labels (floor 48)
 GROW = 1.0                                         # s: a bar grows once, then holds
 ONI_T0 = -1.0                                      # s: the ONI bar is full at frame 0 (the cover shows the answer)
-RAIN_T0 = 10.5 + 0.3                               # s: the rain bar starts to grow (scene 3)
+RAIN_OFF = 0.3                                      # s after scene 3 starts: the rain bar starts to grow
 REVEAL_GAP = 0.2                                   # s: the answer appears this long after its verdict is typed
 PAC_LABEL = "اقیانوسِ آرام"
 NINO_LABEL = "ناحیه‌ی نینو ۳٫۴"
@@ -169,6 +169,7 @@ class ElNino26sFilm(Slides):
         assert PAC_Y + PAC_H < KEY_Y - 10 and KEY_Y + 124 + 88 + 20 < BAR_Y - 60, "the key runs into the dam bar"
         assert MAP_Y3 + self.map_h < COLOUR3_Y - 20, "the Iran map runs into its colour bar"
         assert COLOUR3_Y + 124 + UNIT < BAR_Y - 40, "the colour bar's unit runs into the rain bar"
+        assert abs(self.starts[-1] - END) < 1e-9, "END is the sum of the scenes"
 
     # ── geometry ──
 
@@ -430,7 +431,7 @@ class ElNino26sFilm(Slides):
         el = self.nums["iran_mm_el"]
         top = mean / RAIN_MEAN_AT                          # the scale's end: the mean sits at 70 % of the width
         xv = lambda v: LEFT + v / top * (RIGHT - LEFT)
-        p = 1.0 if not np.isfinite(t) else min(max((t - RAIN_T0) / GROW, 0.0), 1.0)
+        p = 1.0 if not np.isfinite(t) else min(max((t - (self.starts[2] + RAIN_OFF)) / GROW, 0.0), 1.0)
         p = p * p * (3 - 2 * p)
         v = el * p
         y = BAR_Y
@@ -490,9 +491,13 @@ def main() -> None:
     film.draw(1, 0.0).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
-        for t in (0.0, 3.0, 8.0, 13.0, 18.0, 24.0, 27.0):
-            film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
-            print("saved", f"{base}_t{t:04.1f}.png")
+        times = [0.0]
+        for i in range(len(film.S.scenes)):
+            end = film.starts[i + 1]
+            times += [float(film.starts[i]), float((film.starts[i] + end) / 2)]
+        for t in sorted(set(round(t, 2) for t in times)):
+            film.draw(1, t).save(f"{base}_t{t:05.2f}.png")
+            print("saved", f"{base}_t{t:05.2f}.png")
         return
     onebit.video(film, Path(f"{base}_reel.mp4"), SOCIAL_CRF, SIZES["reel"], audio="silent")
 
