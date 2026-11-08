@@ -1,4 +1,4 @@
-"""The light score of the Hamoun reel, version 2 (hamoun2_fa, 30 s, no narration: the user's choice, 8 Nov 2026): the
+"""The light score of the Hamoun reel, version 2 (hamoun2_fa, 46 s, no narration: the user's choice, 8 Nov 2026): the
 light score's setar and checks (onebit_score_air_light.py, imported, not copied), on the clock of onebit_hamoun2.py,
 in D Esfahan (D E F G A Bb C#: twelve-tone, no koron).
 
@@ -33,10 +33,10 @@ import onebit_score_air_light as light  # noqa: E402
 
 SR = kit.SR
 BASE = "hamoun2_fa"
-END = 30.0
+END = 46.0
 LUFS, MASTER_TP, TP_WAV, TP_AAC = -14.0, -2.0, -1.5, -1.0
 VEL_SOFT, VEL, VEL_HOLD, VEL_MARK = 0.55, 0.80, 0.90, 0.45
-ENDING_T = 28.0                                      # s: the ending, after the question has settled
+ENDING_T = 44.0                                      # s: the ending, after the question has settled
 MODE = {2, 4, 5, 7, 9, 10, 1}                        # pitch classes of D Esfahan (D E F G A Bb C#)
 ABOVE = (18, 20, 22, 32, 33)                         # springs after 1379 above the mean: 1384 1386 1388 1398 1399
 
@@ -44,7 +44,8 @@ ABOVE = (18, 20, 22, 32, 33)                         # springs after 1379 above 
 def clock() -> None:
     """The film's clock as this score was written for it. A change in onebit_hamoun2.py that moves it fails here."""
     assert film.DURATION == END and (film.T0, film.STEP1, film.T13, film.STEP2) == (2.4, 0.45, 8.4, 0.36)
-    assert (film.REWIND, film.T_ERAS, film.T_DRY, film.T_NOW) == ((1.0, 2.2), 18.0, 18.4, 24.4)
+    assert (film.REWIND, film.T_ERAS, film.T_DRY, film.T_WHY, film.T_WHERE, film.T_NOW) == (
+        (1.0, 2.2), 18.0, 18.4, 24.4, 32.4, 40.4)
     after = [k for k in range(13, 40) if film.bars_above(k)]
     assert tuple(after) == ABOVE, after
 
@@ -62,9 +63,13 @@ def score_notes() -> list:
         (t(32), 77, VEL_MARK), (t(33), 74, VEL_MARK),   # 1398 1399: above the mean
         (t(39), 62, VEL),                            # 1405: D4
         (film.T_DRY, 74, VEL_HOLD),                  # D5: the chart alone, the eras and the near-dry springs
+        (film.T_WHY, 70, VEL),                       # Bb4: why? the rain and the lake
+        (film.T_WHY + 2.3, 65, VEL_MARK),            # F4: «آبِ هامون خیلی بیشتر»
+        (film.T_WHERE, 69, VEL),                     # A4: where did the water go
+        (film.T_WHERE + 2.3, 74, VEL_SOFT),          # D5
         (film.T_NOW, 65, VEL),                       # F4: 1405 against the mean
-        (26.00, 69, VEL),                            # A4: the question
-        (27.00, 74, VEL_SOFT),                       # D5
+        (film.T_NOW + 1.6, 69, VEL),                 # A4: the question
+        (film.T_NOW + 2.6, 74, VEL_SOFT),            # D5
         (ENDING_T, 62, VEL),                         # D4: the ending, an open fifth on the tonic
         (ENDING_T, 69, VEL),                         # A4
     )

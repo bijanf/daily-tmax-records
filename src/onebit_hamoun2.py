@@ -41,13 +41,13 @@ from onebit_slides import LEFT, RIGHT, Slides  # noqa: E402
 DATA = Path(__file__).resolve().parents[1] / "data" / "hamoun" / "reel"
 THEME = "kahgel"
 WET, DRY, GAPC = "#1c5cab", "#B5763A", "#9A8F80"     # above the mean, below it, no number
-PACE = dict(bpm=60, bars=(1, 1.1, 2.5, 1.5, 1.4))
-DURATION = 30.0
+PACE = dict(bpm=60, bars=(1, 1.1, 2.5, 1.5, 2, 2, 1.4))
+DURATION = 46.0
 REWIND = (1.0, 2.2)                                  # s: the bars go, newest first
 T0, STEP1 = 2.4, 0.45                                # 1366 at 2.4 s; 1366-1378 every 0.45 s
 T13, STEP2 = 8.4, 0.36                               # 1379 at 8.4 s; 1379-1405 every 0.36 s
 GROW = 0.25                                          # s: a bar grows from 0 to its value
-T_ERAS, T_DRY, T_NOW = 18.0, 18.4, 24.4              # s: the brackets, the near-dry rings, 1405 against the mean
+T_ERAS, T_DRY, T_WHY, T_WHERE, T_NOW = 18.0, 18.4, 24.4, 32.4, 40.4   # s: brackets, rings, why, where, 1405
 NEAR_DRY = 100.0                                     # km2: «تقریباً بی‌آب»
 # the layout, inside the window of onebit_slides
 FIELD = (LEFT, 740, RIGHT, 1400)                     # x0, y top (the largest spring), x1, y base
@@ -64,13 +64,27 @@ def words() -> dict:
                 ("۱۳۶۷ تا ۱۳۷۸: // هر ۱۲ بهار {بالای میانگین}", ""),
                 ("از ۱۳۷۹: // فقط ۵ بار {بالای میانگین}", ""),
                 ("و {۱۰ بهار} // تقریباً بی‌آب", ""),
+                ("چرا؟ بارش {کمی} کم شد؛ // آبِ هامون {خیلی بیشتر}", "با بارشِ مشابه، آبِ کمتری به هامون رسید"),
+                ("آب کجا رفت؟ // سدها و آبیاری، {در دو سوی مرز}", "خشکسالی شروع کرد؛ برداشتِ آب ادامه داد"),
                 ("امسال: حدودِ {یک‌سومِ} میانگین", "شما هامونِ پُر را دیده‌اید؟")),
         follow="این را برای کسی بفرستید که هامون را می‌شناسد",
         unit="کیلومترمربع", held="تصویرِ صافی از این بهار نیست؛", held2="عدد از همین بهار است",
         gap="عددِ مطمئنی نیست", gap_pic="تصویرِ صافی و عددِ مطمئنی", gap_pic2="از این بهار نیست", legend=("بالای میانگین", "زیرِ میانگین"), mean="میانگینِ ۳۹ بهار",
         eras=("۱۲ از ۱۲ بالای میانگین", "۵ از ۲۶ بالای میانگین"), dry="تقریباً بی‌آب",
+        rain_item="بارشِ زمستان (مهر تا فروردین)، کوه‌های بالادست", lake_item="آبِ هامون، اواخرِ بهار",
+        before="۱۳۶۶ تا ۱۳۷۸", after="۱۳۷۹ تا ۱۴۰۴", wet="در زمستان‌های پرباران هم: حدودِ ۴۰٪ قبل",
+        two="دو داده‌ی بارش: CRU و ERA5",
+        # scene 6, fact-checked 8 Nov 2026 (Whitney 2006 USGS SIR 2006-5182; the 1973 treaty; Akbari et al. 2022 JGLR;
+        # Modaresi Rad et al. 2022 STOTEN; Anadolu Agency 24 Mar 2021): (when, where, what)
+        rows=(("۱۳۳۲", "افغانستان", "سدِ کجکی روی هیرمند"),
+              ("۱۳۵۱", "ایران و افغانستان", "سهمِ ایران از هیرمند: حدودِ ۸۲۰ میلیون مترمکعب در سال"),
+              ("۱۳۶۲", "ایران", "مخازنِ چاه‌نیمه در سیستان؛ چهارمی در ۱۳۸۷"),
+              ("۱۳۶۹ تا ۱۳۹۰", "افغانستان", "زمینِ آبی بینِ سدِ کجکی و مرز: ۶۲٪ بیشتر"),
+              ("۱۴۰۰", "افغانستان", "سدِ کمال‌خان روی هیرمند")),
+        study=("پژوهش (Modaresi Rad و همکاران، ۲۰۲۲):", "بدونِ برداشتِ رو به افزایشِ آب در حوضه،",
+               "هامون در ۲۰۱۰ تا ۲۰۱۹ حدودِ ۲٫۵ برابر بزرگ‌تر می‌بود"),
         sources=("منبع: لندست ۴، ۵، ۷، ۸ و ۹ (USGS)؛ آبِ باز در اواخرِ بهار، کلِ هامون",
-                 "سنجیده با JRC؛ میانگین: ۳۹ بهارِ سنجیده؛ ۱۳۸۱ بی‌عدد"),
+                 "سنجیده با JRC؛ بارش: CRU TS 4.10 و ERA5؛ ۱۳۸۱ بی‌عدد"),
     )
 
 
@@ -123,9 +137,14 @@ class Hamoun2(Slides):
         assert int((v < NEAR_DRY).sum()) == 10 and all(yrs[v < NEAR_DRY] >= 2000)
         assert 0.33 <= v[-1] / self.mean <= 0.38, v[-1] / self.mean          # «حدودِ یک‌سومِ میانگین»
         assert spring_t(12) < 8.4 <= spring_t(13) and spring_t(39) < T_ERAS
+        rain = json.loads((DATA.parent / "reel2" / "rain.json").read_text())   # src/hamoun_rain.py
+        self.rain = rain
+        assert (rain["n_early"], rain["n_late"]) == (13, 25) and 0.25 <= rain["lake_share"] <= 0.27
+        assert 0.91 <= rain["cru"]["rain_share"] <= 0.93 and 0.76 <= rain["era5"]["rain_share"] <= 0.78
+        assert all(0.35 <= rain[k]["wet_share"] <= 0.45 for k in ("cru", "era5"))
         self.hook_at_once = True
         self.setup(th, "fa", colour, words(), PACE, "Hamoun.Lakes")
-        assert abs(self.starts[-1] - DURATION) < 1e-9 and np.allclose(self.starts[:-1], (0, 4, 8.4, 18.4, 24.4))
+        assert abs(self.starts[-1] - DURATION) < 1e-9 and np.allclose(self.starts[:-1], (0, 4, 8.4, 18.4, 24.4, 32.4, 40.4))
         self.done = 0.6
         self.cache = {}
         x, y, side = INSET                                 # the inset sits over the low recent bars
@@ -257,7 +276,7 @@ class Hamoun2(Slides):
 
     def eras(self, c: Canvas, t: float):
         th = self.th
-        if not (np.isfinite(t) and T_ERAS <= t < T_NOW):
+        if not (np.isfinite(t) and T_ERAS <= t < T_WHY):
             return
         _, yt, _, _ = FIELD
         later = self.v[13:][np.isfinite(self.v[13:])].max()
@@ -272,7 +291,7 @@ class Hamoun2(Slides):
 
     def rings(self, c: Canvas, t: float):
         th = self.th
-        if not (np.isfinite(t) and T_DRY <= t < T_NOW):
+        if not (np.isfinite(t) and T_DRY <= t < T_WHY):
             return
         yb = FIELD[3]
         for k, b in enumerate(self.bars):
@@ -283,9 +302,63 @@ class Hamoun2(Slides):
                 ImageDraw.Draw(c.im).ellipse([c.X(cx - 14), c.Y(cy - 14), c.X(cx + 14), c.Y(cy + 14)],
                                              outline=th.mark, width=max(1, round(3 * k_)))
 
+    def why(self, c: Canvas):
+        """Scene 5: the rain and the lake, the later period as a share of the earlier (100 %), as bars."""
+        th, r = self.th, self.rain
+        L = 500                                             # px for 100 %: room left of it for the label
+        lo, hi = sorted((r["era5"]["rain_share"], r["cru"]["rain_share"]))
+        items = ((self.words["rain_item"], (lo, hi), WET, f"{fa(round(100 * lo))} تا {fa(round(100 * hi))}٪"),
+                 (self.words["lake_item"], (r["lake_share"],) * 2, DRY, f"{fa(round(100 * r['lake_share']))}٪"))
+        y = 650
+        for label, (a, b), col, val in items:
+            c.text(RIGHT, y, label, FA_BOLD, 36, th.ink, "rs", "rtl")
+            for k, (period, frac) in enumerate(((self.words["before"], 1.0), (self.words["after"], None))):
+                yy = y + 30 + k * 86
+                c.text(RIGHT, yy + 44, period, FA_TEXT, 28, th.ink, "rs", "rtl")
+                x1 = RIGHT - 150
+                if frac == 1.0:
+                    c.fill(x1 - L, yy + 8, x1, yy + 58, "#CFC4B3")
+                    c.text(x1 - L + 12, yy + 46, "۱۰۰٪", FA_BOLD, 32, th.ink, "ls", "rtl")
+                else:
+                    c.fill(x1 - L * a, yy + 8, x1, yy + 58, col)
+                    if b > a:                               # the range of the two datasets: hatched
+                        for xx in np.arange(x1 - L * b, x1 - L * a, 10):
+                            c.fill(xx, yy + 8, xx + 5, yy + 58, col)
+                    c.text(x1 - L * b - 14, yy + 46, val, FA_BOLD, 36, th.mark, "rs", "rtl")
+                    assert x1 - L * b - 14 - c.width(val, FA_BOLD, 36, "rtl") >= LEFT, val
+            y += 300
+        c.text(RIGHT, y + 10, self.words["wet"], FA_BOLD, 34, th.mark, "rs", "rtl")
+        c.text(RIGHT, y + 64, self.words["two"], FA_TEXT, 28, th.ink, "rs", "rtl")
+
+    def where(self, c: Canvas):
+        """Scene 6: where the water went: the dams, the treaty, the reservoirs and the irrigation on both sides of
+        the border, in time order, and the one study that puts a number on the human share."""
+        th = self.th
+        y = 640
+        for when, side, what in self.words["rows"]:
+            c.text(RIGHT, y, when, FA_BOLD, 40, th.mark, "rs", "rtl")
+            w = c.width(when, FA_BOLD, 40, "rtl")
+            c.text(RIGHT - w - 22, y, f"· {side}", FA_TEXT, 30, th.ink, "rs", "rtl")
+            c.text(RIGHT, y + 46, what, FA_TEXT, 32, th.ink, "rs", "rtl")
+            assert c.width(what, FA_TEXT, 32, "rtl") <= RIGHT - LEFT, what
+            y += 112
+        y0 = y + 6
+        c.frame(LEFT, y0, RIGHT, y0 + 178, fill=th.field)
+        for k, line in enumerate(self.words["study"]):
+            c.text(RIGHT - 20, y0 + 52 + 52 * k, line, FA_BOLD if k == 2 else FA_TEXT, 32 if k else 28,
+                   th.mark if k == 2 else th.ink, "rs", "rtl")
+            assert c.width(line, FA_TEXT, 32, "rtl") <= RIGHT - LEFT - 40, line
+        assert y0 + 178 < 1530, "the study box runs out of the window"
+
     def body(self, c: Canvas, t: float):
+        if np.isfinite(t) and T_WHY <= t < T_WHERE:
+            self.why(c)
+            return
+        if np.isfinite(t) and T_WHERE <= t < T_NOW:
+            self.where(c)
+            return
         cur, upto, grow, all_ = self.state(t)
-        alone = np.isfinite(t) and T_DRY <= t < T_NOW       # scene 4: the chart alone
+        alone = np.isfinite(t) and T_DRY <= t < T_WHY       # scene 4: the chart alone
         self.chart(c, t, cur, upto, grow, all_)
         self.eras(c, t)
         self.rings(c, t)
@@ -306,7 +379,7 @@ def main() -> None:
         old.unlink()
     film.draw(1).save(f"{base}_cover.png", optimize=True)
     if args.stills:
-        for t in (0.0, 1.6, 3.0, 5.6, 9.0, 12.0, 17.9, 19.5, 21.0, 26.0, 29.9):
+        for t in (0.0, 1.6, 9.0, 19.5, 27.5, 30.0, 35.0, 42.0, 45.9):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
             print("saved", f"{base}_t{t:04.1f}.png", flush=True)
         return
