@@ -1,4 +1,4 @@
-"""The light score of the Tehran dams follow-up (tehran5b_fa, 25 s): the light score's engine and checks
+"""The light score of the Tehran dams follow-up (tehran5b_fa, 27 s): the light score's engine and checks
 (onebit_score_air_light.py, imported, not copied), on the clock of onebit_tehran5b.py.
 
     the key       Chahargah on C. The interval checks accept the C scale (C D E F G A B), so the notes are the C scale
@@ -7,7 +7,8 @@
     the notes     a soft G4-C5 pair of plucks: the first sound at 0.00 s (soft, so frame 0 is not silent), then sparse
                   plucks on the film's beats: four in the hook and the first bar, the three bars of 1,930 and 340 (4.4-9.2 s),
                   the three columns (9.9-12.7 s), the rain bar (15.4 s), the rising phrase into the answer (20.5-23.1 s),
-                  and the ending, C4 and G4 struck together 0.12 s after the last speech ends (ENDING_T, 24.15 s).
+                  and the ending, C4 and G4 struck together 0.12 s after the last speech ends (ENDING_T, 24.15 s); the
+                  ending rings into the sources slide (25-27 s) and is inaudible by 26.2 s (checked).
                   Every pair of notes that rings together (within 24 dB at the later onset) is a unison, third, fourth,
                   fifth, sixth or octave (checked).
     the timbre    setar, Karplus-Strong, bright 0.15, T60 2.5 s, low-passed warm at 1.6 kHz; the notes alternate a
@@ -15,15 +16,17 @@
     the duck      the music is ducked 7 dB from 0.6 s before each speech to its end, so it is down when the voice starts.
 
 The narration (the offline voice, ganji, length scale 0.88-0.94: shorter words, never a faster voice), in the window of
-each scene of the film:
+each scene of the film (N2 and N3 were voiced again for the 340-and-548 and 391 figures):
     N1 0.10-3.90 s   N2 4.10-9.40 s   N3 9.60-14.90 s   N4 15.10-19.90 s   N5 20.10-24.40 s
 The take of each segment is the one faster-whisper 'medium' transcribes closest to its text (chosen once, cached in
 data/air/tehran5b/narration with a manifest; a segment whose text, length scale or voice differs is synthesized again).
 
-Three files are written, each with its WAV (48 kHz, 16 bit):
+Four files are written, each with its WAV (48 kHz, 16 bit):
     tehran5b_fa_light_reel.mp4        the voice and the light music
     tehran5b_fa_voiceonly_reel.mp4    the voice alone, at the same level as in the mix
     tehran5b_fa_lightmusic_reel.mp4   the light music alone, at -26 LUFS
+    tehran5b_fa_music_reel.mp4        THE POSTED FILE: the light music alone, no ducking, at -14.5 LUFS (true peak
+                                      at or below -1.5 dBTP after AAC decode)
 
 The silent master (outputs/onebit/social/tehran5b_fa_reel.mp4) must be newer than src/onebit_tehran5b.py (or pass
 --accept-stale-video for a preview). It is not rewritten. Existing outputs are never overwritten.
@@ -53,9 +56,10 @@ import onebit_tehran5b as film  # noqa: E402
 
 SR = kit.SR
 BASE = "tehran5b_fa"
-END = 25.0                                          # s: the length of the reel (the film's clock)
+END = 27.0                                          # s: the length of the reel (the film's clock)
 TAIL = light.TAIL
 MUSIC_LUFS, MIX_LUFS = -26.0, -14.5
+LOUD_LUFS, LOUD_TP = -14.5, -2.0          # the music-only file for posting (no ducking); the WAV ceiling
 TP_WAV, TP_AAC = -1.5, -1.0
 MASTER_TP = -2.0
 RATIO_MIN = light.RATIO_MIN                         # dB: the voice over the ducked music, in every segment
@@ -71,9 +75,9 @@ NARRATION = (
     dict(name="n1", start=0.10, end=3.90, length=0.92, noise=0.0,
          text="با این باران‌ها، سدهای تهران پر می‌شوند؟"),
     dict(name="n2", start=4.10, end=9.40, length=0.94, noise=0.0,
-         text="تا شانزده آبان، پنج سد حدودِ هجده درصد پُر است."),
+         text="تا شانزده آبان، سیصد و چهل؛ معمول، پانصد و چهل و هشت."),
     dict(name="n3", start=9.60, end=14.90, length=0.94, noise=0.0,
-         text="سالِ آبی با حدودِ چهارصد و پنجاه شروع شد؛ حالا سیصد و چهل."),
+         text="اولِ مهر حدودِ سیصد و نود و یک بود؛ حالا سیصد و چهل."),
     dict(name="n4", start=15.10, end=19.90, length=0.88, noise=0.0,
          text="باران تا نیمه‌ی آبان، شانزده میلی‌متر؛ کمتر از نصفِ معمول."),
     dict(name="n5", start=20.10, end=24.40, length=0.92, noise=0.0,
@@ -96,9 +100,9 @@ def clock() -> dict:
     """The film's clock as this score was written for it. A change in onebit_tehran5b.py that moves it fails here."""
     beat = 60 / film.PACE["bpm"]
     starts = np.cumsum([0.0] + [b * 4 * beat for b in film.PACE["bars"]])
-    assert np.allclose(starts, [0.0, 4.0, 9.5, 15.0, 20.0, 25.0]), starts
+    assert np.allclose(starts, [0.0, 4.0, 9.5, 15.0, 20.0, 25.0, 27.0]), starts
     assert np.allclose(starts, film.STARTS), (starts, film.STARTS)
-    scene_of = {"n1": 0, "n2": 1, "n3": 2, "n4": 3, "n5": 4}
+    scene_of = {"n1": 0, "n2": 1, "n3": 2, "n4": 3, "n5": 4}     # the sources slide (scene 5) has no narration
     for seg in NARRATION:
         assert 0.0 <= seg["start"] < seg["end"] <= END and seg["length"] >= 0.88, seg["name"]
         i = scene_of[seg["name"]]
@@ -120,6 +124,7 @@ def score_notes() -> list:
         notes.append(light.Note(float(t), int(m), float(vel), light.PAN if i % 2 == 0 else -light.PAN))
     assert all(m % 12 in CSCALE for _, m, _ in allnotes), "every note is on the C scale"
     assert ENDING_T >= 24.03 + 0.05, "the ending follows N5 (its speech ends at 24.03 s, measured)"
+    assert ENDING_T <= END - 0.8, "the ending must ring out 0.8 s before the end"
     return sorted(notes, key=lambda nt: nt.t)
 
 
@@ -198,6 +203,7 @@ def build(notes) -> dict:
     raw[:k] *= w.reshape(-1, *([1] * (raw.ndim - 1)))
     stem = light._bass_mono(light._air_cut(raw))
     stem_m = kit.master(stem, lufs=MUSIC_LUFS, tp=MASTER_TP, seconds=END, fade_out=1.0)
+    loud = kit.master(stem, lufs=LOUD_LUFS, tp=LOUD_TP, seconds=END, fade_out=1.0)   # the posted music: no ducking
     n = len(stem_m)
     v, spans = narration_voice(n)
     mask = np.zeros(n, bool)
@@ -216,7 +222,7 @@ def build(notes) -> dict:
     voice_only_pre = voice * g_eff
     voice_only = kit.master(voice_only_pre, lufs=kit.integrated_lufs(voice_only_pre), tp=MASTER_TP,
                             seconds=END, fade_out=1.0)
-    return dict(stem=stem_m, music_d=music_d, voice=voice, spans=spans, core=None, mask=mask,
+    return dict(stem=stem_m, loud=loud, music_d=music_d, voice=voice, spans=spans, core=None, mask=mask,
                 mix=mix, total=total, g_eff=g_eff, voice_only=voice_only, ratios=ratios)
 
 
@@ -227,6 +233,7 @@ def output_paths(social: Path) -> dict:
         "light": (social / f"{BASE}_light.wav", social / f"{BASE}_light_reel.mp4"),
         "voiceonly": (social / f"{BASE}_voiceonly.wav", social / f"{BASE}_voiceonly_reel.mp4"),
         "lightmusic": (social / f"{BASE}_lightmusic.wav", social / f"{BASE}_lightmusic_reel.mp4"),
+        "music": (social / f"{BASE}_music.wav", social / f"{BASE}_music_reel.mp4"),
     }
     for wav, mp4 in outs.values():
         if wav.exists() or mp4.exists():
@@ -266,9 +273,10 @@ def main() -> None:
 
     fails = []
     results = {}
-    for key, mode in (("light", "voice+music"), ("voiceonly", "voice only"), ("lightmusic", "music only")):
+    for key, mode in (("light", "voice+music"), ("voiceonly", "voice only"), ("lightmusic", "music only"),
+                      ("music", "music only, posted, -14.5 LUFS")):
         wav, mp4 = outs[key]
-        x = {"light": d["mix"], "voiceonly": d["voice_only"], "lightmusic": d["stem"]}[key]
+        x = {"light": d["mix"], "voiceonly": d["voice_only"], "lightmusic": d["stem"], "music": d["loud"]}[key]
         light.write_wav(wav, x)
         kit.mux(video, wav, mp4)
         print(f"saved {wav}")
@@ -337,6 +345,13 @@ def main() -> None:
         fails.append("mix level")
     if tp_mix > TP_WAV or tp_vo > TP_WAV or tp_music > TP_WAV:
         fails.append("WAV true peak")
+    loud = light._read_wav(outs["music"][0])
+    lufs_loud, tp_loud = kit.integrated_lufs(loud), kit.true_peak_dbtp(loud)
+    print(f"    music, posted (WAV) {lufs_loud:+.2f} LUFS (target -14.5)   {tp_loud:+.2f} dBTP (WAV limit -1.5)")
+    if abs(lufs_loud - LOUD_LUFS) > 0.3:
+        fails.append("posted music level")
+    if tp_loud > TP_WAV:
+        fails.append("posted music WAV true peak")
 
     duck_db = [20 * np.log10(np.sqrt(np.mean(d["music_d"][round(a * SR):round(b * SR)] ** 2))
                              / np.sqrt(np.mean(d["stem"][round(a * SR):round(b * SR)] ** 2)))
@@ -372,12 +387,19 @@ def main() -> None:
     for key, (wav, mp4, mode) in results.items():
         dec = light._decode(mp4)
         aac_l, aac_tp = kit.integrated_lufs(dec), kit.aac_true_peak(mp4)
-        print(f"    {mp4.name}: decoded {aac_l:+.2f} LUFS, {aac_tp:+.2f} dBTP (limit -1)")
-        if aac_tp > TP_AAC:
+        print(f"    {mp4.name}: decoded {aac_l:+.2f} LUFS, {aac_tp:+.2f} dBTP")
+        if key == "music":
+            print(f"    THE POSTED FILE after AAC decode: {aac_l:+.2f} LUFS, true peak {aac_tp:+.2f} dBTP "
+                  f"(limit -1.5 for the posted file)")
+            if aac_tp > -1.5:
+                fails.append("posted file decoded true peak above -1.5 dBTP")
+            if abs(aac_l - LOUD_LUFS) > 0.3:
+                fails.append("posted file decoded level")
+        elif aac_tp > TP_AAC:
             fails.append(f"decoded true peak {key}")
         if v_md5 != light._md5(mp4, "0:v:0"):
             fails.append(f"the video stream of {mp4.name} changed")
-    print("    the video stream of all three MP4s is the silent master's (the same packets)")
+    print("    the video stream of all four MP4s is the silent master's (the same packets)")
     st2 = os.stat(video)
     if before != (st2.st_size, st2.st_mtime_ns):
         fails.append("the silent reel was rewritten")
@@ -389,6 +411,12 @@ def main() -> None:
         print(f"      {name} speech {a:6.2f}-{b:6.2f} s (window {seg['start']:.2f}-{seg['end']:.2f} s)")
         if not (abs(a - seg["start"]) < 1e-9 and b <= seg["end"] + 1e-9):
             fails.append(f"narration timing {name}")
+    tail = light._read_wav(outs["music"][0])
+    e_onset = np.sqrt(np.mean(tail[round((ENDING_T + 0.05) * SR):round((ENDING_T + 0.35) * SR)] ** 2))
+    e_end = np.sqrt(np.mean(tail[round((END - 0.8) * SR):round((END - 0.4) * SR)] ** 2))
+    print(f"    the ending rings out: {20 * np.log10(e_end / e_onset):+.1f} dB between its onset and 0.8 s before the end")
+    if 20 * np.log10(e_end / e_onset) > -30.0:
+        fails.append("the ending rings past 0.8 s before the end")
     if ENDING_T < d["spans"][-1][2] + 0.05:
         fails.append("the ending does not follow N5")
     print(f"    the ending {ENDING_T:.2f} s; the reel {END:.1f} s, N5 ends {d['spans'][-1][2]:.2f} s "

@@ -1,11 +1,12 @@
-"""THE TEHRAN DAMS, FOLLOW-UP (tehran5b_fa, 25 s): the newest official figures, in the look of the five-dam reel
+"""THE TEHRAN DAMS, FOLLOW-UP (tehran5b_fa, 27 s): the newest official figures, in the look of the five-dam reel
 (theme kahgel, the cream window, the title bar "Tehran.Dams" with its counter [k/3]).
 
-Five bars of 60 BPM: S1 0-4 s the hook (the five 1405 lakes, as the viral reel's hook; whole at frame 0, which is the
-cover); S2 [1/3] 4-9.5 s the share of the five dams' capacity (one bar to 340 of 1,930 million m3, the band of 800-850
-that the stable state needs); S3 [2/3] 9.5-15 s the water year's start (450), 1 Aban (359) and 16 Aban (340), three
-bars on one scale, the earliest on the right (Persian time runs right to left); S4 [3/3] 15-20 s the rain of Tehran to
-mid-Aban (16 mm against the expected 38.9), one bar and one dashed mark; S5 20-25 s the answer and the question.
+Six scenes: S1 0-4 s the hook (the five 1405 lakes, as the viral reel's hook; whole at frame 0, which is the cover);
+S2 [1/3] 4-9.5 s the storage on 16 Aban (340 million m3) on a 0-900 scale, with the 1 Aban normal (548) marked and the
+band the stable state needs (800-850); S3 [2/3] 9.5-15 s the start of Mehr (391), 1 Aban (359) and 16 Aban (340), three
+columns on one scale, the earliest on the right (Persian time runs right to left); S4 [3/3] 15-20 s the rain of Tehran to
+mid-Aban (16 mm against the expected 38.9), one bar and one dashed mark; S5 20-25 s the answer and the question; S6
+25-27 s the sources. No percentage of capacity appears on screen.
 
 The figures and their sources: src/tehran5b.py (asserted there). The five lakes: the pictures and the box of each dam
 are onebit_tehran5's (the Landsat autumn passes of 1405, read from src/tehran5.py's modules). The window, the
@@ -37,9 +38,9 @@ from onebit import FA_BOLD, FA_TEXT, OUT, PIXEL, SIZES, SOCIAL_CRF, Canvas, fa, 
 from onebit_slides import COLOURS, LEFT, RIGHT, WIN, Slides  # noqa: E402
 
 BASE = "tehran5b_fa"
-PACE = dict(bpm=60, bars=(1.0, 1.375, 1.375, 1.25, 1.25))      # 4, 5.5, 5.5, 5, 5 s: 25 s
-STARTS = (0.0, 4.0, 9.5, 15.0, 20.0, 25.0)                     # s: the scenes (the film's clock)
-END = 25.0
+PACE = dict(bpm=60, bars=(1.0, 1.375, 1.375, 1.25, 1.25, 0.5))  # 4, 5.5, 5.5, 5, 5, 2 s: 27 s
+STARTS = (0.0, 4.0, 9.5, 15.0, 20.0, 25.0, 27.0)               # s: the scenes (the film's clock)
+END = 27.0
 ORDER = t5.ORDER                                               # worst to best against the average (the five-dam reel)
 ENG = "Tehran.Dams"
 BAR = 40                                                       # px: the window's title bar (Slides)
@@ -50,8 +51,10 @@ KEY_GAP = 60                                                   # px: between the
 HEAD = ((68, 92), (64, 86))                                    # the headline: full size, and the smaller fallback
 SMALL = 48                                                     # px: key lines and labels (floor 48)
 UNIT = 48                                                      # px: ticks, units and the scale (floor 48)
-SOURCE = 40                                                    # px: the sources line (the 40-px floor, so it clears the border)
-SOURCE_Y = 1590                                                # px: the sources' baseline, clear of the window border (1552)
+SOURCE = 40                                                    # px: the footer line under the window (S1-S5)
+SOURCE_Y = 1590                                                # px: the footer's baseline, clear of the window border (1552)
+SRC = 44                                                       # px: the sources slide (S6), outlet and headline
+SRC_LEAD, SRC_GAP, SRC_TOP, SRC_MAX = 56, 28, 716, 1500       # px: line, gap, first baseline, last baseline allowed
 STRIP_TOP, STRIP_BOTTOM = 668, 1210                            # px: the five lakes' area in S2 (its foot: the scale bar)
 STRIP_BOTTOM_HOOK = 1450                                       # px: the hook's lakes take the empty cream below them
 STRIP_FOOT = 64                                                # px: the lakes stop this far above the foot
@@ -64,9 +67,10 @@ BAR_Y, BAR_H = 1300, 44                                        # px: the storage
 RAIN_Y, RAIN_H = 880, 80
 AVG_AT = 0.70                                                  # the average (or the expected) sits at 70 % of the width
 COL_BASE = 1240                                                # px: the baseline of the three columns (S3)
-COL_K = 520 / 450                                              # px per million m3 for S3 (450 is 520 px tall)
+COL_K = 520 / tehran5b.START_MEHR                              # px per million m3 for S3 (391, the start of Mehr, is 520 px)
 COL_W = 200                                                    # px: a column's width
 COL_X = (RIGHT - 100, (LEFT + RIGHT) / 2, LEFT + 100)          # the columns' centres: the earliest on the right
+SCALE = tehran5b.SCALE_MAX                                     # million m3: S2's bar scale, 0 to 900
 BAND = (tehran5b.NEED[0], tehran5b.NEED[1])                    # million m3: the stable state's band (800-850)
 RAIN_TOP = tehran5b.DIDBAN["rain_expected"] / AVG_AT           # the scale's end for the rain bar
 BAND_MIN = 40                                                  # px: the stable state's band is drawn at least this wide
@@ -74,23 +78,31 @@ LABEL = {"karaj": "سدِ امیرکبیر"}                               # the
 
 
 def words() -> dict:
-    """The five scenes (bold line, key line; S5's lines are drawn in body()), the follow line, the sources."""
+    """The six scenes (bold line, key line; S5's lines are drawn in body()), the follow line, the sources."""
     return dict(
         scenes=(("با این باران‌ها، // سدهای تهران پر می‌شوند؟", "تازه‌ترین آمارِ رسمی: ۱۶ آبان ۱۴۰۵"),
-                ("پنج سد: {۱۸٪} پر", "حدودِ ۳۴۰ از جمعِ ظرفیتِ ۱٬۹۳۰ (حسابِ ما)"),
-                ("آغازِ سالِ آبی: {۴۵۰}", "حالا حدودِ ۳۴۰؛ هنوز کم می‌شود"),
+                ("پنج سد: {۳۴۰}؛ معمول: ۵۴۸", "میلیون مترمکعب؛ ۱۶ آبان، در برابرِ میانگینِ بلندمدتِ ۱ آبان"),
+                ("اولِ مهر: {۳۹۱}", "حالا حدودِ ۳۴۰؛ هنوز کم می‌شود"),
                 ("بارانِ تهران: {۱۶} از ۳۸٫۹ میلی‌متر", "تا نیمه‌ی آبان؛ کمتر از نصفِ معمول"),
-                ("چند روز باران پرشان نمی‌کند", "")),
+                ("چند روز باران پرشان نمی‌کند", ""),
+                ("منابعِ خبری", "")),
         follow="این را برای کسی بفرستید که در تهران زندگی می‌کند",
-        sources="دیدبان ایران · آبفا · مهر · لندست",
+        sources="تسنیم · آبفا · مهر · تعادل · لندست",
+        source_items=(
+            ("تسنیم (از راهِ دیدبان ایران)، ۱۶ آبان ۱۴۰۵", "گفت‌وگو با سخنگوی آبفای استانِ تهران"),
+            ("خبرگزاری مهر، ۴ آبان ۱۴۰۵", "آیا سدهای تهران برای النینو آماده هستند؟"),
+            ("خبرگزاری مهر، ۲۶ مهر ۱۴۰۵", "آخرین وضعیت سدهای تهران؛ ذخایر ۳۸۳ میلیون مترمکعب شد"),
+            ("روزنامه‌ی تعادل، ۱۷ مهر ۱۴۰۵", "سدهای پایتخت همچنان چقدر کسری آب دارد؟"),
+        ),
+        images="تصویرها: لندست، ۵ و ۶ مهر ۱۴۰۵",
         s5_small=("بارانِ همین روزها هنوز در آمارِ رسمی نیست",),
         question="برفِ البرز // به میانگین می‌رسد؟",
         question_ref="میانگینِ بلندمدت",
-        bar_end="جمعِ ظرفیت (حسابِ ما): ۱٬۹۳۰",
         unit="میلیون مترمکعب",
-        columns=(("آغازِ سالِ", "آبی"), ("۱ آبان", ""), ("۱۶ آبان", "")),
+        columns=(("اولِ مهر", ""), ("۱ آبان", ""), ("۱۶ آبان", "")),
         rain_mark="معمول ۳۸٫۹",
         rain_unit="میلی‌متر",
+        normal_mark=f"معمول {fa(tehran5b.AVG_1ABAN)}",
     )
 
 
@@ -147,19 +159,23 @@ class Tehran5bFilm(Slides):
 
     def check_words(self) -> None:
         sc = self.words["scenes"]
-        assert len(sc) == 5 and len(PACE["bars"]) == 5
+        assert len(sc) == 6 and len(PACE["bars"]) == 6 and len(STARTS) == 7
         assert sc[0][0] == "با این باران‌ها، // سدهای تهران پر می‌شوند؟"
-        assert sc[1][0] == f"پنج سد: {{{fa(18)}٪}} پر"
-        assert sc[2][0] == f"آغازِ سالِ آبی: {{{fa(450)}}}"
-        assert sc[1][1] == f"حدودِ {fa(340)} از جمعِ ظرفیتِ {fa_thousands(1930)} (حسابِ ما)"
+        assert sc[1][0] == f"پنج سد: {{{fa(340)}}}؛ معمول: {fa(548)}"
+        assert sc[1][1] == "میلیون مترمکعب؛ ۱۶ آبان، در برابرِ میانگینِ بلندمدتِ ۱ آبان"
+        assert sc[2][0] == f"اولِ مهر: {{{fa(391)}}}" and sc[2][1] == "حالا حدودِ ۳۴۰؛ هنوز کم می‌شود"
         assert sc[3][0] == f"بارانِ تهران: {{{fa(16)}}} از {fa_dec(38.9)} میلی‌متر"
-        assert fa_thousands(tehran5b.TOTAL_CAPACITY) == "۱٬۹۳۰"
-        assert fa(tehran5b.DIDBAN["share_pct"]) == "۱۸"
-        assert fa(tehran5b.DIDBAN["rain_now"]) == "۱۶"
-        assert fa_dec(tehran5b.DIDBAN["rain_expected"]) == "۳۸٫۹"
+        assert fa(tehran5b.RAIN_NOW) == "۱۶" and fa_dec(tehran5b.RAIN_EXPECTED) == "۳۸٫۹"
+        assert fa(tehran5b.START_MEHR) == "۳۹۱" and fa(tehran5b.ONE_ABAN) == "۳۵۹" and fa(tehran5b.NOW) == "۳۴۰"
+        assert fa(tehran5b.AVG_1ABAN) == "۵۴۸" and fa(tehran5b.NEED[0]) == "۸۰۰" and fa(tehran5b.NEED[1]) == "۸۵۰"
+        assert fa(tehran5b.SCALE_MAX) == "۹۰۰"
         assert self.words["s5_small"] and all(self.words["s5_small"])
         assert "ذوب" not in " ".join(self.words["s5_small"]), "no snowmelt claim without a source"
-        assert self.words["columns"][0] == ("آغازِ سالِ", "آبی")
+        assert self.words["columns"][0] == ("اولِ مهر", "")
+        assert len(self.words["source_items"]) == 4
+        on_screen = repr(self.words)
+        for banned in ("٪", "%", "درصد", "ظرفیت", "حساب", "۱٬۹۳۰", "1,930", "1930", "۴۵۰", "450", "۱۸"):
+            assert banned not in on_screen, ("on screen, not allowed:", banned)
 
     # ── pictures: the five lakes in two rows at one scale (the hook's, with the names at 48 px) ──
 
@@ -247,7 +263,7 @@ class Tehran5bFilm(Slides):
         """The hook whole at frame 0; every other headline's words within 1.8 s, so its key line lands by 2.4 s."""
         ws = [w for w, _ in onebit.words_of(self.S.scenes[i].title, self.th)]
         n = len(ws) - ws.count("//")
-        if i == 0:
+        if i in (0, 5):                                     # the hook and the sources slide: whole at once
             return [-1.0] * n
         return [0.2 + 1.6 * k / n for k in range(n)]
 
@@ -302,7 +318,8 @@ class Tehran5bFilm(Slides):
             if i < 4:
                 self.key_lines(c, self.words["scenes"][i][1])
         self.body(c, t)
-        self.sources(c)
+        if i < 5:
+            self.sources(c)
         return c.im
 
     def body(self, c: Canvas, t: float):
@@ -316,13 +333,15 @@ class Tehran5bFilm(Slides):
             self.columns(c, t)
         elif i == 3:
             self.rain_bar(c, t)
-        else:
+        elif i == 4:
             self.answer(c, t)
+        else:
+            self.sources_slide(c, t)
 
     # ── scene 2: one bar, full length 1,930, to 340, with the band of the stable state ──
 
     def x_storage(self, v: float) -> float:
-        return LEFT + v / tehran5b.TOTAL_CAPACITY * (RIGHT - LEFT)
+        return LEFT + v / SCALE * (RIGHT - LEFT)
 
     def storage_bar(self, c: Canvas, t: float):
         th = self.th
@@ -342,22 +361,29 @@ class Tehran5bFilm(Slides):
         lab = f"لازم برای پایداری: {lab}"            # what the band is: the spokesman's «عبور از شرایط پایدار»
         lw = c.width(lab, FA_TEXT, SMALL, "rtl")
         cx = min(max((lo + hi) / 2, LEFT + lw / 2), RIGHT - lw / 2)
-        c.text(cx, BAR_Y - 22, lab, FA_TEXT, SMALL, th.ink, "ms", "rtl")
+        c.text(cx, BAR_Y - 30, lab, FA_TEXT, SMALL, th.ink, "ms", "rtl")
+        # the 1 Aban normal (548): a dashed mark across the bar, labelled below it
+        xm = self.x_storage(tehran5b.AVG_1ABAN)
+        for yy in range(BAR_Y - 8, BAR_Y + BAR_H + 12, 22):
+            c.fill(xm - 2, yy, xm + 2, yy + 10, th.ink)
+        ml = self.words["normal_mark"]
+        mw = c.width(ml, FA_TEXT, SMALL, "rtl")
+        assert xm - mw / 2 > LEFT + 40, ml
+        c.text(xm, BAR_Y + BAR_H + 56, ml, FA_TEXT, SMALL, th.ink, "ms", "rtl")
         if p > 0.5:
             c.text(xv + 14, BAR_Y + BAR_H - 6, fa(tehran5b.NOW), FA_BOLD, SMALL, th.ink, "ls", "rtl")
         c.text(LEFT, BAR_Y + BAR_H + 56, fa(0), FA_TEXT, UNIT, th.ink, "ls")
+        c.text(RIGHT, BAR_Y + BAR_H + 56, fa(SCALE), FA_TEXT, UNIT, th.ink, "rs")
         unit = self.words["unit"]
-        c.text(510, BAR_Y + BAR_H + 56, unit, FA_TEXT, UNIT, th.ink, "ms", "rtl")
-        c.text(RIGHT, BAR_Y + BAR_H + 112, self.words["bar_end"], FA_TEXT, UNIT, th.ink, "rs", "rtl")
-        assert c.width(unit, FA_TEXT, UNIT, "rtl") + 2 * 120 < RIGHT - LEFT
-        assert fa_thousands(tehran5b.TOTAL_CAPACITY) in self.words["bar_end"]
+        c.text(RIGHT, BAR_Y + BAR_H + 112, unit, FA_TEXT, UNIT, th.ink, "rs", "rtl")
+        assert c.width(unit, FA_TEXT, UNIT, "rtl") < RIGHT - LEFT - 200
 
     # ── scene 3: three columns on one scale, the earliest on the right ──
 
     def columns(self, c: Canvas, t: float):
         th = self.th
         c.fill(LEFT, COL_BASE, RIGHT, COL_BASE + 2, th.ink)
-        values = (tehran5b.WATER_YEAR_START, tehran5.TOTAL["value"], tehran5b.NOW)
+        values = (tehran5b.START_MEHR, tehran5.TOTAL["value"], tehran5b.NOW)
         starts = (self.starts[2] + 0.4, self.starts[2] + 1.6, self.starts[2] + 2.8)
         for cx, v, t0, lab in zip(COL_X, values, starts, self.words["columns"]):
             p = 1.0 if not np.isfinite(t) else smooth((t - t0) / GROW)
@@ -415,6 +441,23 @@ class Tehran5bFilm(Slides):
             c.text(510, box_top + 262, self.words["question_ref"], FA_TEXT, SMALL, th.ink, "ms", "rtl")
 
 
+    # ── scene 6: the sources, two lines each (outlet and date; the headline in guillemets) ──
+
+    def sources_slide(self, c: Canvas, t: float):
+        """Outlet and date only, large enough to read in 2 s on a phone; the headlines are in the first comment."""
+        th = self.th
+        size, lead = 52, 96
+        y = SRC_TOP + 30
+        for outlet, _headline in self.words["source_items"]:
+            assert c.width(outlet, FA_BOLD, size, "rtl") <= RIGHT - LEFT, outlet
+            c.text(RIGHT, y, outlet, FA_BOLD, size, th.ink, "rs", "rtl")
+            y += lead
+        y += 30
+        assert y <= SRC_MAX, ("the sources do not fit the window", y)
+        assert c.width(self.words["images"], FA_TEXT, size, "rtl") <= RIGHT - LEFT
+        c.text(RIGHT, y, self.words["images"], FA_TEXT, size, th.head, "rs", "rtl")
+
+
 def fa_thousands(n: int) -> str:
     return tehran5b.fa_thousands(n)
 
@@ -430,7 +473,7 @@ def main() -> None:
     film.draw(1, 0.0).save(f"{base}_cover.png", optimize=True)
     print("saved", f"{base}_cover.png")
     if args.stills:
-        for t in (0.0, 3.0, 7.0, 12.0, 13.5, 17.0, 22.0, 24.5):
+        for t in (0.0, 7.0, 12.0, 17.0, 22.0, 26.0):
             film.draw(1, t).save(f"{base}_t{t:04.1f}.png")
             print("saved", f"{base}_t{t:04.1f}.png")
         return
