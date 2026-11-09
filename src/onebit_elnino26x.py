@@ -3,22 +3,20 @@ voice) with the explanation the owner asked for on 9 Nov: what El Niño is, how 
 strong events cannot tell Iran's future, and where the heat of global warming goes. The frame of the five-dam reel
 (onebit_slides; 106,677 views on 9 Nov 2026), one picture or chart per scene, one key phrase in a red box.
 
-Ten scenes at 60 BPM, 67 s. The five scenes of the narrated reel keep their length, their pictures and the owner's
-voice (src/elnino26x_voice.py: n1..n5); the five new ones carry no voice (the light score plays alone):
-    S1   0-7 s        the hook (n1): this week's Pacific, warm water tinted, and the ONI bar
-    S2   7-12.5 s     what El Niño is: the same week a year ago and now, against 1991-2020 (NOAA PSL)
-    S3   12.5-19      how warm: NOAA's weekly classic Niño-3.4 since 1981, 2026 over 1982, 1997, 2015, 2023; NOAA's
-                      official relative index (RONI) puts Aug-Oct 2026 second after 1997 (said on screen)
-    S4   19-26.75     the 26 El Niño autumns, 21 wetter (n2)
-    S5   26.75-30.75  El Niño autumns at 123 % of the mean (n3)
-    S6   30.75-38.75  the 22 winters, 11 wetter (n4)
-    S7   38.75-45.25  the six strong El Niño autumns (ONI of Oct-Dec at least 1.5): 67 % to 191 % of the mean
-    S8   45.25-51.75  why so warm: classic against relative index, Aug-Oct of 1997, 2015, 2026; the gap (-0.03,
-                      +0.22, +0.49 °C) is the warmer tropical ocean that the relative index removes
-    S9   51.75-58.25  where the heat went: 91 % into the ocean (IPCC AR6 Table 7.1); 3.5 m of sea water hold as much
-                      heat per degree as the whole atmosphere (computed); whether warming strengthens El Niño itself
-                      is still debated (said on screen)
-    S10  58.25-67 s   the verdict and the question (n5)
+Eight scenes at 60 BPM, 86 s. The five narrated scenes keep the owner's voice (src/elnino26x_voice.py: n1..n5), each
+piece from its scene's start; the three others carry no voice (the light score plays alone). Slide lengths follow the
+owner's note of 9 Nov ("both are fast, too little time to read"): about 2.5 words a second for the headline and half
+the labels, 1 s to settle, and at least 3 s after the last element appears:
+    hook     0-11 s     the hook (n1): this week's Pacific, warm water tinted, and the ONI bar
+    what     11-23.5    what El Niño is: the same week a year ago and now, against 1991-2020 (NOAA PSL)
+    record   23.5-36    how warm: NOAA's weekly classic Niño-3.4 since 1981, 2026 over 1982, 1997, 2015, 2023; NOAA's
+                        official relative index (RONI) puts Aug-Oct 2026 second after 1997 (said on screen)
+    autumn   36-45      the 26 El Niño autumns, 21 wetter (n2)
+    iran     45-52.75   El Niño autumns at 123 % of the mean (n3)
+    winter   52.75-61.5 the 22 winters, 11 wetter (n4)
+    strong   61.5-74    the six strong El Niño autumns (ONI of Oct-Dec at least 1.5): 67 % to 191 % of the mean
+    answer   74-86 s    the verdict and the question (n5)
+The index-gap and ocean-heat scenes (gap, ocean) stay in the code: ocean is drawn in part 2, the gap is in the caption.
 
 Numbers: src/elnino26x.py (data/enso/elnino26x/numbers.json) for the new scenes, src/elnino26s.py
 (data/enso/elnino26s/numbers.json) and src/enso.py for the narrated ones; every on-screen number is asserted.
@@ -57,12 +55,13 @@ AUTUMN, WINTER = s26.AUTUMN, s26.WINTER
 # the posted cut (review of 9 Nov: the index-gap and ocean-heat slides are left out of part 1; the ocean slide is in
 # part 2, the gap is in the caption); the voiced scenes keep their length from elnino26s
 SCENES = ("hook", "what", "record", "autumn", "iran", "winter", "strong", "answer")
-SECONDS_OF = dict(hook=7.0, what=5.5, record=6.5, autumn=7.75, iran=4.0, winter=8.0, strong=6.5, gap=6.5, ocean=6.5,
-                  answer=9.75)                                   # the answer: +1 s so the last chord rings out
+# reading time (owner, 9 Nov: "too little time to read"): 1 s + (headline + half the labels) / 2.5 words a second
+SECONDS_OF = dict(hook=11.0, what=12.5, record=12.5, autumn=9.0, iran=7.75, winter=8.75, strong=12.5, gap=6.5, ocean=6.5,
+                  answer=12.0)
 VOICE_OF = dict(hook="n1", autumn="n2", iran="n3", winter="n4", answer="n5")
 SECONDS = tuple(SECONDS_OF[k] for k in SCENES)
 PACE = dict(bpm=60, bars=tuple(s / 4 for s in SECONDS))
-END = sum(SECONDS)                                               # 55 s
+END = sum(SECONDS)                                               # 86 s
 VOICED = {i: VOICE_OF[k] for i, k in enumerate(SCENES) if k in VOICE_OF}   # scene -> the owner's piece
 COVER_T = 2.0                                                    # s: the cover frame (the hook whole, the bar grown)
 BARH, RULE_Y = s26.BARH, s26.RULE_Y

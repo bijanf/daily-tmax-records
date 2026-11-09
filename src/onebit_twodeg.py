@@ -5,18 +5,19 @@ five-dam reel (onebit_slides, 106,677 views): a real named place in frame 0 and 
 under snow, Sentinel-2), one chart or picture per slide, the headline whole on the slide's first frame, one key phrase
 in a red box, no narration (a light score).
 
-Eight slides at 60 BPM, 47 s:
-    hook      0-4.5 s     the Alborz and Tehran under snow, 26 Jan 2026 (Sentinel-2), a slow push in, the labels pop
-    holocene  4.5-11      global temperature over 12,000 years: the 10,000-year band (century means, Kaufman 2020),
-                          farming in the Zagros, Susa, Persepolis; the red line of the last 150 years draws in last
-    modern    11-16.5     one bar a year since 1850 (HadCRUT5): 2024 at +1.55 °C, far above the 10,000-year band
-    ocean     16.5-23     91 % of the extra heat went into the ocean (IPCC AR6 Table 7.1); 3.5 m of sea water hold as
-                          much heat per degree as the whole atmosphere (computed); the deep keeps it for centuries
-    extremes  23-28.5     a once-in-50-years heat (global land): 1, 4.8, 8.6, 13.9 times in 50 years (IPCC AR6 SPM.6)
-    rain      28.5-34.5   a year's rain in a day or less: Jeddah (NCM), Dubai (WMO), Chabahar (IRIMO, as reported)
-    snow      34.5-41     snow is the natural dam: the Alborz in winter and before the next winter (Sentinel-2);
-                          snow-cover days at Iran's mountain stations (Sadeqi et al. 2024)
-    end       41-47       the summary, the snow picture again, the question (a loop to frame 0)
+Eight slides at 60 BPM, 99.5 s (owner, 9 Nov: "too little time to read"; about 2.5 words a second for the headline
+and half the labels, 1 s to settle, at least 3 s after the last element appears):
+    hook      0-6.75 s     the Alborz and Tehran under snow, 26 Jan 2026 (Sentinel-2), a slow push in, the labels pop
+    holocene  6.75-19.25   global temperature over 12,000 years: the 10,000-year band (century means, Kaufman 2020),
+                           farming in the Zagros, Susa, Persepolis; the red line of the last 150 years draws in last
+    modern    19.25-30.5   one bar a year since 1850 (HadCRUT5): 2024 at +1.55 °C, far above the 10,000-year band
+    ocean     30.5-45.25   91 % of the extra heat went into the ocean (IPCC AR6 Table 7.1); 3.5 m of sea water hold
+                           as much heat per degree as the whole atmosphere (computed); the deep keeps it for centuries
+    extremes  45.25-57.75  a once-in-50-years heat (global land): 1, 4.8, 8.6, 13.9 times in 50 years (IPCC AR6 SPM.6)
+    rain      57.75-73.75  a year's rain in a day or less: Jeddah (NCM), Dubai (WMO), Chabahar (IRIMO, as reported)
+    snow      73.75-89.25  snow is the natural dam: the Alborz in winter and before the next winter (Sentinel-2);
+                           snow-cover days at Iran's mountain stations (Sadeqi et al. 2024)
+    end       89.25-99.5   the summary, the snow picture again, the question (a loop to frame 0)
 
 Numbers: src/twodeg.py (data/twodeg/numbers.json); the rain examples, the ocean shares and the snow numbers are
 constants with their sources below; every on-screen number is asserted.
@@ -47,10 +48,11 @@ from onebit_slides import COLOURS, LEFT, RIGHT, WIN, Slides  # noqa: E402
 
 BASE = "twodeg_fa"
 SCENES = ("hook", "holocene", "modern", "ocean", "extremes", "rain", "snow", "end")
-SECONDS_OF = dict(hook=4.5, holocene=6.5, modern=5.5, ocean=6.5, extremes=5.5, rain=6.0, snow=6.5, end=6.0)
+# reading time (owner, 9 Nov: "too little time to read"): 1 s + (headline + half the labels) / 2.5 words a second
+SECONDS_OF = dict(hook=6.75, holocene=12.5, modern=11.25, ocean=14.75, extremes=12.5, rain=16.0, snow=15.5, end=10.25)
 SECONDS = tuple(SECONDS_OF[k] for k in SCENES)
 PACE = dict(bpm=60, bars=tuple(s / 4 for s in SECONDS))
-END = sum(SECONDS)                                                # 47 s
+END = sum(SECONDS)                                                # 99.5 s
 COVER_T = 1.0                                                     # s: the cover, once both labels are on the picture
 BARH, RULE_Y, SOURCE_Y = 64, 664, 1532
 LABEL, UNIT, SOURCE = 48, 44, 42
