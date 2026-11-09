@@ -93,7 +93,7 @@ def words() -> dict:
         quote_snow_by="سخنگوی آبفای استانِ تهران، ۱۸ آبانِ ۱۴۰۵",
         season_names=("پاییز", "زمستان", "بهار", "تابستان"),
         season_unit="سهمِ هر سه‌ماهه‌ی میلادی از آبِ سالِ سدِ کرج، ۱۹۷۰ تا ۱۹۹۹",
-        grid_lines=("۱۹۰ مربع: مصرفِ حدودِ دو ماهِ شهرِ تهران", "هر مربع: یک میلیون مترمکعب، مصرفِ حدودِ ۸ ساعتِ تهران"),
+        grid_lines=("یعنی آبِ ۶۳ روزِ تهران؛ حدودِ دو ماه", "هر خانه = آبِ یک روزِ تهران (حدودِ ۳ میلیون مترمکعب)"),
         urmia_labels=("ترازِ اکولوژیک: ۱۲۷۴٫۱۰ متر", "پیش از طوفان: ۱۲۷۰٫۵۹ متر (۱۳ آبان)", "بارانِ روی دریاچه: ۳ سانتی‌متر",
                       "با آبِ رودها: حداکثر ۱۵ سانتی‌متر", "سطحِ آب باید ۳۵۱ سانتی‌متر بالا بیاید",
                       "یعنی حدودِ ۱۲ میلیارد مترمکعب آب"),
@@ -101,7 +101,8 @@ def words() -> dict:
         quote_end_by="کاوه مدنی، برنده‌ی جایزه‌ی آبِ استکهلم؛ الجزیره، آبانِ ۱۴۰۴",
         end_line="آمارِ سدها عمومی است؛ آن را دنبال کنیم",
     )
-    flat = [y for v in w.values() for x in (v if isinstance(v, tuple) else (v,))
+    w["grid_count"] = lambda k: "آبِ " + fa(str(k)) + " روزِ تهران"
+    flat = [y for v in w.values() if not callable(v) for x in (v if isinstance(v, tuple) else (v,))
             for y in (x if isinstance(x, tuple) else (x,)) if isinstance(y, str)]
     bad = [x for x in flat if part1.dotted_yeh(x)]
     assert not bad, bad
@@ -139,7 +140,7 @@ class DamsFilm(Slides):
     def check_data(self):
         n = self.n
         assert n["now"] == 350 and 17 < n["fill_pct"] < 20 and round(n["capacity"]) == 1930
-        assert n["avg_1aban"] == 548 and n["gap_1aban"] == 189 and 60 <= n["gap_days"] <= 70
+        assert n["avg_1aban"] == 548 and n["gap_1aban"] == 189 and n["gap_days"] == 63      # «۶۳ روز» on screen
         assert n["hours_per_mcm"] == 8.0 and n["urmia"]["rain_mm"] == 30
         assert n["urmia"]["direct_cm"] == 3.0 and n["urmia"]["max_cm"] < 15
         assert n["season_pct"] == dict(autumn=10, winter=12, spring=60, summer=18)
@@ -305,21 +306,35 @@ class DamsFilm(Slides):
         self.line(c, ybot + 130, self.words["season_unit"], 34)
 
     def s_grid(self, c: Canvas, dt: float):
+        """The gap as days of Tehran's water: one calendar tile a day (3 million m3), filled one by one."""
         th = self.th
-        cols, rows = 19, 10                                          # 190 squares of 1 million m3
-        cell = (RIGHT - LEFT) / cols
-        y0 = 760
-        for r in range(rows):
-            if not self.on(dt, 0.2 + 0.12 * r):
-                continue
-            for q in range(cols):
-                x = RIGHT - (q + 1) * cell                           # from the top right, as Persian reads
-                y = y0 + r * cell
-                c.fill(x + 3, y + 3, x + cell - 3, y + cell - 3, BLUE if r == q == 0 else PALE)
-        yb = y0 + rows * cell
-        if self.on(dt, 1.6):
-            self.line(c, yb + 60, self.words["grid_lines"][0], 40, True)
-            self.line(c, yb + 116, self.words["grid_lines"][1], 34, False, BLUE)
+        n = int(self.n["gap_days"])                                  # 190 / 3 = 63 days
+        cols, gap = 9, 12
+        rows = int(np.ceil(n / cols))
+        tile = min((RIGHT - LEFT - (cols - 1) * gap) / cols, 70.0)
+        width = cols * tile + (cols - 1) * gap
+        x_right = RIGHT - (RIGHT - LEFT - width) / 2
+        y0 = 790
+        shown = n if not np.isfinite(dt) else int(np.clip((dt - 0.4) / 2.6 * n, 0, n))
+        page, page_off, body_off = (243, 250, 255), (236, 230, 220), (214, 206, 196)
+        for k in range(n):
+            r, q = divmod(k, cols)
+            x1 = x_right - q * (tile + gap)                          # day 1 at the top right, as Persian reads
+            x0, y = x1 - tile, y0 + r * (tile + gap)
+            on = k < shown
+            c.d.rounded_rectangle([c.X(x0), c.Y(y), c.X(x1), c.Y(y + tile)], radius=9,
+                                  fill=page if on else page_off, outline=BLUE if on else body_off, width=2)
+            c.d.rounded_rectangle([c.X(x0), c.Y(y), c.X(x1), c.Y(y + 0.30 * tile)], radius=9,
+                                  fill=HOT if on else body_off)
+            c.fill(x0, y + 0.18 * tile, x1, y + 0.30 * tile, HOT if on else body_off)
+            if on:
+                c.text((x0 + x1) / 2, y + 0.86 * tile, fa(str(k + 1)), FA_BOLD, 26, BLUE, "ms", "rtl")
+        yb = y0 + rows * (tile + gap)
+        L = self.words["grid_lines"]
+        top = L[0] if shown >= n else self.words["grid_count"](shown)
+        self.line(c, y0 - 30, top, 42, True, BLUE if shown >= n else th.ink)
+        if shown >= n:
+            self.line(c, yb + 44, L[1], 34)
 
     def s_urmia(self, c: Canvas, dt: float):
         th = self.th
