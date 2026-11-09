@@ -246,6 +246,56 @@ def part4(force: bool) -> None:
     short_term(music, starts, film4.SCENES, "part 4")
 
 
+def part5(force: bool) -> None:
+    """The long cut with the owner's voice: his eleven pieces from damsexplain_voice, each LEAD into its slide;
+    the light score (part 4's plan on the voiced slide lengths) ducked under his speech."""
+    import damsexplain_voice as dv
+    import onebit_damsexplain2v as film5
+    f = film5.DamsFilm2V(onebit.THEMES["kahgel"], film5.COLOURS["kahgel"])
+    starts, end = f.starts, film5.END
+    silent = SOCIAL / f"{film5.BASE}_reel.mp4"
+    assert silent.exists() and silent.stat().st_mtime > Path(film5.__file__).stat().st_mtime, \
+        "render the silent master first (python -I src/onebit_damsexplain2v.py)"
+    n = round(end * SR)
+    v = np.zeros(n)
+    spans = []
+    for i, q in enumerate(film5.MAN["pieces"]):
+        rate, pcm = wavfile.read(dv.OUT / f"{q['name']}.wav")
+        assert rate == SR and pcm.ndim == 1
+        y = pcm.astype(float) / 32767.0
+        t0 = float(starts[i]) + film5.MAN["lead"]
+        assert t0 + len(y) / SR <= float(starts[i + 1]) + 1e-6, (q["name"], "runs into the next slide")
+        i0 = round(t0 * SR)
+        v[i0:i0 + len(y)] += y[:max(0, n - i0)]
+        spans.append((q["name"], t0, t0 + len(y) / SR))
+    fifth_t = float(math.ceil(spans[-1][2] + 0.3))          # on the pulse grid, after his last word
+    assert fifth_t <= end - 1.4, (fifth_t, end)
+    notes = line(starts, film5.SCENES, PART4, fifth_t - 0.6)
+    notes += [Note(fifth_t, m, 0.80, p) for m, p in zip(END_FIFTH[4], (0.2, -0.2))]
+    check_notes(notes, end)
+    music = kit.master(stem(notes, end), lufs=MUSIC_LUFS, tp=MUSIC_TP, seconds=end, fade_out=1.0)
+    mask = np.zeros(len(music), bool)
+    for _, a, b in spans:
+        mask[max(0, round((a - DUCK_ATTACK) * SR)):round(b * SR)] = True
+    music_d = music * duck_gain(mask)[:, None]
+    v = light._highpass20(v[:len(music)])
+    mono = music_d.mean(axis=1)
+    free = ~mask
+    v_ms = np.mean(np.concatenate([v[round(a * SR):round(b * SR)] for _, a, b in spans]) ** 2)
+    m_ms = np.mean(music.mean(axis=1)[free] ** 2)
+    v = v * math.sqrt(m_ms / v_ms) * 10 ** (1.5 / 20)              # the voice 1.5 dB over the music's level
+    ratio = lambda x, a, b: 10 * np.log10(np.mean(x[round(a * SR):round(b * SR)] ** 2)  # noqa: E731
+                                          / np.mean(mono[round(a * SR):round(b * SR)] ** 2))
+    ratios = [ratio(v, a, b) for _, a, b in spans]
+    assert min(ratios) >= RATIO_MIN, ratios
+    total = light._highpass20(light._air_cut(music_d + np.stack([v, v], axis=1)))
+    mix = light._bass_mono(kit.master(total, lufs=MIX_LUFS, tp=MASTER_TP, seconds=end, fade_out=1.0))
+    write(mix, f"{film5.BASE}_voice", silent, force)
+    print("part 5 spans:", [(nm, round(a, 2), round(b, 2)) for nm, a, b in spans])
+    print("part 5 voice over ducked music (dB):", [round(float(r), 1) for r in ratios])
+    short_term(mix, starts, film5.SCENES, "part 5 voice cut")
+
+
 def short_term(x: np.ndarray, starts, scenes, label: str) -> None:
     """The loudness of each slide, so the slides without voice are never far under the others."""
     out = []
@@ -267,7 +317,7 @@ def write(x: np.ndarray, stem_name: str, silent: Path, force: bool) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--part", default="all", choices=["1", "2", "3", "4", "all"])
+    ap.add_argument("--part", default="all", choices=["1", "2", "3", "4", "5", "all"])
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
     if args.part in ("1", "all"):
@@ -278,6 +328,8 @@ def main() -> None:
         part3(args.force)
     if args.part in ("4", "all"):
         part4(args.force)
+    if args.part in ("5", "all"):
+        part5(args.force)
 
 
 if __name__ == "__main__":

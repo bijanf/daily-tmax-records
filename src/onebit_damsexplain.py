@@ -95,7 +95,8 @@ def words() -> dict:
         season_unit="سهمِ هر سه‌ماهه‌ی میلادی از آبِ سالِ سدِ کرج، ۱۹۷۰ تا ۱۹۹۹",
         grid_lines=("۱۹۰ مربع: مصرفِ حدودِ دو ماهِ شهرِ تهران", "هر مربع: یک میلیون مترمکعب، مصرفِ حدودِ ۸ ساعتِ تهران"),
         urmia_labels=("ترازِ اکولوژیک: ۱۲۷۴٫۱۰ متر", "پیش از طوفان: ۱۲۷۰٫۵۹ متر (۱۳ آبان)", "بارانِ روی دریاچه: ۳ سانتی‌متر",
-                      "با آبِ رودها: حداکثر ۱۵ سانتی‌متر", "کم دارد: ۳۵۱ سانتی‌متر"),
+                      "با آبِ رودها: حداکثر ۱۵ سانتی‌متر", "سطحِ آب باید ۳۵۱ سانتی‌متر بالا بیاید",
+                      "یعنی حدودِ ۱۲ میلیارد مترمکعب آب"),
         quote_end=("«فکر می‌کنم با اولین باران یا سیل، مردم", "ممکن است وضعیت را فراموش کنند»"),
         quote_end_by="کاوه مدنی، برنده‌ی جایزه‌ی آبِ استکهلم؛ الجزیره، آبانِ ۱۴۰۴",
         end_line="آمارِ سدها عمومی است؛ آن را دنبال کنیم",
@@ -145,6 +146,7 @@ class DamsFilm(Slides):
         assert abs(n["tehran_draw"] - 1.95) < 0.01
         u = n["urmia"]
         assert u["depth_m"] == 3.51 and u["pct_of_gap"][1] < 3.0 and u["level"] == 1270.59
+        assert round(u["gap_bcm"][0]) == 12                                # 14.58 - 2.55 billion m3 to the ecological level
 
     # ── time and frame ──
 
@@ -335,7 +337,10 @@ class DamsFilm(Slides):
         # a bracket from the gauge to the label
         c.fill(x1 + 14, ytop + 3, x1 + 17, ybot - 3, th.ink)
         c.fill(x1 + 14, mid - 1.5, x1 + 40, mid + 1.5, th.ink)
-        self.line(c, mid + 14, labs[4], 40, True, x=x1 + 52, anchor="ls")
+        self.line(c, mid + 14, labs[4], 36, True, x=x1 + 52, anchor="ls")
+        self.line(c, mid + 60, labs[5], 32, False, x=x1 + 52, anchor="ls")
+        for s_, z_, f_ in ((labs[4], 36, FA_BOLD), (labs[5], 32, FA_TEXT)):
+            assert x1 + 52 + c.width(s_, f_, z_, "rtl") <= RIGHT, s_       # a height and a volume, beside the gauge
         if f >= 1.0:
             self.line(c, ybot - 130, labs[2], 38, True, BLUE)
             self.line(c, ybot - 72, labs[3], 36, False, "#4F86B0")

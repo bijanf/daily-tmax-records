@@ -61,7 +61,7 @@ APP = "Tehran.Water"
 # - SINK_CM: more than 25 cm a year in the western Tehran plain, 2003-2017 (Haghshenas Haghighi & Motagh 2019);
 #   Tehran and Karaj above 15 cm a year in 2014-2022 and at least 60 % of it irreversible (Payne et al. 2025 JGR,
 #   doi:10.1029/2024JB030367); compaction mostly permanent (Haghshenas Haghighi & Motagh 2024, Sci. Adv.).
-WET_CM = 25
+WET_CM = 20                                               # the owner says «حداکثر بیست سانت»; FAO-56: 18-26 cm
 GW_YEARS, GW_DROP_M = (1372, 1400), 15
 SINK_CM = 25
 
@@ -78,11 +78,17 @@ def words2() -> dict:
     )
     nsrc = dict(rain="FAO-56 · Hamshahri · our estimate", soil="FAO-56 (Allen et al. 1998) · Hamshahri",
                 ground="Tehran Municipality · Noori 2021 (PNAS)", sink="Haghshenas Haghighi 2019 · Payne 2025")
+    new["hook"] = ("باران و سیلِ این هفته؛ // سدهای تهران {پر شدند؟}", "خیلی از شما پرسیدید؛ جواب با آمارِ رسمی")
+    nsrc["hook"] = "NASA (MODIS Terra), 7 Nov 2026"
+    base.pop("hook")
+    src.pop("hook")
+    w["storm_chip"] = "طوفانِ ۱۶ آبان از فضا؛ تصویرِ ماهواره‌ی ناسا"
+    w["storm_tehran"], w["storm_caspian"] = "تهران", "دریای خزر"
     w["scenes"] = tuple(base[k] if k in base else new[k] for k in SCENES)
     w["sources"] = tuple(src[k] if k in src else nsrc[k] for k in SCENES)
-    w["rain_labels"] = ("سیل: آبی که زمین نگرفت؛ چند ساعته می‌رود", "فقط ۲۰ تا ۳۰ سانتی‌مترِ رویی خیس می‌شود",
+    w["rain_labels"] = ("سیل: آبی که زمین نگرفت؛ چند ساعته می‌رود", "فقط حدودِ ۲۰ سانتی‌مترِ رویی خیس می‌شود",
                         "بخشی به هوا برمی‌گردد", "حدودِ ۱ از ۱۰ زود به سد می‌رسد (برآوردِ ما)", "آبِ زیرزمینی: هنوز بی‌تغییر")
-    w["soil_labels"] = ("بارانِ این چند روز: ۲۰ تا ۳۰ سانتی‌مترِ رویی", "پایین‌تر: باران نرسیده", "آبِ زیرزمینی: خیلی پایین‌تر")
+    w["soil_labels"] = ("بارانِ این چند روز: حدودِ ۲۰ سانتی‌مترِ رویی", "پایین‌تر: باران نرسیده", "آبِ زیرزمینی: خیلی پایین‌تر")
     w["ground_labels"] = ("سطحِ آب در ۱۳۷۲", "حدودِ ۱۵ متر پایین‌تر", "آبِ این طوفان: هنوز در خاکِ رویی",
                           "ایران سالی ۴ تا ۵ میلیارد مترمکعب از پس‌اندازِ زیرِ زمین برمی‌دارد")
     w["sink_labels"] = ("لوله‌ی چاه از زمین بیرون زده", "زمین پیش‌تر اینجا بود (بزرگ‌تر از واقع)", "بیشترِ این فرونشست برگشت‌ناپذیر است")
@@ -94,6 +100,43 @@ def words2() -> dict:
     w["cm"] = lambda v: fa(str(round(v))) + " سانتی‌متر"
     w["m"] = lambda v: fa(str(round(v))) + " متر"
     return w
+
+
+STORM = dict(sat="Terra", date="2026-11-07", box=(46.5, 58.5, 32.0, 39.5))   # W, E, S, N; 16 Aban 1405, morning pass
+TEHRAN = (51.39, 35.69)
+CASPIAN = (51.0, 38.4)
+
+
+def storm_picture() -> tuple:
+    """The storm of 16 Aban 1405 over northern Iran: MODIS Terra true colour (NASA GIBS, public domain), squeezed
+    in longitude by cos(35.75°) so the land is not stretched, Iran's border (Natural Earth 50 m) drawn in white.
+    Returns the picture and a function lon, lat → pixel."""
+    import urllib.request
+    from scipy import ndimage
+    import enso
+    W, E, S, N = STORM["box"]
+    path = one.num.DATA / f"storm_{STORM['sat'].lower()}_{STORM['date'].replace('-', '')}.png"
+    if not path.exists():
+        raw = path.with_suffix(".jpg")
+        url = ("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0"
+               f"&LAYERS=MODIS_{STORM['sat']}_CorrectedReflectance_TrueColor&CRS=EPSG:4326&BBOX={S},{W},{N},{E}"
+               f"&WIDTH=1656&HEIGHT=1035&FORMAT=image/jpeg&TIME={STORM['date']}")
+        urllib.request.urlretrieve(url, raw)
+        im = Image.open(raw).convert("RGB")
+        k = np.cos(np.deg2rad((S + N) / 2))
+        im = im.resize((round(im.width * k), im.height), Image.LANCZOS)
+        w, h = im.size
+        lon = W + (np.arange(w) + 0.5) / w * (E - W)
+        lat = N - (np.arange(h) + 0.5) / h * (N - S)
+        LA, LO = np.meshgrid(lat, lon, indexing="ij")
+        inside = enso.country_mask(["Iran"], LA, LO)
+        border = inside & ~ndimage.binary_erosion(inside, iterations=3)
+        a = np.array(im)
+        a[border] = (255, 255, 255)
+        Image.fromarray(a).save(path)
+    im = Image.open(path).convert("RGB")
+    w, h = im.size
+    return im, (lambda lon, lat: ((lon - W) / (E - W) * w, (N - lat) / (N - S) * h))
 
 
 class DamsFilm2(one.DamsFilm):
@@ -110,6 +153,9 @@ class DamsFilm2(one.DamsFilm):
         snow = Image.open(one.SNOW_PIC).convert("RGB")
         self.snow = snow.resize((snow.width // 3, snow.height // 3), Image.LANCZOS)
         self.sprites = {k: one.el2.ElNino2Film.sprite(self, k) for k in ("pale", "wet")}
+        from PIL import ImageEnhance
+        storm, self.storm_xy = storm_picture()                # a little more contrast so the clouds read on a phone
+        self.storm = ImageEnhance.Color(ImageEnhance.Contrast(storm).enhance(1.18)).enhance(1.12)
 
     def draw(self, s: int, t: float = np.inf, size=SIZES["reel"]):
         c = Canvas(s, self.th, 1.0, (0.0, 0.0), size)
@@ -124,6 +170,42 @@ class DamsFilm2(one.DamsFilm):
         getattr(self, "s_" + SCENES[i])(c, dt)
         self.sources(c, i)
         return c.im
+
+    # ── the hook: the storm from space ──
+
+    def s_hook(self, c: Canvas, dt: float):
+        th = self.th
+        x0, y0, W = BOX[0], BOX[1], BOX[2]
+        im = self.storm
+        H = round(W * im.height / im.width)
+        z = 1.0 + 0.012 * (1.0 if not np.isfinite(dt) else min(dt / SECONDS_OF["hook"], 1.0))
+        tx, ty = self.storm_xy(*TEHRAN)
+        cw, ch = im.width / z, im.height / z
+        ox = (im.width - cw) * tx / im.width                # the push-in closes on Tehran
+        oy = (im.height - ch) * ty / im.height
+        pic = im.resize((W, H), Image.LANCZOS, box=(ox, oy, ox + cw, oy + ch))
+        c.im.paste(pic, (c.X(x0), c.Y(y0)))
+        c.frame(x0 - 1, y0 - 1, x0 + W + 1, y0 + H + 1, colour=th.ink)
+        k = W / cw
+        px, py = x0 + (tx - ox) * k, y0 + (ty - oy) * k
+        tt = 0.0 if not np.isfinite(dt) else dt
+        ph = (tt % 1.4) / 1.4                                # a ring that grows and fades every 1.4 s
+        r = 12 + 30 * ph
+        ring = tuple(int(v) for v in np.array([214, 40, 40]) * (1 - ph) + np.array([255, 255, 255]) * ph)
+        c.d.ellipse([c.X(px - r), c.Y(py - r), c.X(px + r), c.Y(py + r)], outline=ring, width=4)
+        c.d.ellipse([c.X(px - 11), c.Y(py - 11), c.X(px + 11), c.Y(py + 11)], fill=(214, 40, 40),
+                    outline=(255, 255, 255), width=3)
+        w_ = self.words
+        for (lon, lat), text, dx in ((TEHRAN, w_["storm_tehran"], -22), (CASPIAN, w_["storm_caspian"], 0)):
+            sx, sy = self.storm_xy(lon, lat)
+            lx, ly = x0 + (sx - ox) * k + dx, y0 + (sy - oy) * k + (14 if dx else 0)
+            c.d.text((c.X(lx), c.Y(ly)), text, font=c.font(FA_BOLD, 42), fill=(255, 255, 255),
+                     anchor="rt" if dx else "mm", direction="rtl", stroke_width=4, stroke_fill=(46, 33, 24))
+        lab = w_["storm_chip"]
+        wl = c.width(lab, FA_BOLD, 32, "rtl")
+        c.frame(RIGHT - wl - 26, y0 + H + 16, RIGHT, y0 + H + 62, fill=th.paper)
+        c.text(RIGHT - 13, y0 + H + 50, lab, FA_BOLD, 32, th.ink, "rs", "rtl")
+        assert y0 + H + 62 < one.SOURCE_Y - 40
 
     # ── the animated boxes ──
 

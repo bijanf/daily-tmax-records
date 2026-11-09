@@ -236,7 +236,8 @@ def person(b: Box, x, ground_y, height_px, colour=INK):
 
 # ── 1. where the storm's water goes ──
 
-def scene_rain(w: int, h: int, t: float, words: dict) -> Box:
+def scene_rain(w: int, h: int, t: float, words: dict, tp=None) -> Box:
+    tp = t if tp is None else tp                          # particles keep real time when the story is stretched
     b = Box(w, h)
     plain = 0.40 * h
 
@@ -250,7 +251,7 @@ def scene_rain(w: int, h: int, t: float, words: dict) -> Box:
     cloud(b, 0.66 * w, 0.06 * h, 52, dark=0.55 * storm)
     if storm < 0.5:                                      # the sun after the storm
         b.ellipse(0.88 * w, 0.08 * h, 24, 24, mix(SKY_LOW, (246, 196, 80), 1 - 2 * storm))
-    rain(b, t, 0.04 * w, 0.96 * w, 0.12 * h, surf, alpha=storm)
+    rain(b, tp, 0.04 * w, 0.96 * w, 0.12 * h, surf, alpha=storm)
     xs = np.linspace(0, w, 160)
     soil_px = 0.07 * h
     wet = soil_px * 0.42 * ramp(t, 1.5, 4.0)
@@ -270,16 +271,16 @@ def scene_rain(w: int, h: int, t: float, words: dict) -> Box:
         pts_bot = [(x, surf(x) + 1) for x in np.linspace(w, x0, 90)]
         b.poly(pts_top + pts_bot, mix(SKY_LOW, WATER, 0.9 * sheet))
         for k in range(18):                              # ripples running downstream
-            s = (hash01(k, 11) + 0.45 * clock(t)) % 1.0
+            s = (hash01(k, 11) + 0.45 * clock(tp)) % 1.0
             x = x0 + s * (w - x0)
             b.line([(x - 16, surf(x - 16) - 4 * sheet), (x, surf(x) - 4 * sheet)], mix(WATER, WHITE, 0.6), 2.0)
         b.arrow(0.90 * w, plain - 34, 0.99 * w, plain - 34, mix(SKY_LOW, WATER_DARK, sheet), 4.0, 12)
     # back to the air: wavy lines once the sun is out
     ev = ramp(t, 7.6, 1.0)
-    if ev > 0.02 and np.isfinite(t):
+    if ev > 0.02 and np.isfinite(tp):
         for k in range(5):
             x = 0.56 * w + k * 0.075 * w
-            y0 = surf(x) - 14 - ((t * 26 + k * 13) % 46)
+            y0 = surf(x) - 14 - ((tp * 26 + k * 13) % 46)
             b.line([(x + 4 * math.sin((y0 - yy) / 6.0), yy) for yy in np.arange(y0, y0 - 36, -2)],
                    mix(SKY_LOW, (110, 120, 132), ev), 2.6)
     # the stream into the dam
@@ -302,16 +303,17 @@ def scene_rain(w: int, h: int, t: float, words: dict) -> Box:
 
 # ── 2. how deep a storm wets the soil ──
 
-def scene_soil(w: int, h: int, t: float, words: dict, wet_cm: float) -> Box:
+def scene_soil(w: int, h: int, t: float, words: dict, wet_cm: float, tp=None) -> Box:
     """A soil column under a person: the storm wets the top `wet_cm`; the camera pulls back from the top 0.6 m to
     2.2 m, and the person (1.75 m) shows the scale; the water table is only an arrow (its depth varies, no number)."""
+    tp = t if tp is None else tp
     b = Box(w, h)
     z = ramp(t, 4.2, 2.2)
     shown = 0.6 + (2.0 - 0.6) * z                         # metres below ground in view
     gy = 0.13 * h + 0.37 * h * z                          # the ground line moves down to make room for the person
     k = (h - gy) / shown
     sky(b, gy + 8)
-    rain(b, t, 0.02 * w, 0.98 * w, 0.0, lambda x: gy, n=80, alpha=1.0 - ramp(t, 3.2, 0.6), seed=5)
+    rain(b, tp, 0.02 * w, 0.98 * w, 0.0, lambda x: gy, n=80, alpha=1.0 - ramp(t, 3.2, 0.6), seed=5)
     wet_m = wet_cm / 100 * ramp(t, 0.4, 2.6)
     xs = np.linspace(0, w, 60)
     strata(b, lambda x: gy, xs, soil_px=h - gy + 10, wet_px=wet_m * k, table_y=None, dot_seed=9)
@@ -338,7 +340,7 @@ def scene_soil(w: int, h: int, t: float, words: dict, wet_cm: float) -> Box:
 
 # ── 3. the falling water table ──
 
-def scene_ground(w: int, h: int, t: float, words: dict, years: tuple) -> Box:
+def scene_ground(w: int, h: int, t: float, words: dict, years: tuple, tp=None) -> Box:
     """The water table falls from y_then to y_now while the year runs; the depth above it is not to scale (a break
     band says so); the storm's water stays in the top of the soil."""
     b = Box(w, h)
@@ -361,7 +363,7 @@ def scene_ground(w: int, h: int, t: float, words: dict, years: tuple) -> Box:
     b.line([(x, y + 14) for x, y in zig], INK, 1.4)
     buildings(b, 0.40 * w, 0.62 * w, surf, scale=0.8)
     for kk, x in enumerate((0.10 * w, 0.27 * w, 0.71 * w, 0.86 * w)):
-        well(b, x, surf(x), min(h - 6, table + 34 + 10 * kk), t=t, pumping=1.0 if p < 1 else 0.5)
+        well(b, x, surf(x), min(h - 6, table + 34 + 10 * kk), t=t if tp is None else tp, pumping=1.0 if p < 1 else 0.5)
     b.dashed(0, w, y_then, WHITE, 2.2)
     if p > 0.05:
         b.arrow(0.62 * w, y_then + 6, 0.62 * w, table - 6, INK, 3.4, 12)
