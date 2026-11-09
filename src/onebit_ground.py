@@ -318,7 +318,7 @@ def scene_soil(w: int, h: int, t: float, words: dict, wet_cm: float) -> Box:
     for x in np.arange(6, w, 9):
         b.line([(x, gy), (x + 3, gy - 7 - 4 * hash01(int(x), 4))], GRASS, 1.6)
     if z > 0.5:                                           # 1.75 m tall, on the same scale as the soil below
-        person(b, 0.24 * w, gy, 1.75 * k * ramp(t, 5.4, 0.6))
+        person(b, 0.24 * w, gy, 1.75 * k * ramp(t, 5.9, 0.6))
     ticks = (0.1, 0.3, 0.5) if z < 0.5 else (0.25, 1.0, 2.0)
     for m in ticks:
         y = gy + m * k
@@ -372,9 +372,9 @@ def scene_ground(w: int, h: int, t: float, words: dict, years: tuple) -> Box:
     b.label(0.97 * w, y_then - 12, L[0], colour=(60, 70, 82), size=30, bold=False)
     if p >= 1.0:
         b.label(0.97 * w, (y_then + y_now) / 2 + 16, L[1], size=40)
-    if ramp(t, 7.4, 0.3) > 0.5:
+    if ramp(t, 6.8, 0.3) > 0.5:
         b.label(0.97 * w, gy + 0.04 * h + 38, L[2], size=32, lead=(0.33 * w, surf(0.33 * w) + 0.01 * h))
-    if ramp(t, 8.6, 0.3) > 0.5:
+    if ramp(t, 7.6, 0.3) > 0.5:
         b.label(0.97 * w, y_now + 112, L[3], colour=WATER_DARK, size=30)
     return b
 
@@ -402,8 +402,8 @@ def scene_sink(w: int, h: int, t: float, words: dict) -> Box:
     buildings(b, 0.33 * w, 0.72 * w, surf, scale=0.95)
     xc = 0.24 * w
     well(b, xc, surf(xc), 0.88 * h, stick_out=drop * bowl(xc))
-    if s > 0.1:
-        b.arrow(0.80 * w, gy + 4, 0.80 * w, surf(0.80 * w) - 2, INK, 3.0, 10)
+    if surf(0.80 * w) - gy > 10:                         # only once the ground has sunk under it
+        b.arrow(0.80 * w, gy + 2, 0.80 * w, surf(0.80 * w) - 2, INK, 3.0, 10)
     L = words["sink_labels"]
     if s >= 1.0:
         b.label(0.97 * w, 0.12 * h, L[0], size=38, lead=(xc + 12, surf(xc) - drop * bowl(xc) - 18))
