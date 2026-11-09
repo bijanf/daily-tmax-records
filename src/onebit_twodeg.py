@@ -94,7 +94,7 @@ def fa_dec(x: float, digits: int = 1) -> str:
 
 def words() -> dict:
     scene = dict(
-        hook=("۲ درجه گرم‌تر؛ // برفِ البرز {چه می‌شود}؟", "البرز و تهران زیرِ برف، ۶ بهمنِ ۱۴۰۴"),
+        hook=("۲ درجه گرم‌تر؛ // برفِ البرز {چه می‌شود؟}", "البرزِ بالای تهران زیرِ برف، ۶ بهمنِ ۱۴۰۴"),
         holocene=("۱۰ هزار سال: // فقط حدودِ {نیم درجه} تغییر", "دمای کره‌ی زمین؛ میانگین‌های صدساله"),
         modern=("۲۰۲۴: {۱٫۵۵ درجه} // گرم‌تر از دورانِ پیش‌صنعتی", "میانگینِ کلِ کره‌ی زمین، نه فقط ایران"),
         ocean=("{۹۱٪} گرمای اضافه‌ی زمین را // اقیانوس‌ها جذب کرده‌اند", "ال‌نینوی امسال روی همین آبِ گرم است"),
@@ -105,7 +105,7 @@ def words() -> dict:
     source = dict(hook="Copernicus Sentinel-2 (26 Jan 2026)", holocene="Kaufman 2020 · HadCRUT5 · Riehl 2013",
                   modern="HadCRUT5 · WMO · Kaufman 2020", ocean="IPCC AR6, Table 7.1 · 3.5 m: computed",
                   extremes="IPCC AR6 WG1, SPM.6 (2021)", rain="NCM · WMO · IRIMO (reported) · IPCC",
-                  snow="Sentinel-2 · Sadeqi et al. 2024", end="IPCC AR6 WG1 (2021)")
+                  snow="Sentinel-2 · Sadeqi et al. 2024", end="IPCC AR6 WG1 (2021) · Sentinel-2")
     w = dict(
         scenes=tuple(scene[k] for k in SCENES),
         follow="این را برای کسی بفرستید که می‌گوید ۲ درجه چیزی نیست",
@@ -114,7 +114,7 @@ def words() -> dict:
         ch_key="سیاه: صدساله · قرمز: ده‌ساله · نقطه: یک سال",
         ch_years=((12000, "۱۲٬۰۰۰"), (9000, "۹٬۰۰۰"), (6000, "۶٬۰۰۰"), (3000, "۳٬۰۰۰"), (0, "امروز")),
         ch_lines=((1.5, "۱٫۵"), (2.0, "۲")),
-        recent="۱۵۰ سالِ اخیر",
+        recent="۱۷۰ سالِ اخیر",
         band_label="بازه‌ی ۱۰ هزار سال (میانگینِ صدساله)",
         c3_unit="دمای سالانه‌ی کلِ زمین، از ۱۸۵۰؛ هر میله یک سال",
         c3_note="فقط ۲۰۲۴ از ۱٫۵ گذشت؛ روندِ بلندمدت حدودِ ۱٫۴",

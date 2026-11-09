@@ -116,8 +116,8 @@ def words() -> dict:
     """The scenes (bold line, small line), the follow line, the sources of each scene, the labels."""
     scene = dict(
         hook=("ال‌نینوی قوی آمده؛ // یعنی {طوفانِ نوح} در ایران؟", "یکی از قوی‌ترین ال‌نینوها از ۱۹۵۰"),
-        what=("ال‌نینو یعنی چه؟ // اقیانوسِ آرام {گرم‌تر از معمول}", "مرکز و شرقِ اقیانوسِ آرام؛ هر ۲ تا ۷ سال"),
-        record=("ال‌نینوی امسال: // {گرم‌ترین} آب از ۱۹۸۱ تا کنون", "شاخصِ رسمی NOAA، مرداد تا مهر: دوم"),
+        what=("ال‌نینو یعنی چه؟ // اقیانوسِ آرام {گرم‌تر از معمول}", "مرکز و شرقِ آرامِ استوایی؛ هر ۲ تا ۷ سال"),
+        record=("ال‌نینوی امسال: // {گرم‌ترین} آب از ۱۹۸۱ تاکنون", "شاخصِ رسمی NOAA، اوت تا اکتبر: دوم"),
         autumn=("پاییز: {۲۱ از ۲۶} ال‌نینو // پرباران‌تر از معمول", "اکتبر تا دسامبر؛ هر قطره یک پاییزِ ال‌نینو"),
         iran=("پاییزِ ال‌نینو: {۱۲۳٪} میانگین", "۲۶ پاییزِ ال‌نینو در برابرِ همه‌ی ۷۴ پاییز"),
         winter=("زمستان: {۱۱ از ۲۲} // نیمی پرباران‌تر، نیمی نه", "ژانویه تا مارس؛ مثلِ شیر یا خط"),
@@ -138,14 +138,14 @@ def words() -> dict:
         pac_key=("درجه‌ی سلسیوس گرم‌تر از معمول", "هفته‌ی ۱۰ تا ۱۶ آبانِ ۱۴۰۵"),
         pac_ticks=("۱٫۵", "۲", "۳", "۴", "۵"),
         dam_marks=(("ال‌نینو", 0.5), ("قوی", 1.5)),
-        dam_unit=("درجه گرم‌تر از معمول؛ شاخصِ کلاسیکِ ONI", "میانگینِ سه‌ماهه‌ی مرداد تا مهرِ ۱۴۰۵"),
+        dam_unit=("درجه گرم‌تر از معمول؛ شاخص کلاسیک ONI", "میانگین سه‌ماهه‌ی اوت تا اکتبر ۲۰۲۶"),
         # what
-        ab_labels=("یک سال پیش: ۱۰ تا ۱۶ آبانِ ۱۴۰۴", "امسال: ۱۰ تا ۱۶ آبانِ ۱۴۰۵"),
+        ab_labels=("یک سال پیش: ۱۰ تا ۱۶ آبان ۱۴۰۴", "امسال: ۱۰ تا ۱۶ آبان ۱۴۰۵"),
         ab_key=("سردتر از معمول", "نزدیکِ معمول", "گرم‌تر از معمول"),
         ab_places=("آسیا و استرالیا", "آمریکای جنوبی"),
         # record
         ch_unit="نینو ۳٫۴ (کلاسیک، هفتگی): درجه گرم‌تر از معمول",
-        ch_wmo="سازمانِ جهانی هواشناسی: احتمالاً تا دسامبر قوی‌ترین",
+        ch_wmo="WMO: احتمالاً تا دسامبر قوی‌ترینِ ثبت‌شده",
         ch_prev="رکوردِ قبلی، ۲۰۱۵",
         ch_legend="خاکستری: ۱۹۸۲، ۱۹۹۷، ۲۰۱۵، ۲۰۲۳ · قرمز: ۲۰۲۶",
         # autumn, iran, winter (the narrated reel's)
@@ -393,7 +393,7 @@ class ElNino26xFilm(Slides):
         c.frame(LEFT, y, RIGHT, y + bh, colour=th.ink)
         for lab, v in self.words["dam_marks"]:
             x = xv(v)
-            for yy in range(y - 14, y + bh + 14, 10):
+            for yy in range(y - 14, y + bh + 8, 10):
                 c.fill(x - 2, yy, x + 2, yy + 6, th.ink)
             c.text(x, y - 26, lab, FA_TEXT, LABEL, th.ink, "ms", "rtl")
         if p >= 1.0:
@@ -401,7 +401,7 @@ class ElNino26xFilm(Slides):
         c.text(RIGHT, y - 26, fa(0), FA_TEXT, UNIT, th.ink, "rs")
         c.text(LEFT, y - 26, fa(int(hi)), FA_TEXT, UNIT, th.ink, "ls")
         for k, line in enumerate(self.words["dam_unit"]):
-            c.text(RIGHT, y + bh + 56 + 52 * k, line, FA_TEXT, UNIT, th.ink, "rs", "rtl")
+            c.text(RIGHT, y + bh + 48 + 52 * k, line, FA_TEXT, UNIT, th.ink, "rs", "rtl")
             assert c.width(line, FA_TEXT, UNIT, "rtl") <= RIGHT - LEFT, line
 
     # ── S2: what El Niño is ──
@@ -482,7 +482,7 @@ class ElNino26xFilm(Slides):
         yp = self.cy(prev)
         for xx in np.arange(x0, x1, 18):
             c.fill(xx, yp - 1.5, min(xx + 10, x1), yp + 1.5, PAST)
-        c.text(x1, yp - 14, f"{self.words['ch_prev']}: +{fa_dec(prev)}", FA_TEXT, 34, th.ink, "rs", "rtl")
+        c.text(x1, yp - 14, f"{self.words['ch_prev']}: {fa_dec(prev)}", FA_TEXT, 34, th.ink, "rs", "rtl")
         paths = {int(y): p for y, p in self.nums["paths"].items()}
         for y in (1982, 1997, 2015, 2023):                       # the past years, whole from the start
             self.line(c, [q for q in paths[y] if q[0] <= CH_DAYS], PAST, 2.5)
@@ -602,7 +602,7 @@ class ElNino26xFilm(Slides):
         for yy in np.arange(ybar(ST_MAX), y1 - 4, 12):
             c.fill(xa, yy, xa + 3, yy + 6, th.mark)
             c.fill(xb - 3, yy, xb, yy + 6, th.mark)
-        c.text((xa + xb) / 2, ybar(ST_MAX / 2) + 20, "؟", FA_BOLD, 72, th.mark, "ms", "rtl")
+        c.text((xa + xb) / 2, ybar(ST_MAX * 0.75) + 20, "؟", FA_BOLD, 72, th.mark, "ms", "rtl")
         c.text((xa + xb) / 2, y1 + 54, fa(2026), FA_BOLD, 40, th.mark, "ms")
         c.fill(x0, y1, x1, y1 + 2, th.ink)
         ym = ybar(100)
