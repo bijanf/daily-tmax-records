@@ -71,7 +71,12 @@ A_I, A_IV, A_V, A_vi = (64, 69, 73, 76, 81), (62, 66, 69, 74, 78), (64, 68, 71, 
 PART3 = (("hook", A_I, (2, 3, 2, 1, 2)), ("answer", A_vi, (0, 1, 2, 3, 2, 1)), ("drops", A_IV, (4, 3, 2, 1, 0, 1)),
          ("snow", A_I, (3, 4, 3, 2, 1, 2)), ("seasons", A_V, (0, 1, 2, 3, 4, 3)), ("grid", A_vi, (0, 1, 2, 1, 0, 1)),
          ("urmia", A_IV, (1, 2, 3, 4, 3, 2)), ("end", A_I, (0, 1, 2, 3, 4, 3, 2)))
-END_FIFTH = {1: (64, 71), 2: (62, 69), 3: (64, 69)}    # the open fifth (or fourth, part 3) that ends each part
+# part 4, the long cut of the dams explainer (same mode, a longer arc: calm, darker under the ground, home at the end)
+PART4 = (("hook", A_I, (2, 3, 2, 1, 2)), ("answer", A_vi, (0, 1, 2, 3, 2, 1)), ("grid", A_IV, (1, 2, 3, 2, 1, 0)),
+         ("rain", A_V, (0, 1, 2, 3, 4, 3, 2, 1)), ("soil", A_vi, (3, 2, 1, 0, 1, 2)), ("snow", A_I, (3, 4, 3, 2, 1, 2)),
+         ("seasons", A_V, (0, 1, 2, 3, 4, 3)), ("ground", A_vi, (2, 1, 0, 1, 2, 1)), ("sink", A_IV, (1, 0, 1, 2, 1, 0)),
+         ("urmia", A_IV, (1, 2, 3, 4, 3, 2)), ("end", A_I, (0, 1, 2, 3, 4, 3, 2)))
+END_FIFTH = {1: (64, 71), 2: (62, 69), 3: (64, 69), 4: (64, 69)}  # the open fifth (or fourth, parts 3-4) at the end
 
 
 class Note:
@@ -225,6 +230,22 @@ def part3(force: bool) -> None:
     short_term(music, starts, film3.SCENES, "part 3")
 
 
+def part4(force: bool) -> None:
+    import onebit_damsexplain2 as film4
+    f = film4.DamsFilm2(onebit.THEMES["kahgel"], film4.COLOURS["kahgel"])
+    starts, end = f.starts, film4.END
+    silent = SOCIAL / f"{film4.BASE}_reel.mp4"
+    assert silent.exists() and silent.stat().st_mtime > Path(film4.__file__).stat().st_mtime, \
+        "render the silent master first (python -I src/onebit_damsexplain2.py)"
+    fifth_t = float(math.floor(end - 2.2))               # on the pulse grid, so no gap opens before it
+    notes = line(starts, film4.SCENES, PART4, fifth_t - 0.6)
+    notes += [Note(fifth_t, m, 0.80, p) for m, p in zip(END_FIFTH[4], (0.2, -0.2))]
+    check_notes(notes, end)
+    music = kit.master(stem(notes, end), lufs=MUSIC_LUFS, tp=MUSIC_TP, seconds=end, fade_out=1.0)
+    write(music, f"{film4.BASE}_music", silent, force)
+    short_term(music, starts, film4.SCENES, "part 4")
+
+
 def short_term(x: np.ndarray, starts, scenes, label: str) -> None:
     """The loudness of each slide, so the slides without voice are never far under the others."""
     out = []
@@ -246,7 +267,7 @@ def write(x: np.ndarray, stem_name: str, silent: Path, force: bool) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--part", default="all", choices=["1", "2", "3", "all"])
+    ap.add_argument("--part", default="all", choices=["1", "2", "3", "4", "all"])
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
     if args.part in ("1", "all"):
@@ -255,6 +276,8 @@ def main() -> None:
         part2(args.force)
     if args.part in ("3", "all"):
         part3(args.force)
+    if args.part in ("4", "all"):
+        part4(args.force)
 
 
 if __name__ == "__main__":
