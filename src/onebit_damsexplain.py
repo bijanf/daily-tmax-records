@@ -3,18 +3,18 @@ dozens of viewers asked under the five-dam reel after the storm of 14-17 Aban 14
 (onebit_slides, "Tehran.Dams"), its five Landsat pictures in frame 0, one number or picture per slide, headlines whole
 on each slide's first frame, a light score, no narration. Numbers: src/damsexplain.py (asserted).
 
-Eight slides at 60 BPM, 86.25 s; each slide long enough to read (owner, 9 Nov: "too little time to read"): 1 s to
+Eight slides at 60 BPM, 90 s; each slide long enough to read (owner, 9 Nov: "too little time to read"): 1 s to
 settle, then the headline and half the labels at 2.5 words a second, and at least 3 s after the last element appears:
     hook     0-8.5       the five dams from space (the five-dam reel's picture, Mehr 1405, before the rains) and the question
-    answer   8.5-17.75   not yet: about 350 million m3, under a fifth of the five dams' capacity (Abfa, 18 Aban)
-    drops    17.75-29.25 of 10 drops of autumn rain, about 1 reaches a dam soon (our estimate); where the other 9 go
-    snow     29.25-40.75 the storm's water is still snow on the heights (Abfa's own words); the Alborz in winter
-    seasons  40.75-51.5  the Karaj dam gets 60 % of its year's water in April-June, from melting snow
-    grid     51.5-61.5   the dams are about 190 million m3 short of normal (1 Aban: 359 against the average 548): about
+    answer   8.5-18      not yet: about 350 million m3, under a fifth of the five dams' capacity (Abfa, 18 Aban)
+    drops    18-29.5     of 10 drops of autumn rain, about 1 reaches a dam soon (our estimate); where the other 9 go
+    snow     29.5-42     the storm's water is still snow on the heights (Abfa's own words); the Alborz in winter
+    seasons  42-53.25    the Karaj dam gets 60 % of its year's water in April-June, from melting snow
+    grid     53.25-63.5  the dams are about 190 million m3 short of normal (1 Aban: 359 against the average 548): about
                          two months of the city's water, 190 squares of 1 million m3 (8 hours of Tehran's water each)
-    urmia    61.5-73.25  Lake Urmia: about 30 mm of Aban rain on the basin, 3 cm on the lake itself, at most about 15 cm
+    urmia    63.5-75.5   Lake Urmia: about 30 mm of Aban rain on the basin, 3 cm on the lake itself, at most about 15 cm
                          with the rivers, of the 351 cm it lacks
-    end      73.25-86.25 Kaveh Madani (Stockholm Water Prize 2026): with the first rain people may forget; follow the data
+    end      75.5-90     Kaveh Madani (Stockholm Water Prize 2026): with the first rain people may forget; follow the data
 
     python -I src/onebit_damsexplain.py --stills
     python -I src/onebit_damsexplain.py
@@ -43,10 +43,11 @@ from onebit_slides import COLOURS, LEFT, RIGHT, WIN, Slides  # noqa: E402
 
 BASE = "damsexplain_fa"
 SCENES = ("hook", "answer", "drops", "snow", "seasons", "grid", "urmia", "end")
-SECONDS_OF = dict(hook=8.5, answer=9.25, drops=11.5, snow=11.5, seasons=10.75, grid=10.0, urmia=11.75, end=13.0)
+# sized by src/onebit_reading.py (owner, 9 Nov: "too little time to read"); the end slide holds the quote and the call
+SECONDS_OF = dict(hook=8.5, answer=9.5, drops=11.5, snow=12.5, seasons=11.25, grid=10.25, urmia=12.0, end=14.5)
 SECONDS = tuple(SECONDS_OF[k] for k in SCENES)
 PACE = dict(bpm=60, bars=tuple(s / 4 for s in SECONDS))
-END = sum(SECONDS)                                                # 86.25 s
+END = sum(SECONDS)                                                # 90 s
 COVER_T = 1.0
 BARH, RULE_Y, SOURCE_Y = 64, 664, 1532
 SOURCE = 42
@@ -67,11 +68,11 @@ def words() -> dict:
     scene = dict(
         hook=("با این باران‌ها، // سدهای تهران {پر شدند؟}", "خیلی از شما پرسیدید؛ جواب با آمارِ رسمی"),
         answer=("هنوز نه: // حدودِ {۳۵۰} میلیون مترمکعب", "کمتر از یک‌پنجمِ گنجایشِ پنج سد؛ ۱۸ آبان"),
-        drops=("از هر ۱۰ قطره بارانِ پاییز، // {حدودِ یکی} زود به سد می‌رسد", "برآوردِ ما از آمارِ کرج و طالقان؛ شاید کمتر"),
+        drops=("از هر ۱۰ قطره بارانِ پاییز، // {حدودِ یکی} زود به سد می‌رسد", "برآوردِ ما؛ شاید کمتر"),
         snow=("در کوه‌ها، آبِ این طوفان // هنوز {برف است}", "بیش از یک متر برف در توچال، ۱۷ آبان"),
         seasons=("سدِ کرج کِی آب می‌گیرد؟ // {بهار}، با آبِ برف", "بیش از نیمِ آبِ سالش در بهار می‌رسد"),
-        grid=("سدها هنوز تا حدِ معمول // {۱۹۰} میلیون مترمکعب کم دارند", "۱ آبان: ۳۵۹ در برابرِ میانگینِ ۵۴۸"),
-        urmia=("دریاچه‌ی ارومیه با دو روز باران؟ // {چند سانتی‌متر} از ۳۵۱", "برآوردِ ما با حدودِ ۳۰ میلی‌متر بارانِ آبان"),
+        grid=("سدها تا حدِ معمول حدودِ // {۱۹۰} میلیون مترمکعب کم دارند", "۱ آبان: ۳۵۹ در برابرِ میانگینِ ۵۴۸"),
+        urmia=("دریاچه‌ی ارومیه با این باران‌ها؟ // {چند سانتی‌متر} از ۳۵۱", "برآوردِ ما با حدودِ ۳۰ میلی‌متر بارانِ آبان"),
         end=("یک باران، // حسابِ آب را {پر نمی‌کند}", "کمبودِ آب سال‌ها جمع شده است"))
     source = dict(hook="Landsat (USGS), Mehr 1405", answer="Abfa via IRIB · Tehran Regional Water",
                   drops="Mohammadi 2005 · JICA 2001 (estimate)", snow="Abfa via IRIB · Tabnak · Sentinel-2",
@@ -204,7 +205,8 @@ class DamsFilm(Slides):
         th = self.th
         W = RIGHT - LEFT
         im = self.grid_pic
-        z = 1.0 + 0.04 * (1.0 if not np.isfinite(dt) else min(dt / SECONDS_OF["hook"], 1.0))
+        z = 1.0 + 0.012 * (1.0 if not np.isfinite(dt) else min(dt / SECONDS_OF["hook"], 1.0))   # past ~1.018 the frame's
+        # own borders (the year chip, the scale bar) are cut
         H = round(W * im.height / im.width)
         cw, ch = im.width / z, im.height / z
         x0, y0 = (im.width - cw) / 2, (im.height - ch) / 2

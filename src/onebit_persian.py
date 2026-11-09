@@ -783,14 +783,20 @@ def aac_true_peak(media) -> float:
 def mux(video_mp4, wav, out_mp4) -> Path:
     """Put the track under the picture: the video stream is copied, the audio is AAC at 192 kbps,
     and the file ends with the shorter of the two streams. AAC overshoots the WAV by a few tenths
-    of a dB, so the decoded audio's true peak is measured; above -1 dBTP a warning says to master
-    again with tp=-1.5 for the delivered file."""
-    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video_mp4), "-i", str(wav),
-           "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-           "-ar", "48000", "-ac", "2", "-shortest", "-movflags", "+faststart", str(out_mp4)]
-    subprocess.run(cmd, check=True)
-    peak = aac_true_peak(out_mp4)
-    if peak > -1.0:
+    of a dB, so the decoded audio's true peak is measured; above -1 dBTP the audio is encoded again
+    at 256 and then 320 kbps (a sharp pluck overshot by 4 dB at 192 kbps and not at 256, 9 Nov 2026);
+    a warning remains only when all three overshoot (then master again with tp=-1.5)."""
+    for rate in ("192k", "256k", "320k"):
+        cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video_mp4), "-i", str(wav),
+               "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", rate,
+               "-ar", "48000", "-ac", "2", "-shortest", "-movflags", "+faststart", str(out_mp4)]
+        subprocess.run(cmd, check=True)
+        peak = aac_true_peak(out_mp4)
+        if peak <= -1.0:
+            if rate != "192k":
+                print(f"the AAC at 192 kbps overshot; {rate} keeps the peak at {peak:.2f} dBTP")
+            break
+    else:
         print(f"warning: the encoded audio peaks at {peak:.2f} dBTP; master again with tp=-1.5")
     return Path(out_mp4)
 
