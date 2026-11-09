@@ -4,7 +4,8 @@ outputs/onebit/social/damsexplain2_voice_script_fa.txt read in his own words), c
 The cut points come from a Whisper large-v3 transcript (word times) checked against the pauses ffmpeg's
 silencedetect finds at -38 dB. Edits, all at word boundaries with 15-ms fades:
 - seasons: «از آب شدنِ برف‌ها» kept, «و یخچال‌ها» dropped (the Karaj dam's catchment has no glaciers to speak of);
-- end: the false start «گفت که فکر کنم، پارسال گفت اینو» and the repeated «و دنبالش کنید» dropped.
+- end: the false start «گفت که فکر کنم، پارسال گفت اینو» and the repeated «و دنبالش کنید» dropped;
+- soil: «حداکثر بیست سانت» dropped (the triple check: Mehrabad's ~43 mm wets about 20-30 cm; the owner chose the cut).
 Pauses longer than 0.40 s inside a piece are shortened to 0.30 s; then, only if the reel would run past MAX_REEL,
 the pieces are sped up together (ffmpeg atempo, pitch kept) by the least factor that fits.
 
@@ -40,7 +41,7 @@ PIECES = (                                         # (scene, [(start, end) in th
     ("answer", [(22.30, 33.45)]),
     ("grid", [(35.25, 50.28)]),
     ("rain", [(51.30, 85.70)]),
-    ("soil", [(88.90, 107.35)]),
+    ("soil", [(88.90, 98.30), (101.95, 107.35)]),     # «حداکثر بیست سانت» dropped (understated; the owner chose the cut)
     ("snow", [(109.05, 118.80)]),
     ("seasons", [(119.35, 128.545)]),                # ends on «برف»: «...ها و یخچال‌ها» run on without a pause
     ("ground", [(132.70, 155.13)]),

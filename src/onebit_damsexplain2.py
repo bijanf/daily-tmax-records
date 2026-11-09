@@ -61,7 +61,7 @@ APP = "Tehran.Water"
 # - SINK_CM: more than 25 cm a year in the western Tehran plain, 2003-2017 (Haghshenas Haghighi & Motagh 2019);
 #   Tehran and Karaj above 15 cm a year in 2014-2022 and at least 60 % of it irreversible (Payne et al. 2025 JGR,
 #   doi:10.1029/2024JB030367); compaction mostly permanent (Haghshenas Haghighi & Motagh 2024, Sci. Adv.).
-WET_CM = 20                                               # the owner says «حداکثر بیست سانت»; FAO-56: 18-26 cm
+WET_CM = 25                                               # FAO-56 with Mehrabad's ~43 mm (14-18 Aban): about 20-30 cm
 GW_YEARS, GW_DROP_M = (1372, 1400), 15
 SINK_CM = 25
 
@@ -86,10 +86,10 @@ def words2() -> dict:
     w["storm_tehran"], w["storm_caspian"] = "تهران", "دریای خزر"
     w["scenes"] = tuple(base[k] if k in base else new[k] for k in SCENES)
     w["sources"] = tuple(src[k] if k in src else nsrc[k] for k in SCENES)
-    w["rain_labels"] = ("سیل: آبی که زمین نگرفت؛ چند ساعته می‌رود", "فقط حدودِ ۲۰ سانتی‌مترِ رویی خیس می‌شود",
-                        "بخشی به هوا برمی‌گردد", "حدودِ ۱ از ۱۰ زود به سد می‌رسد (برآوردِ ما)", "آبِ زیرزمینی: هنوز بی‌تغییر")
-    w["soil_labels"] = ("بارانِ این چند روز: حدودِ ۲۰ سانتی‌مترِ رویی", "پایین‌تر: باران نرسیده", "آبِ زیرزمینی: خیلی پایین‌تر")
-    w["ground_labels"] = ("سطحِ آب در ۱۳۷۲", "حدودِ ۱۵ متر پایین‌تر", "آبِ این طوفان: هنوز در خاکِ رویی",
+    w["rain_labels"] = ("سیل: آبی که زمین نگرفت؛ چند ساعته می‌رود", "فقط حدودِ ۲۰ تا ۳۰ سانتی‌مترِ رویی خیس می‌شود",
+                        "بخشی به هوا برمی‌گردد", "حدودِ ۱ از ۱۰ زود به سد می‌رسد (برآوردِ ما)", "آبِ زیرزمینی: هنوز تقریباً بی‌تغییر")
+    w["soil_labels"] = ("بارانِ این چند روز: حدودِ ۲۰ تا ۳۰ سانتی‌مترِ رویی", "پایین‌تر: باران هنوز نرسیده", "آبِ زیرزمینی: خیلی پایین‌تر")
+    w["ground_labels"] = ("سطحِ آب در ۱۳۷۲", "حدودِ ۱۵ متر پایین‌تر", "بیشترِ آبِ این طوفان: هنوز به آبِ زیرزمینی نرسیده",
                           "ایران سالی ۴ تا ۵ میلیارد مترمکعب از پس‌اندازِ زیرِ زمین برمی‌دارد")
     w["sink_labels"] = ("لوله‌ی چاه از زمین بیرون زده", "زمین پیش‌تر اینجا بود (بزرگ‌تر از واقع)", "بیشترِ این فرونشست برگشت‌ناپذیر است")
     flat = [y for k in ("scenes", "rain_labels", "soil_labels", "ground_labels", "sink_labels")
