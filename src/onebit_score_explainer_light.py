@@ -66,7 +66,12 @@ PART2 = (("hook", D_I, (3, 4, 3, 2, 3)), ("holocene", D_vi, (0, 1, 2)), ("holoce
          ("modern", D_IV, (1, 2, 3)), ("modern", D_V, (1, 2, 3)), ("ocean", D_I, (3, 2, 3, 4, 3, 2)),
          ("extremes", D_IV, (0, 1, 2, 3, 4)), ("rain", D_vi, (0, 1, 2, 3, 2, 1)),
          ("snow", D_I, (3, 2, 1, 2)), ("snow", D_IV, (2, 1, 0)), ("end", D_I, (0, 2, 3, 4, 3)))
-END_FIFTH = {1: (64, 71), 2: (62, 69)}                # the open fifth that ends each part
+# part 3, the dams explainer (A Mahur: A B C# D E F# G#)
+A_I, A_IV, A_V, A_vi = (64, 69, 73, 76, 81), (62, 66, 69, 74, 78), (64, 68, 71, 76, 80), (66, 69, 73, 78)
+PART3 = (("hook", A_I, (2, 3, 2, 1, 2)), ("answer", A_vi, (0, 1, 2, 3, 2, 1)), ("drops", A_IV, (4, 3, 2, 1, 0, 1)),
+         ("snow", A_I, (3, 4, 3, 2, 1, 2)), ("seasons", A_V, (0, 1, 2, 3, 4, 3)), ("grid", A_vi, (0, 1, 2, 1, 0, 1)),
+         ("urmia", A_IV, (1, 2, 3, 4, 3, 2)), ("end", A_I, (0, 1, 2, 3, 4, 3, 2)))
+END_FIFTH = {1: (64, 71), 2: (62, 69), 3: (64, 69)}    # the open fifth (or fourth, part 3) that ends each part
 
 
 class Note:
@@ -204,6 +209,22 @@ def part2(force: bool) -> None:
     short_term(music, starts, film2.SCENES, "part 2")
 
 
+def part3(force: bool) -> None:
+    import onebit_damsexplain as film3
+    f = film3.DamsFilm(onebit.THEMES["kahgel"], film3.COLOURS["kahgel"])
+    starts, end = f.starts, film3.END
+    silent = SOCIAL / f"{film3.BASE}_reel.mp4"
+    assert silent.exists() and silent.stat().st_mtime > Path(film3.__file__).stat().st_mtime, \
+        "render the silent master first (python -I src/onebit_damsexplain.py)"
+    fifth_t = end - 2.2
+    notes = line(starts, film3.SCENES, PART3, fifth_t - 0.6)
+    notes += [Note(fifth_t, m, 0.80, p) for m, p in zip(END_FIFTH[3], (0.2, -0.2))]
+    check_notes(notes, end)
+    music = kit.master(stem(notes, end), lufs=MUSIC_LUFS, tp=MUSIC_TP, seconds=end, fade_out=1.0)
+    write(music, f"{film3.BASE}_music", silent, force)
+    short_term(music, starts, film3.SCENES, "part 3")
+
+
 def short_term(x: np.ndarray, starts, scenes, label: str) -> None:
     """The loudness of each slide, so the slides without voice are never far under the others."""
     out = []
@@ -225,13 +246,15 @@ def write(x: np.ndarray, stem_name: str, silent: Path, force: bool) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--part", default="all", choices=["1", "2", "all"])
+    ap.add_argument("--part", default="all", choices=["1", "2", "3", "all"])
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
     if args.part in ("1", "all"):
         part1(args.force)
     if args.part in ("2", "all"):
         part2(args.force)
+    if args.part in ("3", "all"):
+        part3(args.force)
 
 
 if __name__ == "__main__":
