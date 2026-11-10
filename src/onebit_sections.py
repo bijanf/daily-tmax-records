@@ -8,8 +8,8 @@ better»), for the voiced long cut of the dams explainer (src/onebit_damsexplain
 
 Each module has SECONDS (its slide's length in the voiced cut), CUE (when each thing appears, in scene-local
 seconds, on the owner's words) and scene(w, h, t, words, tp=None, cue=CUE) → the finished box as an RGB picture.
-State of 9 Nov 2026: only `ground` is drawn (and used by the voiced film); rain, soil and sink are still to be
-written in this look, and the film draws them with src/onebit_ground.py until then.
+The voiced film draws all four (10 Nov 2026); the music long cut (src/onebit_damsexplain2.py) keeps the earlier
+drawings of src/onebit_ground.py.
 The kit is src/onebit_section.py, the scenery src/onebit_scenery.py. The words on screen are those of
 onebit_damsexplain2.words2() (fact check of 9 Nov 2026) and nothing else.
 

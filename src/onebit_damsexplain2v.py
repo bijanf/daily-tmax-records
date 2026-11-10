@@ -1,8 +1,7 @@
 """THE LONG CUT WITH THE OWNER'S VOICE (damsexplain2v_fa): damsexplain2_fa's eleven slides, each as long as his
 piece of narration (src/damsexplain_voice.py: LEAD before, TAIL after; the last slide keeps END_TAIL for the closing
-chord). The animated scenes run their story on a stretched clock so the reveals land with his words, while the rain
-and the pumps keep real time. The water-table slide is drawn in the newsroom look (src/onebit_sections.py: real
-Alborz skyline, textured ground), its reveals timed on his words.
+chord). The four cross-sections under Tehran (rain, soil, water table, subsidence) are drawn in the newsroom look
+(src/onebit_sections.py: the real Alborz skyline and section, textured ground), each reveal timed on his words.
 
     python -I src/damsexplain_voice.py <recording>        the pieces and their manifest
     python -I src/onebit_damsexplain2v.py --stills
@@ -25,7 +24,6 @@ from PIL import Image, ImageEnhance  # noqa: E402
 import damsexplain_voice as voice  # noqa: E402
 import onebit  # noqa: E402
 import onebit_damsexplain2 as two  # noqa: E402
-import onebit_ground as G  # noqa: E402
 import onebit_sections as sections  # noqa: E402
 from onebit import OUT, SIZES, SOCIAL_CRF  # noqa: E402
 from onebit_slides import COLOURS  # noqa: E402
@@ -47,8 +45,8 @@ PACE = dict(bpm=60, bars=tuple(s / 4 for s in SECONDS))
 END = sum(SECONDS)
 assert END <= 179.0, END                            # Instagram recommends reels up to 3 minutes
 COVER_T = 1.0
-STORY = {k: two.SECONDS_OF[k] / SECONDS_OF[k] for k in ("rain", "soil", "sink")}
-assert sections.module("ground").SECONDS == SECONDS_OF["ground"]     # its cues are on the owner's words
+for _k in ("rain", "soil", "ground", "sink"):       # the four cross-sections: their cues are on the owner's words
+    assert sections.module(_k).SECONDS == SECONDS_OF[_k], _k
 
 
 class DamsFilm2V(two.DamsFilm2):
@@ -67,19 +65,21 @@ class DamsFilm2V(two.DamsFilm2):
         storm, self.storm_xy = two.storm_picture()
         self.storm = ImageEnhance.Color(ImageEnhance.Contrast(storm).enhance(1.18)).enhance(1.12)
 
-    def s_rain(self, c, dt):
-        self.box(c, G.scene_rain(two.BOX[2], two.BOX[3], dt * STORY["rain"], self.words, tp=dt))
-
-    def s_soil(self, c, dt):
-        self.box(c, G.scene_soil(two.BOX[2], two.BOX[3], dt * STORY["soil"], self.words, two.WET_CM, tp=dt))
-
-    def s_ground(self, c, dt):                          # the newsroom look: src/onebit_section_table.py
-        im = sections.scene("ground", two.BOX[2], two.BOX[3], dt, self.words, tp=dt if np.isfinite(dt) else None,
-                            years=two.GW_YEARS)
+    def section(self, c, name, dt, **kw):               # the newsroom look: src/onebit_sections.py
+        im = sections.scene(name, two.BOX[2], two.BOX[3], dt, self.words, tp=dt if np.isfinite(dt) else None, **kw)
         c.im.paste(im, (c.X(two.BOX[0]), c.Y(two.BOX[1])))
 
+    def s_rain(self, c, dt):
+        self.section(c, "rain", dt)
+
+    def s_soil(self, c, dt):
+        self.section(c, "soil", dt, wet_cm=two.WET_CM)
+
+    def s_ground(self, c, dt):
+        self.section(c, "ground", dt, years=two.GW_YEARS)
+
     def s_sink(self, c, dt):
-        self.box(c, G.scene_sink(two.BOX[2], two.BOX[3], dt * STORY["sink"], self.words))
+        self.section(c, "sink", dt)
 
 
 def main() -> None:
@@ -88,7 +88,7 @@ def main() -> None:
     ap.add_argument("--at", type=float, nargs="*")
     args = ap.parse_args()
     film = DamsFilm2V(onebit.THEMES["kahgel"], COLOURS["kahgel"])
-    print("seconds", SECONDS, "end", END, "story", {k: round(v, 2) for k, v in STORY.items()})
+    print("seconds", SECONDS, "end", END)
     (OUT / "social").mkdir(parents=True, exist_ok=True)
     base = OUT / "social" / BASE
     film.draw(1, COVER_T).save(f"{base}_cover.png", optimize=True)
