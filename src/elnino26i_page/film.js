@@ -101,7 +101,7 @@ async function main() {
     iran.style.filter = "drop-shadow(0 10px 14px rgba(46,33,24,.38)) saturate(1.15) contrast(1.05)";
     const s = svg("svg", { width: 1080, height: 1920, viewBox: "0 0 1080 1920" }, b);
     css(s, { left: "0", top: "0" });
-    const x0 = L + boxL + 34, y0 = cardY + cardH + 8, x1 = L + iranW * 0.86, y1 = 956 + iranH * 0.30;
+    const x0 = L + boxL + 14, y0 = cardY + cardH + 8, x1 = L + iranW * 0.86, y1 = 956 + iranH * 0.30;
     const d = `M${x0},${y0} C${x0 - 6},${y0 + 62} ${x1 + 86},${y1 + 4} ${x1 + 12},${y1}`;
     const mask = svg("mask", { id: "arcmask", maskUnits: "userSpaceOnUse", x: 0, y: 0, width: 1080, height: 1920 }, svg("defs", {}, s));
     const reveal = svg("path", { d, fill: "none", stroke: "#fff", "stroke-width": 40 }, mask);
@@ -118,7 +118,7 @@ async function main() {
     css(ask, { borderRadius: "50%", background: F.colours.ink, color: F.colours.paper, fontSize: "70px", lineHeight: "90px",
       textAlign: "center", boxShadow: "0 0 0 5px " + F.colours.paper });
     // the colour key of the map, with its unit
-    const keyL = 508, keyW = R - keyL, keyY = 960;
+    const keyL = 540, keyW = R - keyL, keyY = 960;
     css(el("div", "abs", b), px({ left: keyL, top: keyY, width: keyW, height: 26 }), { borderRadius: "13px" }).style.cssText +=
       `;border-radius:13px;background:url(${pic("key_pacific")}) 0 0/100% 100%;box-shadow:0 0 0 2px rgba(46,33,24,.55)`;
     H.pac_ticks.forEach((tk, k) => {
@@ -209,6 +209,7 @@ async function main() {
       });
       const done = t >= cue.t0 + cue.span + 0.2;
       count.textContent = done ? S.count : S.count.replace(/^[۰-۹]+/, faDigits(tally));
+      count.style.opacity = tally > 0 ? "1" : "0";              // no «۰ از ۲۶» before the first drop has turned
       count.style.scale = (1 + 0.08 * bump(seg(t, cue.t0 + cue.span + 0.2, cue.t0 + cue.span + 0.7))).toFixed(4);
       if (coin) {
         const spin = easeInOut(seg(t, cue.coin, cue.coin + 1.5)), turn = spin * 3 * Math.PI;   // one and a half turns
