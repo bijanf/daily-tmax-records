@@ -1,0 +1,69 @@
+/* The infographic cut of the El Niño reel: one 1080 x 1920 stage, drawn for a time t by film.js (no CSS animation). */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url("/fonts/inter/ttf/Inter-Medium.ttf"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url("/fonts/jetbrains-mono/JetBrainsMono-Bold.ttf"); }
+
+:root {
+  --paper: #F3ECE1; --ink: #2E2118; --mark: #A03129; --land: #E2D8C8; --wet: #1c5cab; --dry: #8c5a2b;
+  --pale: #d8cdbb; --past: #A3968A; --near: #b0a698; --card: #FBF7F0;
+  --left: 96px; --width: 828px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); }
+#stage {
+  position: relative; width: 1080px; height: 1920px; overflow: hidden; color: var(--ink);
+  font-family: "Vazirmatn", sans-serif; font-weight: 500; direction: rtl;
+  background:
+    radial-gradient(1200px 900px at 50% 38%, rgba(255, 252, 244, 0.85), rgba(255, 252, 244, 0) 70%),
+    linear-gradient(180deg, #F5EFE5 0%, #F3ECE1 45%, #EDE4D6 100%);
+}
+.abs { position: absolute; }
+.ltr { direction: ltr; unicode-bidi: isolate; }
+.rtl { direction: rtl; unicode-bidi: isolate; }
+
+/* the top: the story's progress, the film's name, the scene counter */
+#progress { position: absolute; left: var(--left); top: 150px; width: var(--width); height: 10px; display: flex;
+  flex-direction: row; gap: 12px; direction: rtl; }
+#progress .seg { flex: 1; height: 10px; border-radius: 5px; background: var(--land); overflow: hidden; position: relative; }
+#progress .seg i { position: absolute; right: 0; top: 0; bottom: 0; width: 0; background: var(--mark); border-radius: 5px; }
+#app { position: absolute; left: var(--left); top: 186px; font: 700 34px "JetBrains Mono", monospace; direction: ltr;
+  color: var(--ink); opacity: 0.72; letter-spacing: 0.5px; }
+#counter { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 180px; direction: ltr;
+  font: 700 34px "JetBrains Mono", monospace; color: var(--paper); background: var(--ink); border-radius: 12px;
+  padding: 3px 16px 5px; }
+#follow { position: absolute; left: var(--left); top: 1338px; width: var(--width); text-align: center; font-weight: 800;
+  font-size: 46px; line-height: 62px; white-space: nowrap; color: var(--ink); }
+#follow span { display: block; }
+
+/* a scene: the headline, the small line, the picture, the sources */
+.scene { position: absolute; inset: 0; }
+.head { position: absolute; left: var(--left); top: 282px; width: var(--width); text-align: right; }
+.head .line { display: block; font-weight: 800; font-size: 74px; line-height: 104px; white-space: nowrap; }
+.head .key { background: var(--mark); color: var(--paper); border-radius: 16px; padding: 0 16px 4px; margin: 0 2px;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.small { display: block; font-weight: 500; font-size: 48px; line-height: 66px; margin-top: 10px; white-space: nowrap;
+  color: #4a3a2e; }
+.sources { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 1494px; direction: ltr;
+  font: 500 36px "Inter", sans-serif; color: var(--ink); opacity: 0.62; white-space: nowrap; }
+.unit { font-size: 40px; line-height: 50px; white-space: nowrap; color: #4a3a2e; }
+.label { font-size: 48px; line-height: 58px; white-space: nowrap; }
+.chip { position: absolute; background: var(--paper); color: var(--ink); border-radius: 12px; padding: 0 14px 3px;
+  font-size: 42px; line-height: 56px; white-space: nowrap; box-shadow: 0 3px 10px rgba(20, 12, 6, 0.28); }
+.card { position: absolute; border-radius: 26px; overflow: hidden; box-shadow: 0 22px 44px rgba(46, 33, 24, 0.26),
+  0 2px 0 rgba(255, 255, 255, 0.5) inset; }
+.card img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+.box34 { position: absolute; border: 4px solid #F4EFE4; border-radius: 8px; }
+svg { position: absolute; overflow: visible; }
+.num { font-weight: 900; }
+
+/* twodeg2: the series pill, small tags, tiles */
+.pill { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 178px; background: var(--ink); color: var(--paper);
+  border-radius: 14px; padding: 2px 20px 6px; font-weight: 700; font-size: 36px; line-height: 52px; white-space: nowrap; }
+.tag { position: absolute; background: var(--ink); color: var(--paper); border-radius: 10px; padding: 0 12px 3px; font-weight: 700;
+  font-size: 34px; line-height: 46px; white-space: nowrap; }
+.lab { font-size: 44px; line-height: 56px; white-space: nowrap; }
+.big { font-weight: 900; white-space: nowrap; }
+.wrap { white-space: normal; text-align: right; }
