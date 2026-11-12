@@ -68,6 +68,15 @@ def score_notes(film: dict) -> tuple:
         (c["pins"][1], 65, VEL_MARK),                # F4: the irrigated land
         (c["pins"][2], 69, VEL_MARK),                # A4: Kamal Khan
         (c["pins"][3], 74, VEL_SOFT),                # D5: Chah-nimeh
+        (c["dust"], 62, VEL),                        # D4: the dust storm
+        (c["dframes"][1] + 0.3, 65, VEL_MARK),       # F4: noon
+        (c["dframes"][2] + 0.3, 69, VEL_MARK),       # A4: an hour later
+        (c["dust2"], 74, VEL),                       # D5: since 1378
+        (c["dust2_chip"] + 0.2, 65, VEL_MARK),       # F4: the people in that storm
+        (c["lives"], 62, VEL),                       # D4: the dry years
+        (c["lives_pins"][0], 69, VEL_MARK), (c["lives_pins"][2], 74, VEL_MARK), (c["lives_pins"][4], 77, VEL_MARK),
+        (c["dispute"], 70, VEL),                     # Bb4: the dispute
+        (c["dispute_chips"][0], 65, VEL_MARK), (c["dispute_chips"][1], 62, VEL_MARK), (c["dispute_chips"][2], 65, VEL_MARK),
         (c["now"], 65, VEL),                         # F4: this spring against the mean
         (c["ask"], 69, VEL),                         # A4: the question
         (c["follow"], 74, VEL_SOFT),                 # D5: the call

@@ -81,6 +81,12 @@ svg { position: absolute; left: 0; top: 0; overflow: visible; }
   border-radius: 18px; padding: 8px 22px 12px; font-weight: 800; font-size: 40px; line-height: 54px; white-space: nowrap;
   text-align: center; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); }
 .chip span { display: block; }
+.head .bed { color: #8fdcff; }
+#when { position: absolute; left: var(--left); top: 1130px; width: var(--width); text-align: right; }
+#when .d { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 92px; line-height: 116px; white-space: nowrap;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
+#when .h { font-weight: 900; font-size: 60px; line-height: 78px; white-space: nowrap; color: var(--gold);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 0, 0, 0.75); }
 #follow { position: absolute; left: var(--left); top: 1126px; width: var(--width); text-align: center; font-weight: 900;
   font-size: 50px; line-height: 70px; white-space: nowrap; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 22px rgba(0, 0, 0, 0.8); }
 #follow span { display: block; }

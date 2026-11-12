@@ -13,7 +13,7 @@ function el(tag, cls, parent, text) { const e = document.createElement(tag); if 
 function svg(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
 function css(e, o) { for (const k in o) e.style[k] = typeof o[k] === "number" ? o[k] + "px" : o[k]; return e; }
 function marked(parent, s) {
-  s.split(/(\{[^}]*\})/).forEach(part => { if (!part) return; if (part[0] === "{") el("span", "key", parent, part.slice(1, -1)); else parent.appendChild(document.createTextNode(part)); });
+  s.split(/(\{[^}]*\}|\[[^\]]*\])/).forEach(part => { if (!part) return; if (part[0] === "{") el("span", "key", parent, part.slice(1, -1)); else if (part[0] === "[") el("span", "bed", parent, part.slice(1, -1)); else parent.appendChild(document.createTextNode(part)); });
 }
 function show(e, p) { p = clamp(p); e.style.opacity = p.toFixed(3); e.style.visibility = p <= 0.001 ? "hidden" : "visible"; }
 function fit(nodes, limit, floor, lh) {
@@ -44,10 +44,10 @@ async function main() {
   for (const k in col) document.documentElement.style.setProperty("--" + k, col[k]);
   const load = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("no picture " + src)); im.src = "/build/" + src; });
   const names = new Set([F.ring]); S.forEach(s => { names.add(s.pic); if (s.water) names.add(s.water); });
-  ["wide", "mid", "near"].forEach(k => names.add(F.ground[k].file));
+  ["wide", "mid", "near"].forEach(k => names.add(F.ground[k].file)); F.dust.frames.forEach(f => names.add(f.file));
   const IM = {}; await Promise.all([...names].map(async n => { IM[n] = await load(n); }));
   await Promise.all(['900 88px "Vazirmatn"', '800 48px "Vazirmatn"', '700 48px "Vazirmatn"', '500 32px "Vazirmatn"', '400 118px "Lalezar"'].map(f => document.fonts.load(f, "آبِ هامون ۱۳۷۷")));
-  const NOW = S[F.now], BEFORE = S[F.before], T13 = S[13].t;
+  const NOW = S[F.now], BEFORE = S[F.before], DRY = S[F.dry], T13 = S[13].t;
 
   // ── the camera: a view is the lakes' place on screen (xa, ya) and a scale (frame pixels per picture pixel) ──
   const A = { lon: F.views.close[0], lat: F.views.close[1] };
@@ -55,8 +55,9 @@ async function main() {
   for (const k in F.views) { const [lon, lat, s] = F.views[k]; VW[k] = { s, xa: 540 + s * (A.lon - lon) / G.dlon, ya: 960 - s * (A.lat - lat) / G.dlat }; }
   const key = (v, m) => ({ s: VW[v].s * m, xa: 540 + (VW[v].xa - 540) * m, ya: 960 + (VW[v].ya - 960) * m });
   const K = [[0, "close", 1.0], [C.where, "close", 1.05], [C.out1[1], "mid", 1.0], [C.run, "mid", 0.97], [C.in1[1], "close", 1.0],
-             [C.why, "close", 1.05], [C.out2[1], "wide", 1.0], [C.mid2[0], "wide", 0.97], [C.mid2[1], "mid", 1.0], [C.now, "mid", 0.98],
-             [C.in2[1], "close", 1.0], [C.back[0], "close", 1.04], [END, "close", 1.0]];
+             [C.why, "close", 1.05], [C.out2[1], "wide", 1.0], [C.mid2[0], "wide", 0.97], [C.mid2[1], "mid", 1.0], [C.dust, "mid", 0.98],
+             [C.dustin[1], "dust", 1.0], [C.lives, "dust", 1.06], [C.livesin[1], "close", 1.0], [C.dispute, "close", 1.04],
+             [C.dispin[1], "mid", 1.0], [C.now, "mid", 0.98], [C.in2[1], "close", 1.0], [C.back[0], "close", 1.04], [END, "close", 1.0]];
   function cam(t) {
     let i = 0; while (i < K.length - 2 && t >= K[i + 1][0]) i++;
     const a = key(K[i][1], K[i][2]), b = key(K[i + 1][1], K[i + 1][2]);
@@ -88,26 +89,37 @@ async function main() {
                               svg("path", { fill: "none", stroke: "#ffffff", "stroke-width": wd, "stroke-dasharray": dash, "stroke-linejoin": "round" }, lines)];
   const bAP = edge(3.5, "10 9"), bIP = edge(3.5, "10 9"), bIA = edge(6, "16 11");
   const dots = {}; for (const k of ["zabol", "kajaki", "lashkargah", "kamalkhan", "chahnimeh", "lake"]) dots[k] = [svg("circle", { r: 16, fill: "none", stroke: col.pin, "stroke-width": 4, opacity: 0 }, map), svg("circle", { r: 9, fill: k === "zabol" ? "#ffffff" : col.pin, stroke: k === "zabol" ? "#1d140c" : "#ffffff", "stroke-width": 3.5, opacity: 0 }, map)];
+  const bedLine = [svg("path", { fill: "none", stroke: "rgba(10,6,2,0.5)", "stroke-width": 8, "stroke-linejoin": "round", opacity: 0 }, map),
+                   svg("path", { fill: "none", stroke: "#7fd6ff", "stroke-width": 4, "stroke-linejoin": "round", opacity: 0 }, map)];
+  const windLine = [svg("path", { fill: "none", stroke: "rgba(10,6,2,0.55)", "stroke-width": 17, "stroke-linecap": "round", opacity: 0 }, map),
+                    svg("path", { fill: "none", stroke: "#ffffff", "stroke-width": 10, "stroke-linecap": "round", opacity: 0 }, map),
+                    svg("path", { fill: "#ffffff", stroke: "rgba(10,6,2,0.55)", "stroke-width": 3, "stroke-linejoin": "round", opacity: 0 }, map)];
   const LIA = F.lines.ia, cIA = measure(LIA), RIV = F.lines.river, cR = measure(RIV), RL = cR[cR.length - 1];
   // the stretch of the river with the irrigated land: from Kajaki down to the head of the delta (Kamal Khan)
   const nearest = pt => { let b = 0, bd = 1e9; RIV.forEach((p, i) => { const d = Math.hypot(p[0] - pt[0], p[1] - pt[1]); if (d < bd) { bd = d; b = i; } }); return cR[b]; };
   const dKaj = nearest(P.kajaki), dKam = nearest(P.border_end);
 
-  el("div", null, stage).id = "shade-top"; el("div", null, stage).id = "shade-bot";
+  const shadeTop = el("div", null, stage), shadeBot = el("div", null, stage); shadeTop.id = "shade-top"; shadeBot.id = "shade-bot";
   const country = (name, where, size) => { const e = css(el("div", "country", stage, name), { fontSize: size, lineHeight: Math.round(size * 1.3) }); e.dataset.at = where; return e; };
   const labels = { close: [country(Wd.iran, "iran_close", 60), country(Wd.afg, "afg_close", 48)],
                    mid: [country(Wd.iran, "iran_mid", 78), country(Wd.afg, "afg_mid", 78)],
-                   wide: [country(Wd.iran, "iran_wide", 56), country(Wd.afg, "afg_wide", 78), country(Wd.pak, "pak_wide", 66)] };
+                   wide: [country(Wd.iran, "iran_wide", 56), country(Wd.afg, "afg_wide", 78), country(Wd.pak, "pak_wide", 66)],
+                   dust: [country(Wd.iran, "iran_dust", 60), country(Wd.afg, "afg_dust", 62)] };
+  const windName = el("div", "place", stage, Wd.wind), bedName = css(el("div", "place", stage, Wd.bed), { color: "#8fdcff", fontWeight: 900, transform: "translate(-50%, -50%)" });
   const zabol = el("div", "place", stage, Wd.zabol);
   const riverName = el("div", "rivername", stage, Wd.river), kush = el("div", "place", stage, Wd.kush), lakeName = el("div", "place", stage, Wd.lake);
   css(lakeName, { color: "var(--gold)", fontWeight: 900 });
   const pins = Wd.pins.map(([at, nm, yr]) => { const e = el("div", at === "lashkargah" ? "pin farm" : "pin", stage); el("span", "nm", e, nm); yr.split(" // ").forEach(y => el("span", "yr", e, y)); e.dataset.at = at; return e; });
+  const lives = Wd.lives_pins.map((nm, i) => { const e = el("div", "pin", stage); el("span", "nm", e, nm); css(e, { top: 548 + i * 104 }); return e; });
+  const livesNote = el("div", "place", stage, Wd.lives_note); css(livesNote, { left: 96, top: 1072, fontSize: 40, lineHeight: 50 });
   const wipe = el("div", null, stage); wipe.id = "wipe";
 
   // the headlines: [name, lines, small line, from, to]
   const heads = [["hook", Wd.hook, null, 0, C.where], ["where", Wd.where, null, C.where, C.run], ["era1", Wd.era1, null, C.run, T13],
                  ["era2", Wd.era2, null, T13, C.why], ["why", Wd.why, Wd.periods, C.why, C.where2],
-                 ["where2", Wd.where2, Wd.where2_small, C.where2, C.now], ["now", Wd.now, Wd.ask, C.now, C.back[0] + 0.25]]
+                 ["where2", Wd.where2, Wd.where2_small, C.where2, C.dust], ["dust", Wd.dust_head, null, C.dust, C.dust2],
+                 ["dust2", Wd.dust2_head, Wd.dust2_small, C.dust2, C.lives], ["lives", Wd.lives_head, Wd.lives_small, C.lives, C.dispute],
+                 ["dispute", Wd.dispute_head, null, C.dispute, C.now], ["now", Wd.now, Wd.ask, C.now, C.back[0] + 0.25]]
     .map(([name, textLines, small, a, b]) => {
       const box = el("div", "head", stage), lines = textLines.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
       fit(lines, 826, 52, 1.39);
@@ -120,6 +132,10 @@ async function main() {
   const held = el("div", "chip", stage); css(held, { top: 1040 }); el("span", null, held, Wd.held.join(" "));
   fit([held], 780, 34, 1.35);
   const hedge = el("div", "chip", stage, Wd.share); css(hedge, { top: 1392 });
+  const when = el("div", null, stage); when.id = "when"; el("div", "d", when, Wd.dust_date); const whenH = el("div", "h", when);
+  const sick = el("div", "chip", stage); css(sick, { top: 1290 }); Wd.dust2_chip.forEach(s => el("span", null, sick, s)); fit([sick], 780, 34, 1.35);
+  let dTop = 1096;
+  const disp = Wd.dispute_chips.map(s => { const e = css(el("div", "chip", stage), { top: dTop, fontSize: 36, lineHeight: 48 }); s.split(" // ").forEach(l => el("span", null, e, l)); fit([e], 800, 30, 1.34); dTop += e.offsetHeight + 12; return e; });
 
   // the small chart: forty springs against their mean
   const chart = el("div", "card", stage), leg = el("div", "legend", chart);
@@ -146,7 +162,8 @@ async function main() {
   });
 
   const follow = el("div", null, stage); follow.id = "follow"; Wd.follow.forEach(s => el("span", null, follow, s)); fit([...follow.children], 828, 40, 1.4);
-  const src = { water: el("div", "sources", stage, Wd.src_water), map: el("div", "sources", stage, Wd.src_map), rain: el("div", "sources", stage, Wd.src_rain) };
+  const src = { water: el("div", "sources", stage, Wd.src_water), map: el("div", "sources", stage, Wd.src_map), rain: el("div", "sources", stage, Wd.src_rain),
+                dust: el("div", "sources", stage, Wd.src_dust), lives: el("div", "sources", stage, Wd.src_lives), dispute: el("div", "sources", stage, Wd.src_dispute) };
   Object.values(src).forEach(e => fit([e], 828, 26, 1.25));
 
   function put(sp, a) {
@@ -188,22 +205,45 @@ async function main() {
         if (k < 0) { put(NOW, 1); const p = ease(seg(t, C.t0 - 0.45, C.t0 - 0.03)); if (p > 0) put(S[0], p); if (t >= C.t0 - 0.3) sp = S[0]; }
         else { if (k > 0) put(S[k - 1], 1); put(S[k], k > 0 ? ease(seg(t, S[k].t, S[k].t + 0.14)) : 1);
           kt = 0; for (let i = 0; i < S.length; i++) if (t - 0.07 >= S[i].t) kt = i; sp = S[kt]; }
-      } else { put(NOW, 1); if (t >= C.now) sp = NOW; }
+      } else if (t >= C.lives && t < C.dispute + 0.7) { put(DRY, 1); const p = ease(seg(t, C.dispute, C.dispute + 0.6)); if (p > 0) put(NOW, p); if (t < C.dispute) sp = DRY; }
+      else { put(NOW, 1); if (t >= C.now) sp = NOW; }
     }
     ctx.drawImage(IM[F.ring], X(G.lon0), Y(G.lat1), V.s * G.w, V.s * G.h);
+    // the dust storm: three passes of one day over the whole frame
+    const dA = seg(t, C.dframes[0], C.dframes[0] + 1.0) * (1 - seg(t, C.lives, C.lives + 1.0));
+    if (dA > 0) { const D = F.dust, x0 = X(D.w), y0 = Y(D.n), w = X(D.e) - x0, h = Y(D.s) - y0;
+      ctx.globalAlpha = dA; ctx.drawImage(IM[D.frames[0].file], x0, y0, w, h);
+      for (let i = 1; i < D.frames.length; i++) { const a = ease(seg(t, C.dframes[i], C.dframes[i] + 0.9)); if (a > 0) { ctx.globalAlpha = dA * a; ctx.drawImage(IM[D.frames[i].file], x0, y0, w, h); } }
+      ctx.globalAlpha = 1; }
+    const bedOn = dA * seg(t, C.dust + 1.0, C.dust + 1.6);
+    if (bedOn > 0) { const d = F.lines.lake.map(r => path(r) + "Z").join(""); bedLine.forEach(e => e.setAttribute("d", d)); }
+    bedLine.forEach((e, i) => e.setAttribute("opacity", (bedOn * (i ? 1 : 0.9)).toFixed(3)));
+    shadeTop.style.opacity = (1 - 0.35 * dA).toFixed(3); shadeBot.style.opacity = (1 - 0.45 * dA).toFixed(3);
+    const windOn = dA * seg(t, C.dust + 1.8, C.dust + 2.3);
+    if (windOn > 0) { const x0 = X(P.wind0[0]), y0 = Y(P.wind0[1]), x1 = X(P.wind1[0]), y1 = Y(P.wind1[1]), L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L;
+      const g = easeOut(seg(t, C.dust + 1.8, C.dust + 2.6)), ex = x0 + (x1 - x0) * g, ey = y0 + (y1 - y0) * g, hx = ex + ux * 34, hy = ey + uy * 34;
+      const shaft = `M${x0.toFixed(1)},${y0.toFixed(1)}L${ex.toFixed(1)},${ey.toFixed(1)}`;
+      windLine[0].setAttribute("d", shaft); windLine[1].setAttribute("d", shaft);
+      windLine[2].setAttribute("d", `M${hx.toFixed(1)},${hy.toFixed(1)}L${(ex - uy * 26).toFixed(1)},${(ey + ux * 26).toFixed(1)}L${(ex + uy * 26).toFixed(1)},${(ey - ux * 26).toFixed(1)}Z`); }
+    windLine.forEach(e => e.setAttribute("opacity", windOn.toFixed(3)));
+    css(windName, { left: 96, top: Y(P.wind0[1]) - 84 }); show(windName, windOn);
+    place(bedName, P.bed_name[0], P.bed_name[1]); show(bedName, bedOn);
 
     // the border: drawn once (the "where" scene), then it stays; not in the hook, not in the loop's last frames
-    const bOn = hook ? 0 : loop ? 1 - seg(t, C.back[0], C.back[0] + 0.3) : 1, bp = ease(seg(t, C.border[0], C.border[1]));
+    const bOn = (hook ? 0 : loop ? 1 - seg(t, C.back[0], C.back[0] + 0.3) : 1) * (1 - seg(t, C.lives, C.lives + 0.6) * (1 - seg(t, C.dispute, C.dispute + 0.5))), bp = ease(seg(t, C.border[0], C.border[1]));
     const dIA = path(part(LIA, cIA, 0, cIA[cIA.length - 1] * bp));
     bIA.forEach((e, i) => { e.setAttribute("d", dIA); e.setAttribute("opacity", (bOn * (bp > 0 ? 1 : 0) * (i ? 0.95 : 1)).toFixed(3)); });
     const far = bOn * seg(t, C.border[1] - 0.3, C.border[1] + 0.3) * (1 - seg(V.s, 0.5, 0.7));
     [[bIP, F.lines.ip], [bAP, F.lines.ap]].forEach(([pair, line]) => pair.forEach(e => { if (far > 0) e.setAttribute("d", path(line)); e.setAttribute("opacity", (far * 0.85).toFixed(3)); }));
     const lab = [seg(t, C.labels[0], C.labels[0] + 0.3), seg(t, C.labels[1], C.labels[1] + 0.3), seg(t, C.labels[2], C.labels[2] + 0.3)];
-    const atMid = (t >= C.out1[0] && t < C.in1[1]) || (t >= C.mid2[0] && t < C.in2[1]) ? 1 : 0;
-    const scale = { close: seg(V.s, 0.62, 0.74), mid: atMid * seg(V.s, 0.24, 0.3) * (1 - seg(V.s, 0.46, 0.58)), wide: 1 - seg(V.s, 0.17, 0.215) };
+    const atMid = (t >= C.out1[0] && t < C.in1[1]) || (t >= C.mid2[0] && t < C.dustin[0] + 0.5) || (t >= C.dispin[0] && t < C.in2[1]) ? 1 : 0;
+    const scale = { close: seg(V.s, 0.62, 0.74), mid: atMid * seg(V.s, 0.24, 0.3) * (1 - seg(V.s, 0.44, 0.52)), wide: 1 - seg(V.s, 0.17, 0.215),
+                    dust: seg(t, C.dustin[1] - 0.3, C.dustin[1] + 0.2) * (1 - seg(t, C.lives - 0.2, C.lives + 0.3)) };
+    const inDisp = t >= C.dispute + 0.5 && t < C.now;
+    bIA[1].setAttribute("stroke", inDisp ? col.gold : "#ffffff"); bIA[1].setAttribute("stroke-width", inDisp ? 9 : 6);
     for (const v in labels) labels[v].forEach((e, i) => { const [lon, lat] = P[e.dataset.at]; place(e, lon, lat);
-      show(e, bOn * scale[v] * lab[Math.min(i, 1)] * (v === "close" ? 0.9 : 1) * (e.dataset.at === "pak_wide" && rainOn > 0 ? 0 : 1)); });
-    const zOn = bOn * lab[2] * seg(V.s, 0.3, 0.38);
+      show(e, bOn * scale[v] * lab[Math.min(i, 1)] * (v === "close" ? 0.9 * (t >= C.lives && t < C.dispute + 0.4 ? 0 : 1) : 1) * (e.dataset.at === "pak_wide" && rainOn > 0 ? 0 : 1)); });
+    const zOn = bOn * lab[2] * seg(V.s, 0.3, 0.38) * (t >= C.lives && t < C.dispute + 0.4 ? 0 : 1);
     css(zabol, { left: X(P.zabol[0]) - 22 - zabol.offsetWidth, top: Y(P.zabol[1]) - 30 }); show(zabol, zOn);
     const dot = (name, on, pulse) => { const [lon, lat] = name === "lake" ? [A.lon - 0.12, A.lat + 0.12] : P[name], [ring, core] = dots[name];
       core.setAttribute("cx", X(lon)); core.setAttribute("cy", Y(lat)); core.setAttribute("opacity", on.toFixed(3));
@@ -211,7 +251,7 @@ async function main() {
     dot("zabol", zOn, 1);
 
     // the river: drawn from its head to the lakes, then it flows; only in the far views
-    const rOn = (t >= C.river[0] && t < C.now + 0.8 ? 1 : 0) * (1 - seg(V.s, 0.5, 0.72)), rp = ease(seg(t, C.river[0], C.river[1]));
+    const rOn = ((t >= C.river[0] && t < C.dust + 0.6) || (t >= C.dispute + 0.3 && t < C.now + 0.8) ? 1 : 0) * (1 - seg(V.s, 0.5, 0.72)), rp = ease(seg(t, C.river[0], C.river[1]));
     const dR = rOn > 0 ? path(part(RIV, cR, 0, RL * rp)) : "";
     [[riverGlow, 0.9], [riverLine, 1], [riverCore, 0.9]].forEach(([e, o]) => { e.setAttribute("d", dR); e.setAttribute("opacity", (rOn * o).toFixed(3)); });
     beads.forEach((b, i) => { const f = ((i / beads.length) + (t - C.river[0]) * 0.055) % 1, on = rOn * (f < rp ? 1 : 0) * Math.min(1, f * 12, (1 - f) * 12);
@@ -224,7 +264,7 @@ async function main() {
     dot("lake", V.s < 0.2 ? lakeOn : 0, 0.5 + 0.5 * Math.sin((t - C.river[1]) * 4));
 
     // the dams and the irrigated land, in the river's order
-    const pOn = t >= C.where2 && t < C.now + 0.5 ? 1 - seg(t, C.now, C.now + 0.5) : 0;
+    const pOn = t >= C.where2 && t < C.dust + 0.5 ? 1 - seg(t, C.dust, C.dust + 0.5) : 0;
     const fOn = pOn * seg(t, C.pins[1], C.pins[1] + 0.5) * (1 - seg(V.s, 0.15, 0.2));
     if (fOn > 0) farm.setAttribute("d", path(part(RIV, cR, dKaj, dKam))); farm.setAttribute("opacity", (fOn * 0.78).toFixed(3));
     const OFF = { kajaki: [28, -8, "l"], lashkargah: [-34, -196, "r"], kamalkhan: [0, 30, "c"], chahnimeh: [-34, 34, "r"] };
@@ -240,15 +280,22 @@ async function main() {
       if (h.sm && h.name === "now") show(h.sm, seg(t, C.ask, C.ask + 0.35)); });
 
     // the spring's tag (its year and its water), the note of a spring without a clean picture
-    const tagOn = hook ? 1 : loop ? seg(t, C.back[0] + 0.3, C.back[0] + 0.6) : run ? seg(t, C.t0 - 0.3, C.t0) * (1 - seg(t, C.why - 0.25, C.why)) : t >= C.now ? seg(t, C.now + 0.6, C.now + 0.9) * (1 - seg(t, C.follow - 0.3, C.follow)) : 0;
+    const tagOn = hook ? 1 : loop ? seg(t, C.back[0] + 0.3, C.back[0] + 0.6) : run ? seg(t, C.t0 - 0.3, C.t0) * (1 - seg(t, C.why - 0.25, C.why)) : t >= C.lives && t < C.dispute ? 0 : t >= C.now ? seg(t, C.now + 0.6, C.now + 0.9) * (1 - seg(t, C.follow - 0.3, C.follow)) : 0;
     if (sp) {
       tagYr.textContent = Wd.spring.replace("{}", sp.label);
       if (sp.km2 === null) { tagN.textContent = Wd.gap; tagN.className = "n nogap"; tagU.style.display = "none"; }
       else { tagN.textContent = sp.shown; tagN.className = "n"; tagU.style.display = "block"; }
     }
     tagSub.textContent = hook || loop ? (sp === BEFORE ? Wd.wet : Wd.this_spring) : !run && t >= C.now ? Wd.mean_value : "";
-    css(tag, { top: hook || loop ? 1150 : run ? 1128 : 1066 }); show(tag, sp ? tagOn : 0);
-    show(hedge, win(t, C.pins[2] + 0.5, C.now, 0.4, 0.3));
+    css(tag, { top: hook || loop || (t >= C.lives && t < C.dispute) ? 1150 : run ? 1128 : 1066 }); show(tag, sp ? tagOn : 0);
+    show(hedge, win(t, C.pins[2] + 0.5, C.dust, 0.4, 0.3));
+    show(when, win(t, C.dust + 1.2, C.dust2, 0.4, 0.3));
+    whenH.textContent = Wd.dust_hours[t < C.dframes[1] + 0.45 ? 0 : t < C.dframes[2] + 0.45 ? 1 : 2];
+    show(sick, win(t, C.dust2_chip, C.lives, 0.4, 0.3));
+    lives.forEach((e, i) => { const on = win(t, C.lives_pins[i], C.dispute, 0.3, 0.3), pop = easeOut(seg(t, C.lives_pins[i], C.lives_pins[i] + 0.35));
+      css(e, { left: i % 2 ? 924 - e.offsetWidth : 96, transform: `scale(${(0.7 + 0.3 * pop).toFixed(3)})` }); show(e, on); });
+    show(livesNote, win(t, C.lives_pins[4] + 0.2, C.dispute, 0.3, 0.3));
+    disp.forEach((e, i) => show(e, win(t, C.dispute_chips[i], C.now, 0.35, 0.3)));
     let heldOn = 0;
     if (run) S.forEach((s, i) => { if (s.held && s.km2 !== null) heldOn = Math.max(heldOn, win(t, s.t - 0.08, (i + 1 < S.length ? S[i + 1].t : C.why) + 0.25, 0.1, 0.25)); });
     show(held, heldOn * tagOn);
@@ -273,7 +320,8 @@ async function main() {
 
     show(follow, win(t, C.follow, C.back[0] + 0.2, 0.35, 0.25));
     show(src.water, hook ? 1 : loop ? seg(t, C.back[0] + 0.3, C.back[0] + 0.6) : Math.max(win(t, C.run + 0.3, C.why), win(t, C.now + 0.6, C.back[0] + 0.2)));
-    show(src.map, Math.max(win(t, C.where + 0.4, C.run), win(t, C.where2, C.now)));
+    show(src.map, Math.max(win(t, C.where + 0.4, C.run), win(t, C.where2, C.dust)));
+    show(src.dust, win(t, C.dust + 0.6, C.lives)); show(src.lives, win(t, C.lives + 0.6, C.dispute)); show(src.dispute, win(t, C.dispute + 0.6, C.now));
     show(src.rain, win(t, C.why + 0.4, C.where2));
   };
   window.renderAt(0);

@@ -15,6 +15,14 @@ product at three pixel sizes, so the camera can travel from one to the next with
                                   countries, the river centre lines
     lines.json                    the Iran-Afghanistan, Iran-Pakistan and Afghanistan-Pakistan boundaries and the
                                   Helmand river (its main stem from the Hindu Kush to the Hamoun) as lon/lat lists
+    dust_20230922_<sensor>.jpg    the dust storm of 22 September 2023 (31 Shahrivar 1402) in true colour, three
+                                  passes of one day from NASA GIBS (Corrected Reflectance, keyless WMS), 59.9-63.6 E,
+                                  27.7-33.2 N at about 240 m: MODIS on Terra (05:35 UTC = 09:05 in Iran), VIIRS on
+                                  Suomi NPP (08:36 UTC = 12:06) and VIIRS on NOAA-20 (09:30 UTC = 13:00); the times
+                                  are the granules' start times from NASA's CMR (MOD021KM, VNP02MOD, VJ102MOD at
+                                  61.5 E, 30.5 N). NASA's Earth Observatory showed this day (image of the day,
+                                  28 Sep 2023, "Dusty Skies in Southern Asia"): "The dust appears to emanate from the
+                                  ephemeral Hamun wetlands"
 
     python -I src/get_hamoun3.py
 """
@@ -45,6 +53,12 @@ NE_URL = "https://naciscdn.org/naturalearth/10m/{}/{}.zip"
 NE_FILES = dict(ne_10m_admin_0_boundary_lines_land="cultural", ne_10m_admin_0_countries="cultural",
                 ne_10m_rivers_lake_centerlines="physical")
 REGION = (56.0, 22.0, 72.0, 42.0)                    # W, S, E, N: lines outside are dropped
+GIBS = ("https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1"
+        "&LAYERS={}_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG:4326&BBOX={},{},{},{}&WIDTH={}&HEIGHT={}"
+        "&FORMAT=image/jpeg&TIME={}")
+DUST_DAY = "2023-09-22"
+DUST_BOX = (59.9, 27.7, 63.6, 33.2)                  # W, S, E, N
+DUST_PASSES = (("MODIS_Terra", "05:35"), ("VIIRS_SNPP", "08:36"), ("VIIRS_NOAA20", "09:30"))   # sensor, UTC
 
 
 def get(url: str) -> bytes:
@@ -67,6 +81,21 @@ def ground() -> None:
         wd, ht = size(name)
         im = Image.open(io.BytesIO(get(WMS.format(w, s, e, n, wd, ht)))).convert("RGB")
         assert im.size == (wd, ht), ("the WMS returned an error tile", name, im.size)
+        im.save(path, quality=93)
+        print("saved", path.name, im.size, flush=True)
+
+
+def dust() -> None:
+    from PIL import Image
+    w, s, e, n = DUST_BOX
+    wd, ht = round((e - w) / 0.0025), round((n - s) / 0.00215)
+    for sensor, _utc in DUST_PASSES:
+        path = OUT / f"dust_{DUST_DAY.replace('-', '')}_{sensor}.jpg"
+        if path.exists():
+            print("have", path.name)
+            continue
+        im = Image.open(io.BytesIO(get(GIBS.format(sensor, w, s, e, n, wd, ht, DUST_DAY)))).convert("RGB")
+        assert im.size == (wd, ht), (sensor, im.size)
         im.save(path, quality=93)
         print("saved", path.name, im.size, flush=True)
 
@@ -129,6 +158,7 @@ def lines() -> None:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     ground()
+    dust()
     natural_earth()
     lines()
 
