@@ -27,7 +27,7 @@ src/onebit_hamoun3.py steps it frame by frame. Nothing new is measured here:
 - What follows when the bed is dry (added 12 Nov 2026 at the owner's request): the dust storm of 22 September 2023
   in three passes of one day (NASA GIBS; the day NASA's Earth Observatory showed), NASA's sentence on dust since
   1999 and the people who sought medical help in that storm (news reports, quoted by NASA), what UNEP's 2006 report
-  says of the dry years 1378-1384 (fishing, reeds, farming, emigration, deserted villages), and the dispute over the
+  says of the dry years 1378-1383 (fishing, reeds, farming, emigration, deserted villages), and the dispute over the
   river's water (the 1973 treaty; the border clash of May 2023 as Al Jazeera reported it, both sides' words). No
   migration or unemployment figure: the censuses of 1385, 1390 and 1395 count about 388, 400 and 394 thousand people
   in Sistan's counties, and no source gives a traceable number.
@@ -108,7 +108,7 @@ PLACES = dict(                                       # lon, lat
     iran_mid=(60.25, 31.75), afg_mid=(62.2, 32.2),
     iran_wide=(59.79, 33.3), afg_wide=(62.95, 34.21), pak_wide=(65.5, 28.3),
     kush=(65.84, 34.95), river_name=(63.2, 29.75),
-    iran_dust=(60.58, 30.2), afg_dust=(62.48, 31.35), wind0=(61.144, 31.614), wind1=(61.501, 31.180), bed_name=(60.86, 30.47),
+    iran_dust=(60.58, 30.2), afg_dust=(62.48, 31.35), wind0=(61.144, 31.614), wind1=(61.501, 31.180), bed_name=(60.86, 30.42),
 )
 
 NEW = dict(                                          # this film's own words (checked on 12 Nov 2026)
@@ -141,7 +141,9 @@ NEW = dict(                                          # this film's own words (ch
     # beds provide fodder for livestock"; "caused damage to agriculture in the delta"; "Loss of traditional
     # livelihoods has resulted in emigration"; "local experts reported that more than a hundred villages in the
     # Saberi and Baringak region had been deserted")
-    lives_head="خشکسالیِ ۱۳۷۸ تا ۱۳۸۴: // {اقتصادِ محلی} فروپاشید",
+    # UNEP's drought is "between 1999 and 2005" and ends with the floods of March 2005 (Esfand 1383); this film's own
+    # strip shows spring 1384 full again, so the Persian years of the dry period are 1378 to 1383
+    lives_head="خشکسالیِ ۱۳۷۸ تا ۱۳۸۳: // {اقتصادِ محلی} فروپاشید",
     lives_small="گزارشِ برنامه‌ی محیط‌زیستِ ملل متحد (۲۰۰۶)",
     lives_pins=("ماهیگیری ممکن نبود", "نیزار (علوفه‌ی دام) خشکید", "کشاورزی آسیب دید", "مهاجرت از منطقه",
                 "بیش از ۱۰۰ روستای خالی، کنارِ هامون*"),

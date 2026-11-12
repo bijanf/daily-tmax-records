@@ -134,8 +134,8 @@ async function main() {
   const hedge = el("div", "chip", stage, Wd.share); css(hedge, { top: 1392 });
   const when = el("div", null, stage); when.id = "when"; el("div", "d", when, Wd.dust_date); const whenH = el("div", "h", when);
   const sick = el("div", "chip", stage); css(sick, { top: 1290 }); Wd.dust2_chip.forEach(s => el("span", null, sick, s)); fit([sick], 780, 34, 1.35);
-  let dTop = 1096;
-  const disp = Wd.dispute_chips.map(s => { const e = css(el("div", "chip", stage), { top: dTop, fontSize: 36, lineHeight: 48 }); s.split(" // ").forEach(l => el("span", null, e, l)); fit([e], 800, 30, 1.34); dTop += e.offsetHeight + 12; return e; });
+  let dTop = 1076;
+  const disp = Wd.dispute_chips.map(s => { const e = css(el("div", "chip", stage), { top: dTop, fontSize: 38, lineHeight: 50 }); s.split(" // ").forEach(l => el("span", null, e, l)); fit([e], 812, 34, 1.32); dTop += e.offsetHeight + 12; return e; });
 
   // the small chart: forty springs against their mean
   const chart = el("div", "card", stage), leg = el("div", "legend", chart);
