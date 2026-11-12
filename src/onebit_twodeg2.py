@@ -5,7 +5,7 @@ src/twodeg2_page/ draws any moment; this file steps it through every frame in he
 silent reel, with the machinery of src/onebit_elnino26i.py (its server, its page loader, its encoder). The owner
 narrates over the silent reel; no sound is made here.
 
-    outputs/onebit/social/twodeg2_fa_reel.mp4 (silent, 80 s, 2400 frames), _cover.png, _t<sec>.png (stills)
+    outputs/onebit/social/twodeg2_fa_reel.mp4 (silent, 76 s, 2280 frames), _cover.png, _t<sec>.png (stills)
 
     python -I src/twodeg2.py                    # film.json and the world map (first)
     python -I src/onebit_twodeg2.py --stills    # the cover and stills
