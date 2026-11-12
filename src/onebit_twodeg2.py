@@ -2,10 +2,10 @@
 
 The words, the numbers (IPCC AR6 WG1 SPM, read at source) and the clock come from src/twodeg2.py; the page
 src/twodeg2_page/ draws any moment; this file steps it through every frame in headless Chromium and encodes the
-silent reel, with the machinery of src/onebit_elnino26i.py (its server, its page loader, its encoder). The owner
-narrates over the silent reel; no sound is made here.
+silent reel, with the machinery of src/onebit_elnino26i.py (its server, its page loader, its encoder). No sound is
+made here: src/onebit_score_twodeg2_light.py writes the score (the reel has no narration).
 
-    outputs/onebit/social/twodeg2_fa_reel.mp4 (silent, 76 s, 2280 frames), _cover.png, _t<sec>.png (stills)
+    outputs/onebit/social/twodeg2_fa_reel.mp4 (silent, 71 s, 2130 frames), _cover.png, _t<sec>.png (stills)
 
     python -I src/twodeg2.py                    # film.json and the world map (first)
     python -I src/onebit_twodeg2.py --stills    # the cover and stills

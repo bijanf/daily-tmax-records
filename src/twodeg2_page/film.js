@@ -360,7 +360,7 @@ async function main() {
     const drops = Array.from({ length: 120 }, () => ({ X: -228 + 396 * rnd(), d: 2 * rnd() - 1, ph: rnd(), sp: 1.5 + 0.7 * rnd() }));   // x 144 to 540: clear of the labels
     const up = [], extra = F.vapour.counts[1] - F.vapour.counts[0];
     for (let i = 0; i < 30; i++) up.push(Object.assign(tumble(rnd), { kind: 1, t0: -1.3 + 2.1 * rnd(), dur: 1.5 + 0.3 * rnd(), x0: 104 + 112 * rnd(), y0: 1040 + 370 * rnd(), x1: ccx - 196 + 250 * rnd(), ring: 0 }));   // the vapour that makes the cloud
-    q.fill.slice(1).forEach((r, k) => { for (let i = 0; i < extra; i++) up.push(Object.assign(tumble(rnd), { kind: 1, t0: r[0] - 1.8 + 0.1 * i, dur: 1.5, x0: 106 + 104 * rnd(), y0: 1280 + 120 * rnd(), x1: ccx - 196 + 250 * rnd(), ring: k + 1 })); });   // the extra vapour of each degree
+    q.fill.slice(1).forEach((r, k) => { for (let i = 0; i < extra; i++) up.push(Object.assign(tumble(rnd), { kind: 1, t0: r[0] - 1.55 + 0.08 * i, dur: 1.35, x0: 106 + 104 * rnd(), y0: 1280 + 120 * rnd(), x1: ccx - 196 + 250 * rnd(), ring: k + 1 })); });   // the extra vapour of each degree
     const marks = Rn.marks.map((m, k) => ({ m, y: base - m.v * per, ly: 1068 - k * 74, lab: text(b, "lab", m.label, { left: gx1 + 106, top: 1068 - k * 74 }) }));
     css(el("div", "tag", b, Rn.tag), { left: L, top: 566 });   // clear of the vapour that rises on the left
     f.fits = [text(b, "unit", Rn.foot, { right: 1080 - R, top: 1424 })];

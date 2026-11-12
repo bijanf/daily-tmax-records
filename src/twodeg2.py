@@ -35,6 +35,13 @@ molecules, 7 more leaving the sea with each degree (107, 114; a drawing on the s
 example; the molecules' quicker motion in warmer air is exaggerated to be seen). The rain scene then lets that
 vapour rise into a cloud that swells and rains into the gauge.
 
+No narration (the owner, 12 Nov evening: "go without my voice"): the reel carries its own words and a light setar
+score (src/onebit_score_twodeg2_light.py). The clock is therefore sized by reading, not by speech (the rule of
+src/onebit_reading.py: 1 s + words / 2.5 a second, and 3 s or more after a scene's last picture lands): 71 s. The
+holds that waited for a spoken line are shorter, the last slide (a question and a call, 30 words) is longer, and the
+Earth keeps turning through the hook so that the picture never stands still. CUES are now the moments the score
+plays to. The clock of the narrated cut (76 s) is in commit b065db3.
+
     python -I src/twodeg2.py        writes outputs/onebit/twodeg2/film.json and world.jpg, prints the clock
 """
 
@@ -55,15 +62,17 @@ from onebit import fa  # noqa: E402
 
 BUILD = onebit.ROOT / "outputs" / "onebit" / "twodeg2"
 SCENES = ("hook", "mean", "pile", "vapour", "rain", "answer")
-SECONDS = (15.0, 12.0, 16.0, 12.0, 12.0, 9.0)                            # 76 s: few words, a hold of 3 s or more after each picture lands
-# moments inside a scene (seconds after its start) where the narration reaches a picture
-CUES = dict(hook=dict(rewind=[0.9, 2.1], spin=[0.0, 2.6, -34.0],                              # the end state first, then back to the time before industry
-                      rise=[[5.2, 7.0, 0.0, 1.0], [7.6, 8.8, 1.0, 1.5], [9.4, 10.8, 1.5, 2.0]]),   # the warming level: t0, t1, from, to
-            mean=dict(spin=[0.4, 8.5, 50.0], body=3.6, mercury=[6.0, 8.4]),
-            pile=dict(pulse=5.2, shift=[8.2, 11.4], record=11.8),
-            vapour=dict(legend=[1.5, 2.4], warm=[[3.6, 5.2, 0.0, 1.0], [7.2, 8.8, 1.0, 2.0]]),     # the two labels beat (air, vapour); the box warms: t0, t1, from, to (degrees)
-            rain=dict(fill=[[0.6, 2.6, 0.0, 100.0], [4.8, 6.4, 100.0, 106.7], [7.4, 9.0, 106.7, 114.0]]),
-            answer=dict(question=2.6, follow=4.8))
+SECONDS = (12.5, 9.5, 13.0, 11.0, 11.5, 13.5)                            # 71 s: sized by reading, a hold of 3 s or more after each picture lands
+# moments inside a scene (seconds after its start) where a picture changes; the score plays to them
+CUES = dict(hook=dict(rewind=[0.9, 2.1], spin=[0.0, 10.5, -44.0],                             # the end state first, then back to the time before industry; the Earth turns on
+                      rise=[[4.4, 5.9, 0.0, 1.0], [6.4, 7.5, 1.0, 1.5], [8.0, 9.3, 1.5, 2.0]]),    # the warming level: t0, t1, from, to
+            mean=dict(spin=[0.4, 7.0, 50.0], body=2.4, mercury=[4.4, 6.4]),
+            pile=dict(pulse=4.0, shift=[5.6, 8.4], record=8.8),
+            vapour=dict(legend=[1.3, 2.1], warm=[[3.0, 4.6, 0.0, 1.0], [6.2, 7.8, 1.0, 2.0]]),     # the two labels beat (air, vapour); the box warms: t0, t1, from, to (degrees)
+            rain=dict(fill=[[0.6, 2.6, 0.0, 100.0], [4.4, 6.0, 100.0, 106.7], [6.9, 8.5, 106.7, 114.0]]),
+            answer=dict(question=1.4, follow=4.2))
+LAST = dict(hook=CUES["hook"]["rise"][-1][1], mean=CUES["mean"]["mercury"][1], pile=CUES["pile"]["record"] + 1.2,   # when each scene's last picture has landed
+            vapour=CUES["vapour"]["warm"][-1][1], rain=CUES["rain"]["fill"][-1][1], answer=CUES["answer"]["follow"] + 0.6)
 # IPCC AR6 WG1 SPM, Figure SPM.6: (global warming level, best estimate, range, increase in intensity)
 HEAT50 = ((1.0, 4.8, (2.3, 6.4), 1.2), (1.5, 8.6, (4.3, 10.7), 2.0), (2.0, 13.9, (6.9, 16.6), 2.7))   # times per 50 years, C hotter
 RAIN10 = ((1.0, 1.3, (1.2, 1.4), 6.7), (1.5, 1.5, (1.4, 1.7), 10.5), (2.0, 1.7, (1.6, 2.0), 14.0))    # times per 10 years, % wetter
@@ -158,6 +167,29 @@ def words() -> dict:
     )
 
 
+def reading(w: dict, k: str) -> float:
+    """Seconds a viewer needs for scene k: 1 s + (headline and sentences + half the labels) / 2.5 words a second."""
+    count = lambda s: len(str(s).replace("//", " ").replace("{", "").replace("}", "").split())   # noqa: E731
+    full = [w["scenes"][k][0], w["scenes"][k][1]]
+    half = []
+    if k == "hook":
+        full += [w["hook"]["event"], w["hook"]["levels"][-1]["line"]]
+        half += [w["hook"]["levels"][-1]["note"]]
+    elif k == "mean":
+        half += [w["mean"]["tag"]] + [m["label"] for m in w["mean"]["marks"]]
+    elif k == "pile":
+        half += [w["pile"][x] for x in ("chip", "days", "tag", "cold", "hot", "xaxis", "yaxis")]
+    elif k == "vapour":
+        half += w["vapour"]["chip"][-1:] + [w["vapour"][x] for x in ("water", "unit", "gas", "sea", "tag")]
+    elif k == "rain":
+        full += [w["rain"]["foot"]]
+        half += [m["label"] for m in w["rain"]["marks"]] + [w["rain"]["tag"]]
+    elif k == "answer":
+        full += [" ".join(w["answer"]["question"]), w["answer"]["follow"]]
+        half, full = [full[1]], [full[0]] + full[2:]                     # the small line there is a footnote
+    return 1.0 + (sum(map(count, full)) + 0.5 * sum(map(count, half))) / 2.5
+
+
 def film() -> dict:
     w = words()
     starts = [sum(SECONDS[:i]) for i in range(len(SCENES))]
@@ -166,9 +198,10 @@ def film() -> dict:
     assert [lv["n"] for lv in w["hook"]["levels"]] == [1, 5, 9, 14]
     assert list(VAPOUR) == [100, 107, 114] == [round(m["v"]) for m in w["rain"]["marks"]]      # the box and the gauge share one scale
     assert all(b[0] >= a[1] for a, b in zip(CUES["hook"]["rise"], CUES["hook"]["rise"][1:])) and CUES["hook"]["rewind"][1] < CUES["hook"]["rise"][0][0]
-    for k, n in zip(SCENES, SECONDS):                                    # every scene holds 3 s or more after its last cue
-        last = max([c[1] for key in ("rise", "warm", "fill") for c in CUES[k].get(key, [])] + [0.0])
-        assert n - last >= 3.0, (k, n, last)
+    for k, n in zip(SCENES, SECONDS):                                    # every scene holds 3 s or more after its last picture has landed
+        assert n - LAST[k] >= 3.0 - 1e-9, (k, n, LAST[k])
+    for k, n in zip(SCENES, SECONDS):                                    # and is long enough to read: 1 s + words / 2.5 a second (labels count half)
+        assert n >= reading(w, k) - 0.25, (k, n, reading(w, k))
     assert (pile_count(0), pile_count(PILE_SHIFT)) == (3, 13) and sum(PILE) == 100
     assert [round(m["v"], 1) for m in w["rain"]["marks"]] == [100.0, 106.7, 114.0]
     return dict(
