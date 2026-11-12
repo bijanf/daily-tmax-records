@@ -117,7 +117,7 @@ async function main() {
   const zabol = el("div", "place", stage, Wd.zabol);
   const make = (on, f) => on ? f() : null;
   const windName = make(has("dust"), () => css(el("div", "rivername", stage, Wd.wind), { fontSize: 46, lineHeight: 58, transform: "none" }));
-  const bedName = make(has("dust"), () => css(el("div", "rivername", stage, Wd.bed), { fontSize: 48, lineHeight: 60 }));
+  const bedName = make(has("dust"), () => css(el("div", "rivername", stage, Wd.bed), { fontSize: 48, lineHeight: 60, background: "rgba(8, 26, 52, 0.93)" }));   // nearly opaque: the border's dashes pass behind it
   const riverName = make(has("why"), () => el("div", "rivername", stage, Wd.river));
   const lakeName = make(has("hook"), () => css(el("div", "rivername", stage, Wd.lake), { color: "var(--gold)", fontSize: 48, lineHeight: 58, transform: "none" }));
   const pins = has("dams") ? Wd.pins.map(([at, nm, yr]) => { const e = el("div", at === "lashkargah" ? "pin farm" : "pin", stage); el("span", "nm", e, nm); yr.split(" // ").forEach(y => { if (y) el("span", "yr", e, y); }); e.dataset.at = at; return e; }) : [];
