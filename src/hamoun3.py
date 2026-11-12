@@ -89,7 +89,7 @@ PLACES = dict(                                       # lon, lat
     zabol=(61.4878, 31.0339), kajaki=(65.1189, 32.3219), lashkargah=(64.369, 31.583), kamalkhan=(61.8834, 30.3240),
     chahnimeh=reel.PLACES["chahnimeh"],
     # where the map's words sit (each on its own side of the border, inside the frame's safe part in its view)
-    iran_close=(61.31, 30.90), afg_close=(62.027, 31.137),
+    iran_close=(61.31, 30.90), afg_close=(62.017, 31.137),
     border_end=(61.80, 30.86),                           # where the river reaches the border (the green band's end)
     iran_mid=(60.25, 31.75), afg_mid=(62.2, 32.2),
     iran_wide=(59.79, 33.3), afg_wide=(62.95, 34.21), pak_wide=(65.5, 28.3),

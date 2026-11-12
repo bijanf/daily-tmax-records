@@ -110,7 +110,7 @@ async function main() {
                  ["where2", Wd.where2, Wd.where2_small, C.where2, C.now], ["now", Wd.now, Wd.ask, C.now, C.back[0] + 0.25]]
     .map(([name, textLines, small, a, b]) => {
       const box = el("div", "head", stage), lines = textLines.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
-      fit(lines, 828, 58, 1.39);
+      fit(lines, 826, 52, 1.39);
       const sm = small ? el("span", "small", box, small) : null; if (sm) fit([sm], 828, 40, 1.4);
       return { name, box, sm, a, b };
     });
@@ -118,7 +118,7 @@ async function main() {
   const tag = el("div", null, stage); tag.id = "tag";
   const tagYr = el("div", "yr", tag), tagSub = el("div", "sub", tag), tagVal = el("div", "val", tag), tagN = el("span", "n", tagVal), tagU = el("span", "u", tagVal, Wd.unit);
   const held = el("div", "chip", stage); css(held, { top: 1040 }); el("span", null, held, Wd.held.join(" "));
-  fit([held], 760, 34, 1.35);
+  fit([held], 780, 34, 1.35);
   const hedge = el("div", "chip", stage, Wd.share); css(hedge, { top: 1392 });
 
   // the small chart: forty springs against their mean
@@ -227,7 +227,7 @@ async function main() {
     const pOn = t >= C.where2 && t < C.now + 0.5 ? 1 - seg(t, C.now, C.now + 0.5) : 0;
     const fOn = pOn * seg(t, C.pins[1], C.pins[1] + 0.5) * (1 - seg(V.s, 0.15, 0.2));
     if (fOn > 0) farm.setAttribute("d", path(part(RIV, cR, dKaj, dKam))); farm.setAttribute("opacity", (fOn * 0.78).toFixed(3));
-    const OFF = { kajaki: [34, -8, "l"], lashkargah: [-34, -196, "r"], kamalkhan: [0, 30, "c"], chahnimeh: [-34, 34, "r"] };
+    const OFF = { kajaki: [28, -8, "l"], lashkargah: [-34, -196, "r"], kamalkhan: [0, 30, "c"], chahnimeh: [-34, 34, "r"] };
     pins.forEach((e, i) => { const at = e.dataset.at, [lon, lat] = P[at], on = pOn * seg(t, C.pins[i], C.pins[i] + 0.3) * (i < 2 ? 1 - seg(V.s, 0.15, 0.2) : seg(V.s, 0.3, 0.38));
       const pop = easeOut(seg(t, C.pins[i], C.pins[i] + 0.35));
       const [dx, dy, anchor] = OFF[at], wd = e.offsetWidth;
@@ -247,7 +247,7 @@ async function main() {
       else { tagN.textContent = sp.shown; tagN.className = "n"; tagU.style.display = "block"; }
     }
     tagSub.textContent = hook || loop ? (sp === BEFORE ? Wd.wet : Wd.this_spring) : !run && t >= C.now ? Wd.mean_value : "";
-    css(tag, { top: hook || loop ? 1150 : run ? 1128 : 1088 }); show(tag, sp ? tagOn : 0);
+    css(tag, { top: hook || loop ? 1150 : run ? 1128 : 1066 }); show(tag, sp ? tagOn : 0);
     show(hedge, win(t, C.pins[2] + 0.5, C.now, 0.4, 0.3));
     let heldOn = 0;
     if (run) S.forEach((s, i) => { if (s.held && s.km2 !== null) heldOn = Math.max(heldOn, win(t, s.t - 0.08, (i + 1 < S.length ? S[i + 1].t : C.why) + 0.25, 0.1, 0.25)); });
