@@ -1,4 +1,4 @@
-/* «آبِ هامون کجا رفت؟»: one 1080 x 1920 stage, the satellite picture as the whole frame, drawn for a time t by
+/* «آبِ هامون کجا رفت؟» (two parts): one 1080 x 1920 stage, the satellite picture as the whole frame, drawn for a time t by
    film.js (no CSS animation). Text and data stay inside x 96-924 and above y 1540 (Instagram's own buttons). */
 @font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
 @font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
@@ -28,25 +28,29 @@ svg { position: absolute; left: 0; top: 0; overflow: visible; }
 .head { position: absolute; left: var(--left); top: 232px; width: var(--width); text-align: right; }
 .head .line { display: block; font-weight: 900; font-size: 88px; line-height: 122px; white-space: nowrap;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.38), 0 0 26px rgba(0, 0, 0, 0.62); }
-.head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
+.key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
   text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .head .small { display: block; font-weight: 700; font-size: 50px; line-height: 70px; margin-top: 12px; white-space: nowrap;
   color: #fdf6e6; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(0, 0, 0, 0.7); }
+.head .small.more { margin-top: 0; }
 
 /* the spring's tag: its year and its open water */
-#tag { position: absolute; left: var(--left); width: var(--width); height: 160px; }
-#tag .yr { position: absolute; right: 0; top: 0; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400;
+.tag { position: absolute; left: var(--left); width: var(--width); height: 160px; }
+.tag .yr { position: absolute; right: 0; top: 0; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400;
   font-size: 118px; line-height: 150px; white-space: nowrap; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
-#tag .val { position: absolute; left: 0; top: 6px; text-align: left; white-space: nowrap; }
-#tag .n { display: block; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 104px; line-height: 104px;
+.tag .val { position: absolute; left: 0; top: 6px; text-align: left; white-space: nowrap; }
+.tag .n { display: block; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 104px; line-height: 104px;
   color: var(--gold); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
-#tag .u { display: block; font-weight: 800; font-size: 42px; line-height: 50px; color: #fff;
+.tag .u { display: block; font-weight: 800; font-size: 42px; line-height: 50px; color: #fff;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 0, 0, 0.75); }
-#tag .u::before { content: ""; display: inline-block; width: 30px; height: 30px; border-radius: 7px; background: rgb(24, 104, 214);
+.tag .u::before { content: ""; display: inline-block; width: 30px; height: 30px; border-radius: 7px; background: rgb(24, 104, 214);
   margin-left: 12px; vertical-align: -3px; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9); }
-#tag .sub { position: absolute; right: 0; top: 158px; font-weight: 800; font-size: 42px; line-height: 52px; white-space: nowrap;
+.tag .sub { position: absolute; right: 0; top: 158px; font-weight: 800; font-size: 42px; line-height: 52px; white-space: nowrap;
   color: #fdf6e6; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 0, 0, 0.75); }
-#tag .nogap { font-family: "Vazirmatn", sans-serif; font-weight: 800; font-size: 46px; line-height: 104px; color: #fff; }
+.tag .subl { display: block; font-weight: 800; font-size: 42px; line-height: 52px; white-space: nowrap; color: #fdf6e6;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 0, 0, 0.75); }
+.tag .subl:empty { display: none; }
+.tag .nogap { font-family: "Vazirmatn", sans-serif; font-weight: 800; font-size: 46px; line-height: 104px; color: #fff; }
 
 /* the small chart and the rain card: one light card above Instagram's own text */
 .card { position: absolute; left: var(--left); top: 1286px; width: var(--width); height: 206px; border-radius: 26px;
@@ -90,6 +94,10 @@ svg { position: absolute; left: 0; top: 0; overflow: visible; }
 #follow { position: absolute; left: var(--left); top: 1126px; width: var(--width); text-align: center; font-weight: 900;
   font-size: 50px; line-height: 70px; white-space: nowrap; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 22px rgba(0, 0, 0, 0.8); }
 #follow span { display: block; }
+#follow .next { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 24px; padding: 8px 36px 14px;
+  text-shadow: none; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+#follow .next .lead { font-weight: 800; font-size: 44px; line-height: 58px; }
+#follow .next .big { font-weight: 900; font-size: 60px; line-height: 80px; }
 .sources { position: absolute; left: var(--left); top: 1498px; width: var(--width); text-align: right; font-weight: 500;
   font-size: 30px; line-height: 40px; white-space: nowrap; color: #f3ead8; opacity: 0.92;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }

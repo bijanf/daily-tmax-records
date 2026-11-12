@@ -1,7 +1,10 @@
-"""«آبِ هامون کجا رفت؟» (hamoun3_fa): the Hamoun lakes from space with the satellite picture as the whole frame.
+"""«آبِ هامون کجا رفت؟» (hamoun3_fa): the Hamoun lakes from space with the satellite picture as the whole frame,
+in two parts without narration (p1 «آبِ هامون کجا رفت؟», p2 «وقتی هامون خالی است»).
 The owner's direction (12 Nov 2026): the satellite animation is the hero and the bar chart the small one, a zoom-out
 that shows the border of Iran and Afghanistan, catchy from the first second (the reference reels he sent are logged
-in ~/Documents/instagram_research/reels.csv, "owner reference (12 Nov 2026)").
+in ~/Documents/instagram_research/reels.csv, "owner reference (12 Nov 2026)"). One 65-s film with all the scenes
+was "too fast to read" (about 250 words on screen); he chose no narration, so the film became two parts with fewer
+words, and every scene is sized by his reading rule (reading(), asserted).
 
 This file is the film's data: it writes outputs/onebit/hamoun3/film.json (every string, every number, the clock, the
 camera, the lines) and the pictures the page draws. src/hamoun3_page/ draws any moment from it and
@@ -31,10 +34,14 @@ src/onebit_hamoun3.py steps it frame by frame. Nothing new is measured here:
   river's water (the 1973 treaty; the border clash of May 2023 as Al Jazeera reported it, both sides' words). No
   migration or unemployment figure: the censuses of 1385, 1390 and 1395 count about 388, 400 and 394 thousand people
   in Sistan's counties, and no source gives a traceable number.
-- The clock (64.5 s, a loop): the hook, a wipe from a full spring (1377, within 5 % of the wettest, said on screen)
-  to this spring; the zoom-out with the border drawn; the forty springs one by one with the small bar chart; the
-  whole river with the rain against the lake; the dams and the irrigated land in the river's order, with «سهمِ هر
-  عامل محلِ بحث است» on screen; this spring against the mean; the wipe back to frame 0.
+- The clocks (part1(), part2(); a part has only its own scenes). Part 1 (43.7 s, a loop): the hook, a wipe from a
+  full spring (1377, within 5 % of the wettest, said on screen) to this spring, from frame 0; the zoom-out with the
+  border drawn; the forty springs one by one with the small bar chart; the whole river with the rain against the
+  lake; the dams and the irrigated land in the river's order, with «سهمِ هر عامل محلِ بحث است» on screen; this spring
+  against the mean and the next part's name; the wipe back to frame 0. Part 2 (46.4 s): the dust storm from frame 0
+  under a question, the answer drawn on the bed; the people who sought medical help; the dry years; the dispute
+  (the claim is Iran's, the Taliban deny it, who the three dead guards were, the cause not clear); this spring
+  wiped back to the full lake of 1377 under the question and the call to send it on.
 - The ground around the pictures and under the zoom-outs: Sentinel-2 cloudless 2016 by EOX (get_hamoun3.py), its
   tones matched once to the Landsat pictures' land (one mapping per band for the three ground pictures); the border
   and the river: Natural Earth 10 m (about 1 km accurate); the dams' places: Wikipedia's coordinates, checked on
@@ -42,7 +49,11 @@ src/onebit_hamoun3.py steps it frame by frame. Nothing new is measured here:
 
 The view: longitude and latitude as straight axes in units of the picture pixel; a view is (lon, lat of the frame's
 centre, frame pixels per picture pixel). CLOSE shows the lakes at the pictures' own scale (about 143 m a pixel, the
-frame 154 km wide), MID 2.5 times wider (the border, Zabol, the delta), WIDE 6 times wider (the whole river).
+frame 154 km wide), MID 2.5 times wider (the border, Zabol, the delta), WIDE 6 times wider (the whole river); DUST
+and DUSTB hold the storm (inside the three passes' picture), DISP the lakes with the river across the frame.
+
+Before rendering: python -I src/onebit_hamoun3_sweep.py (both parts every 0.25 s: the safe area, text on text,
+strings of the other part).
 
     python -I src/hamoun3.py              # film.json and the pictures (cached pictures are kept)
     python -I src/hamoun3.py --pictures   # rebuild the pictures too
@@ -51,6 +62,7 @@ frame 154 km wide), MID 2.5 times wider (the border, Zabol, the delta), WIDE 6 t
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -83,22 +95,44 @@ CLOSE = (LON0 + 540 * gh.DLON, LAT1 - 809 * gh.DLAT, 0.78)   # the lakes between
 MID = (61.45, 31.05, 0.40)
 WIDE = (63.7, 32.0, 0.14)
 DUST = (61.75, 30.45, 0.47)                          # the dust storm: the lakes at the top, the plume down the frame
+DUSTB = (61.75, 30.60, 0.50)                         # the same storm a little closer (the camera never rests)
+DISP = (61.85, 30.45, 0.40)                          # the dispute: the lakes on the left, the river across the frame
 DRY = 2001                                           # the dry bed's picture (spring 1380: no open water)
 
-# the clock (s). Each scene: start, and the times inside it are in film.json's cues
-T = dict(
-    wipe=(0.35, 1.90),                               # the hook's wipe, 1377 -> 1405
-    where=3.5, out1=(3.5, 4.6), border=(4.0, 4.9), labels=(4.5, 4.7, 4.9),
-    run=6.4, in1=(6.4, 7.4), t0=7.4, step1=0.30, step2=0.24,       # 1366 at t0; 1366-1378 every step1, then step2
-    why=18.6, out2=(18.6, 20.3), river=(19.6, 21.6), card=20.2,
-    where2=24.4, pins=(24.8, 25.6, 28.1, 28.9), mid2=(26.7, 27.9),
-    # what follows when the bed is dry: the dust storm of one day (three passes), what NASA says, the dry years of
-    # 1378-1384 in UNEP's report, the dispute over the river's water
-    dust=31.4, dustin=(31.4, 32.8), dframes=(31.6, 34.0, 35.6), dust2=37.4, dust2_chip=38.4,
-    lives=44.0, livesin=(44.0, 45.3), lives_pins=(45.4, 46.15, 46.9, 47.65, 48.4),
-    dispute=51.6, dispin=(51.6, 52.9), dispute_chips=(52.8, 54.0, 55.2),
-    now=58.6, in2=(58.6, 59.8), ask=60.2, follow=62.0, back=(64.3, 65.0), end=65.1,
-)
+# The two parts (12 Nov 2026: no narration; the owner found the 65-s cut "too fast to read", and it was: about 250
+# words in 65 s against the 120 s his reading rule asks). Each part has its own scenes, each scene its own window
+# (seconds); a scene that a part does not have is absent, never a zero-length window. reading() asserts the owner's
+# rule (src/onebit_reading.py) on every scene.
+def part1() -> dict:
+    """«آبِ هامون کجا رفت؟»: the wipe and the border, the forty springs, the rain against the lake, the dams, this spring."""
+    hook, run, why, dams, now = (0.0, 6.9), (6.9, 18.7), (18.7, 27.1), (27.1, 36.8), (36.8, 43.7)
+    t0, s1, s2 = run[0] + 0.9, 0.30, 0.24                                 # 1366 at t0; 1366-1378 every s1, then s2
+    spring_t = [round(t0 + s1 * k if k <= 12 else t0 + s1 * 13 + s2 * (k - 13), 3) for k in range(40)]
+    assert spring_t[-1] + 0.5 < run[1]
+    cues = dict(wipe=(0.0, 2.4), swap=3.2, border=(3.2, 4.1), labels=(3.4, 3.55, 3.7), t0=t0, spring_t=spring_t,
+                river=(why[0] + 0.7, why[0] + 2.5), river_on=[(why[0] + 0.7, now[0] + 1.2)], card=why[0] + 1.6,
+                pins=(dams[0] + 0.4, dams[0] + 1.3, dams[0] + 5.3, dams[0] + 6.0), leave=dams[0] + 4.0, hedge=dams[0] + 6.6,   # the irrigated land's three lines get 2.4 s before the camera leaves
+                mid=[(2.6, run[0] + 0.9), (dams[0] + 4.0, now[0] + 1.2)],
+                teaser=now[0] + 3.2, back=(now[1] - 0.7, now[1]))
+    camera = [[0, "close", 1.0], [2.6, "close", 1.04], [3.7, "mid", 1.0], [run[0], "mid", 0.97], [run[0] + 0.9, "close", 1.0],
+              [why[0], "close", 1.05], [why[0] + 1.6, "wide", 1.0], [dams[0] + 4.0, "wide", 0.97], [dams[0] + 5.1, "mid", 1.0],
+              [now[0], "mid", 0.98], [now[0] + 1.2, "close", 1.0], [now[1] - 0.7, "close", 1.04], [now[1], "close", 1.0]]
+    return dict(end=now[1], cover_t=0.0, scenes=dict(hook=hook, run=run, why=why, dams=dams, now=now), cues=cues, camera=camera)   # the cover: the full lake with its own year and number (half-way through the wipe the number of 1405 stands under the lake of 1377)
+
+
+def part2() -> dict:
+    """«وقتی هامون خالی است»: the dust storm, the people in it, the dry years, the dispute, the full lake and the question."""
+    dust, health, lives, dispute, end2 = (0.0, 9.8), (9.8, 17.4), (17.4, 26.4), (26.4, 39.4), (39.4, 46.4)
+    cues = dict(dframes=(-1.0, 0.4, 5.0), bed=(1.5, 2.1), wind=(2.4, 3.2), dsmall=4.2,
+                notes=tuple(round(lives[0] + 1.4 + 1.0 * i, 2) for i in range(4)),
+                boxes=(dispute[0] + 1.5, dispute[0] + 5.8), river_on=[(dispute[0] + 0.3, end2[0] + 1.2)],
+                wipe2=(end2[0] + 0.5, end2[0] + 2.1), follow=end2[0] + 3.0)
+    camera = [[0, "dust", 1.0], [health[1], "dustb", 1.0], [lives[0] + 1.3, "close", 1.0], [dispute[0], "close", 1.04],
+              [dispute[0] + 1.3, "disp", 1.0], [end2[0], "disp", 1.03], [end2[0] + 1.2, "close", 1.0], [end2[1], "close", 1.04]]
+    return dict(end=end2[1], cover_t=3.6, scenes=dict(dust=dust, health=health, lives=lives, dispute=dispute, end2=end2),
+                cues=cues, camera=camera)
+
+
 PLACES = dict(                                       # lon, lat
     zabol=(61.4878, 31.0339), kajaki=(65.1189, 32.3219), lashkargah=(64.369, 31.583), kamalkhan=(61.8834, 30.3240),
     chahnimeh=reel.PLACES["chahnimeh"],
@@ -108,60 +142,103 @@ PLACES = dict(                                       # lon, lat
     iran_mid=(60.25, 31.75), afg_mid=(62.2, 32.2),
     iran_wide=(59.79, 33.3), afg_wide=(62.95, 34.21), pak_wide=(65.5, 28.3),
     kush=(65.84, 34.95), river_name=(63.2, 29.75),
-    iran_dust=(60.58, 30.2), afg_dust=(62.48, 31.35), wind0=(61.144, 31.614), wind1=(61.501, 31.180), bed_name=(60.86, 30.42),
+    iran_dust=(60.643, 29.57), afg_dust=(62.48, 31.35), wind0=(61.144, 31.614), wind1=(61.501, 31.180), bed_name=(61.08, 30.30),
+    iran_disp=(60.55, 31.05), afg_disp=(62.73, 31.60),
 )
 
-NEW = dict(                                          # this film's own words (checked on 12 Nov 2026)
-    hook="آبِ {هامون} کجا رفت؟",
-    spring="بهارِ {}",
-    where="هامون، روی {مرزِ} ایران و افغانستان",
-    wet="از پُرآب‌ترین بهارها", this_spring="بهارِ امسال", unit_water="کیلومترمربع آبِ باز", mean_value="میانگین: {}",
-    # the reviewed headline with its verb said twice, so that the second half cannot be read as "more water"
-    why="چرا؟ بارش {کمی} کم شد؛ // آبِ هامون {خیلی بیشتر} کم شد",
-    iran="ایران", afg="افغانستان", pak="پاکستان", zabol="زابل", river="رودِ هیرمند", kush="کوه‌های بالادست", lake="هامون",
-    run_small="هر بهار، از فضا",
+NEW = dict(                                          # this film's own words, as few as the pictures allow
+    hook="آبِ {هامون} کجا رفت؟", spring="بهارِ {}", wet="از پُرآب‌ترین بهارها", this_spring="بهارِ امسال",
+    unit_water="کیلومترمربع آبِ باز", mean_value="میانگین: {}",
+    iran="ایران", afg="افغانستان", pak="پاکستان", zabol="زابل", river="رودِ هیرمند", lake="هامون",
+    held="بدونِ تصویرِ صاف",
+    # the rain against the lake: the reviewed numbers; what the two rows are, and the periods, are in the source line
+    why="از ۱۳۷۹: بارش {کمی} کمتر، // آبِ هامون {خیلی} کمتر", rain_item="بارش", lake_item="آبِ هامون",
     less="{}٪ کمتر", less_range="{} تا {}٪ کمتر",
-    rain_item="بارشِ زمستان در بالادست", lake_item="آبِ هامون در بهار",
-    periods="{} تا {} در برابرِ {} تا {}",
-    pins=(("kajaki", "سدِ کجکی", "۱۳۳۲"), ("lashkargah", "کشاورزیِ آبی", "۶۲٪ بیشتر // ۱۳۶۹ تا ۱۳۹۰"),
+    dams="سدها و آبیاری، // {در دو سوی مرز}",
+    pins=(("kajaki", "سدِ کجکی", "۱۳۳۲"), ("lashkargah", "کشاورزیِ آبی", "۶۲٪ بیشتر // از ۱۳۶۹ تا ۱۳۹۰"),
           ("kamalkhan", "سدِ کمال‌خان", "۱۴۰۰"), ("chahnimeh", "چاه‌نیمه‌ها", "۱۳۶۲")),
     share="سهمِ هر عامل محلِ بحث است",
+    teaser=("قسمتِ بعد:", "وقتی هامون خالی است"),
     # the dust (NASA Earth Observatory, 28 Sep 2023, read 12 Nov 2026: the plume of 22 Sep 2023 "appears to emanate
     # from the ephemeral Hamun wetlands"; the Levar or "120-day wind"; "Since 1999, low water levels in the Hamun
     # wetlands have led to a marked increase in dust events originating there"; "More than 1,300 people in Iran's
     # Sistan and Baluchestan province sought medical attention for respiratory, heart, and other ailments, according
-    # to news reports")
-    dust_head="[بسترِ خشکِ هامون]: // {طوفانِ گرد و غبار}، از فضا", dust_date="۳۱ شهریور ۱۴۰۲",
-    dust_hours=("حدودِ ساعتِ ۹", "حدودِ ساعتِ ۱۲", "حدودِ ساعتِ ۱۳"), wind="بادِ ۱۲۰روزه", bed="بسترِ هامون",
-    dust2_head="از ۱۳۷۸، با کم‌آبیِ هامون // طوفان‌های غبارش {خیلی بیشتر} شده", dust2_small="رصدخانه‌ی زمینِ ناسا، ۲۰۲۳",
-    dust2_chip=("در طوفانِ همان روزها، در سیستان و بلوچستان", "بیش از ۱٬۳۰۰ نفر به مراکزِ درمانی رفتند",
-                "(گزارشِ رسانه‌ها، به نقلِ ناسا)"),
-    # the dry years 1999-2005 (UNEP 2006, History of Environmental Change in the Sistan Basin, read 12 Nov 2026:
-    # "the collapse of the local economy during this latest drought period"; "fishing is not possible"; "The reed
-    # beds provide fodder for livestock"; "caused damage to agriculture in the delta"; "Loss of traditional
-    # livelihoods has resulted in emigration"; "local experts reported that more than a hundred villages in the
-    # Saberi and Baringak region had been deserted")
-    # UNEP's drought is "between 1999 and 2005" and ends with the floods of March 2005 (Esfand 1383); this film's own
-    # strip shows spring 1384 full again, so the Persian years of the dry period are 1378 to 1383
-    lives_head="خشکسالیِ ۱۳۷۸ تا ۱۳۸۳: // {اقتصادِ محلی} فروپاشید",
-    lives_small="گزارشِ برنامه‌ی محیط‌زیستِ ملل متحد (۲۰۰۶)",
-    lives_pins=("ماهیگیری ممکن نبود", "نیزار (علوفه‌ی دام) خشکید", "کشاورزی آسیب دید", "مهاجرت از منطقه",
-                "بیش از ۱۰۰ روستای خالی، کنارِ هامون*"),
+    # to news reports"; UNEP 2006: "the primary source of the dust plumes is the lakebed of the Hamoons"). The
+    # headline asks; the answer is the name drawn on the bed, where the picture shows the plume begin.
+    dust_head="این غبار از {کجا} می‌آید؟",
+    dust_small="ناسا: از ۱۳۷۸، با کم‌آبیِ هامون، // به‌طورِ چشمگیری بیشتر شده",   # "a marked increase": not «خیلی»
+    dust_date="۳۱ شهریور ۱۴۰۲", dust_hours=("ساعتِ ۹", "ساعتِ ۱۲", "ساعتِ ۱۳"), wind="بادِ ۱۲۰روزه", bed="بسترِ خشکِ هامون",
+    health_head="بیش از {۱٬۳۰۰ نفر}",
+    health_small="در مراکزِ درمانیِ سیستان و بلوچستان // همان روزها؛ گزارشِ رسانه‌ها، به نقلِ ناسا",
+    # the dry years (UNEP 2006, History of Environmental Change in the Sistan Basin, read 12 Nov 2026: "the collapse of
+    # the local economy during this latest drought period"; "fishing is not possible"; "caused damage to agriculture
+    # in the delta"; "Loss of traditional livelihoods has resulted in emigration"; "local experts reported that more
+    # than a hundred villages in the Saberi and Baringak region had been deserted" (January 2005). UNEP's drought is
+    # "between 1999 and 2005" and ends with the floods of March 2005 (Esfand 1383); this film's own strip shows
+    # spring 1384 full again: the Persian years are 1378 to 1383)
+    lives_head="خشکسالیِ ۱۳۷۸ تا ۱۳۸۳: // {اقتصادِ محلی} فروپاشید", lives_small="گزارشِ سازمانِ ملل (۲۰۰۶)",
+    lives_notes=("ماهیگیری ممکن نبود", "کشاورزی آسیب دید", "مهاجرت از منطقه", "بیش از ۱۰۰ روستای خالی، کنارِ هامون*"),
     lives_note="* به گفته‌ی کارشناسانِ محلی، دی ۱۳۸۳",
-    # the dispute (Al Jazeera, 30 May 2023, read 12 Nov 2026: "at least two Iranian and one Afghan guard were
-    # killed"; "The reasons for the clashes are still unknown"; Iran's president "accused Afghanistan's Taliban
-    # rulers of restricting the flow of water"; "The Taliban, which has denied the accusation"). The wording of this
-    # scene is the owner's to approve.
-    dispute_head="و اختلاف بر سرِ [آبِ هیرمند]",
-    dispute_chips=("۱۳۵۱: امضای معاهده‌ی آبِ هیرمند // میانِ ایران و افغانستان",
-                   "اردیبهشت ۱۴۰۲: ایران می‌گوید طالبان، برخلافِ معاهده، // جریانِ آب را محدود کرده‌اند؛ طالبان رد می‌کنند",
-                   "خرداد ۱۴۰۲: درگیریِ مرزی؛ دست‌کم ۳ مرزبان کشته شدند // الجزیره: علتِ درگیری روشن نبود"),
-    src_dust="تصویرها و گزارش: ناسا (Terra، Suomi NPP، NOAA-20)", src_lives="تصویر: لندست (USGS)، بهارِ ۱۳۸۰",
-    src_dispute="الجزیره، ۹ خرداد ۱۴۰۲؛ معاهده: UNEP، ۲۰۰۶",
+    # the dispute (Al Jazeera, 30 May 2023, read 12 Nov 2026: "at least two Iranian and one Afghan guard were killed";
+    # "The reasons for the clashes are still unknown"; Iran's president "accused Afghanistan's Taliban rulers of
+    # restricting the flow of water"; "The Taliban, which has denied the accusation"). Three things stay on screen:
+    # the claim is Iran's, the Taliban deny it, the cause of the clash was not clear. Read again at the source for
+    # the final check: "Both sides have accused each other of initiating the shooting in which at least two Iranian
+    # and one Afghan guard were killed" (so the box says who the three were: a Persian reader takes «مرزبان» alone
+    # for Iran's guards).
+    dispute_head="۱۴۰۲: اختلاف بر سرِ // [آبِ هیرمند]",
+    dispute_boxes=("ایران می‌گوید طالبان // جریانِ آب را محدود کرده‌اند؛ // طالبان رد می‌کنند",
+                   "درگیریِ مرزی؛ دست‌کم ۳ مرزبان کشته شدند // (۲ ایرانی، ۱ افغانستانی) // علتش روشن نبود"),
+    end_head="شما {هامونِ پُر} را // دیده‌اید؟", follow=("برای کسی بفرستید", "که هامون را می‌شناسد"),
     src_water="منبع: لندست (USGS)؛ مقایسه‌شده با آبِ سطحیِ JRC",
     src_map="زمینه: Sentinel-2 cloudless (EOX)؛ مرز و رود: Natural Earth",
-    src_rain="بارش: CRU TS 4.10 و ERA5؛ پژوهش‌ها در کامنتِ اول",
+    src_rain="بارشِ زمستان در بالادست (CRU، ERA5)؛ {} تا {} در برابرِ {} تا {}",
+    src_dust="تصویرها و گزارش: ناسا (Terra، Suomi NPP، NOAA-20)",
+    src_lives="منبع: برنامه‌ی محیط‌زیستِ ملل متحد (UNEP)؛ تصویر: لندست، بهارِ ۱۳۸۰",
+    src_dispute="منبع: الجزیره، ۹ خرداد ۱۴۰۲",
 )
+
+
+def reading(words: dict, cuts: dict) -> None:
+    """The owner's rule (src/onebit_reading.py, its weights imported) on every scene of both parts: a scene lasts at
+    least 1 s + (headline, small line and sentences in full, labels at half weight) / 2.5 words a second, and at least
+    3 s after its last string appears. Printed, and asserted."""
+    import onebit_reading as rd
+    W = words
+    wt = lambda xs: sum(rd.weight(x) for x in xs)        # noqa: E731
+    p1, p2 = cuts["p1"], cuts["p2"]
+    s1, q1, s2, q2 = p1["scenes"], p1["cues"], p2["scenes"], p2["cues"]
+    t13 = q1["spring_t"][13]
+    tag = lambda y, n: [W["spring"].format(y), n, W["unit"]]   # noqa: E731
+    pins = [x for _a, n, y in W["pins"] for x in (n, *y.split(" // "))]
+    plan = [   # cut, scene, (from, to), in full, at half weight, when the last string appears
+        ("p1", "hook", s1["hook"], [W["hook"]],
+         [*tag("۱۳۷۷", "۴٬۰۷۰"), W["wet"], *tag("۱۴۰۵", "۵۶۰")[:2], W["this_spring"], W["iran"], W["afg"], W["zabol"], W["lake"]],
+         q1["labels"][2] + 0.1),
+        ("p1", "run, first headline", (s1["run"][0], t13), [W["era1"]], [*W["legend"], W["mean"]], s1["run"][0] + 0.3),
+        ("p1", "run, second headline", (t13, s1["run"][1]), [W["era2"]], [W["held"]], t13),
+        ("p1", "why", s1["why"], [W["why"], W["rain_item"], W["rain_less"], W["lake_item"], W["lake_less"]],
+         [W["iran"], W["afg"], W["river"], W["lake"]], q1["card"] + 1.6),
+        ("p1", "dams", s1["dams"], [W["dams"], W["share"]], [*pins, W["pak"]], q1["hedge"]),
+        ("p1", "now", (s1["now"][0], q1["back"][0]), [W["now"], *W["teaser"]], [*tag("۱۴۰۵", "۵۶۰"), W["mean_value"]], q1["teaser"]),
+        ("p2", "dust", s2["dust"], [W["dust_head"], *W["dust_small"].split(" // ")],
+         [W["dust_date"], *W["dust_hours"], W["iran"], W["afg"], W["zabol"], W["bed"], W["wind"]], q2["dframes"][2] + 0.45),
+        ("p2", "health", s2["health"], [W["health_head"], *W["health_small"].split(" // ")], [], s2["health"][0] + 0.3),
+        ("p2", "lives", s2["lives"], [W["lives_head"], W["lives_small"]], [*W["lives_notes"], W["lives_note"]], q2["notes"][-1] + 0.2),
+        ("p2", "dispute", s2["dispute"], [W["dispute_head"], *W["dispute_boxes"]], [W["iran"], W["afg"]], q2["boxes"][-1]),
+        ("p2", "end", s2["end2"], [W["end_head"], *W["follow"]], tag("۱۳۷۷", "۴٬۰۷۰"), q2["follow"]),
+    ]
+    print("\nreading (words in full + labels at half weight; seconds the rule needs, seconds given):")
+    total = {"p1": 0.0, "p2": 0.0}
+    for cut, name, (a, b), full, half, last in plan:
+        w = wt(full) + rd.LABELS * wt(half)
+        need = max(rd.SETTLE + w / rd.WPS, last - a + rd.HOLD)
+        total[cut] += w
+        print(f"  {cut} {name:22s} {wt(full):5.1f} + {wt(half):4.1f}/2 words, last string at {last - a:4.1f} s -> "
+              f"{need:4.1f} s needed, {b - a:4.1f} s given")
+        assert b - a + 0.051 >= need, (cut, name, round(need, 2), round(b - a, 2))
+    for cut in ("p1", "p2"):
+        print(f"  {cut}: {total[cut]:.0f} weighted words in {cuts[cut]['end']:.1f} s ({total[cut] / cuts[cut]['end']:.2f} a second)")
 
 
 def bars() -> list:
@@ -299,12 +376,6 @@ def pictures(b: list, rebuild: bool) -> dict:
     return dict(pics=pics, waters=waters, ground=ground, ring="ring.png", dust=dict(frames=frames, w=w, s=s, e=e, n=n))
 
 
-def follow_lines(s: str) -> list:
-    """The reviewed call to send the reel on, broken before «که» into two lines."""
-    a, b = s.split(" که ")
-    return [a, "که " + b]
-
-
 def river() -> list:
     """The Helmand's main stem from the Hindu Kush to the Hamoun, one line (Natural Earth's three pieces in order)."""
     L = json.loads((g3.OUT / "lines.json").read_text())
@@ -325,16 +396,16 @@ def main() -> None:
     w2 = v2.words()
     L = json.loads((g3.OUT / "lines.json").read_text())
     by = {x["year"]: x for x in b}
+    cuts = dict(p1=part1(), p2=part2())
     springs = []
     for k, x in enumerate(b):
-        t = T["t0"] + T["step1"] * k if k <= 12 else T["t0"] + T["step1"] * 13 + T["step2"] * (k - 13)
         gap = x["km2"] is None
         own = pic["pics"].get(x["year"])
         last = own or next(pic["pics"][z] for z in range(x["year"] - 1, reel.FIRST - 1, -1) if z in pic["pics"])
-        springs.append(dict(year=x["year"], label=fa(x["label"]), km2=x["km2"], t=round(t, 3),
+        springs.append(dict(year=x["year"], label=fa(x["label"]), km2=x["km2"],
                             shown=None if gap else v2.shown(x["km2"]), pic=last, held=own is None,
                             water=pic["waters"].get(x["year"]), above=bool((not gap) and x["km2"] > c["mean"])))
-    assert springs[13]["label"] == fa("1379") and springs[-1]["t"] + 0.5 < T["why"]
+    assert springs[13]["label"] == fa("1379")
     assert springs[0]["held"] is False, "the first spring has its own picture"
     assert by[BEFORE]["km2"] >= 0.95 * c["vmax"], "the hook's first spring is among the fullest (within 5 % of the wettest)"
     held = [s["label"] for s in springs if s["held"]]
@@ -348,33 +419,33 @@ def main() -> None:
     print(f"rain: CRU {r['cru']['rain_share']:.3f}, ERA5 {r['era5']['rain_share']:.3f} of the earlier winters; the lake "
           f"{r['lake_share']:.3f}; on screen {r['less']} and 74 % less")
     print(f"springs without a clean picture ({len(held)}): {' '.join(held)}")
+    now_head = w2["scenes"][6][0].replace("حدودِ ", "حدودِ // ")           # the reviewed line, on two lines
+    assert now_head.count(" // ") == 1, now_head
+    words = dict(
+        hook=NEW["hook"], spring=NEW["spring"], unit=NEW["unit_water"], wet=NEW["wet"], this_spring=NEW["this_spring"],
+        mean_value=NEW["mean_value"].format(v2.shown(c["mean"])),
+        iran=NEW["iran"], afg=NEW["afg"], pak=NEW["pak"], zabol=NEW["zabol"], river=NEW["river"], lake=NEW["lake"],
+        era1=w2["scenes"][1][0], era2=w2["scenes"][2][0], mean=w2["mean"], legend=w2["legend"], held=NEW["held"], gap=w2["gap"],
+        why=NEW["why"], rain_item=NEW["rain_item"], lake_item=NEW["lake_item"],
+        rain_less=NEW["less_range"].format(fa(r["less"][0]), fa(r["less"][1])), lake_less=NEW["less"].format(fa(74)),
+        dams=NEW["dams"], pins=NEW["pins"], share=NEW["share"], now=now_head, teaser=NEW["teaser"],
+        src_rain=NEW["src_rain"].format(fa(1379), fa(1404), fa(1366), fa(1378)),
+        **{k: NEW[k] for k in ("dust_head", "dust_small", "dust_date", "dust_hours", "wind", "bed", "health_head",
+                               "health_small", "lives_head", "lives_small", "lives_notes", "lives_note", "dispute_head",
+                               "dispute_boxes", "end_head", "follow", "src_water", "src_map", "src_dust", "src_lives",
+                               "src_dispute")},
+    )
+    assert NEW["why"].startswith("از ۱۳۷۹") and springs[13]["label"] == fa("1379"), "the later period starts in 1379"
+    reading(words, cuts)
     film = dict(
-        fps=FPS, end=T["end"], cover_t=1.0, size=[W, H],
+        fps=FPS, size=[W, H], cuts=cuts,
         grid=dict(lon0=LON0, lat1=LAT1, dlon=gh.DLON, dlat=gh.DLAT, w=GW, h=GH),
-        views=dict(close=CLOSE, mid=MID, wide=WIDE, dust=DUST), clock=T, dust=pic["dust"], dry=dry,
+        views=dict(close=CLOSE, mid=MID, wide=WIDE, dust=DUST, dustb=DUSTB, disp=DISP), dust=pic["dust"], dry=dry,
         ground=pic["ground"], ring=pic["ring"],
         springs=springs, mean=c["mean"], vmax=c["vmax"],
         before=BEFORE - reel.FIRST, now=NOW - reel.FIRST,          # the hook's two springs (indices)
         lines=dict(ia=L["Iran-Afghanistan"][0], ip=L["Iran-Pakistan"][0], ap=L["Afghanistan-Pakistan"][0], river=river(), lake=outline),
-        places=PLACES,
-        words=dict(
-            hook=NEW["hook"], spring=NEW["spring"], unit=NEW["unit_water"], wet=NEW["wet"],
-            this_spring=NEW["this_spring"], mean_value=NEW["mean_value"].format(v2.shown(c["mean"])),
-            where=NEW["where"], iran=NEW["iran"], afg=NEW["afg"], pak=NEW["pak"], zabol=NEW["zabol"],
-            river=NEW["river"], kush=NEW["kush"], lake=NEW["lake"],
-            era1=w2["scenes"][1][0], era2=w2["scenes"][2][0], run_small=NEW["run_small"],
-            mean=w2["mean"], legend=w2["legend"], held=(w2["held"], w2["held2"]), gap=w2["gap"],
-            why=NEW["why"], why_small=w2["scenes"][4][1],
-            rain_item=NEW["rain_item"], lake_item=NEW["lake_item"],
-            rain_less=NEW["less_range"].format(fa(r["less"][0]), fa(r["less"][1])), lake_less=NEW["less"].format(fa(74)),
-            periods=NEW["periods"].format(fa(1379), fa(1404), fa(1366), fa(1378)),
-            where2=w2["scenes"][5][0], where2_small=w2["scenes"][5][1], pins=NEW["pins"], share=NEW["share"],
-            now=w2["scenes"][6][0], ask=w2["scenes"][6][1], follow=follow_lines(w2["follow"]),
-            src_water=NEW["src_water"], src_map=NEW["src_map"], src_rain=NEW["src_rain"],
-            **{k: NEW[k] for k in ("dust_head", "dust_date", "dust_hours", "wind", "bed", "dust2_head", "dust2_small",
-                                   "dust2_chip", "lives_head", "lives_small", "lives_pins", "lives_note", "dispute_head",
-                                   "dispute_chips", "src_dust", "src_lives", "src_dispute")},
-        ),
+        places=PLACES, words=words,
         rain=dict(cru=r["cru"]["rain_share"], era5=r["era5"]["rain_share"], lake=r["lake_share"]),
         colours=dict(wet=v2.WET, dry=v2.DRY, gapc=v2.GAPC, gold="#F6C445", ink="#1d140c", paper="#FBF7F0",
                      river="#49c0ff", pin="#FF8A1F"),

@@ -1,19 +1,22 @@
-"""The light score of the third Hamoun reel (hamoun3_fa, the satellite picture as the whole frame; no narration): the
-light score's setar and checks (onebit_score_air_light.py, imported, not copied), on the clock that src/hamoun3.py
-writes into film.json, in D Esfahan (D E F G A Bb C#: twelve-tone, no koron), as the second film's score.
+"""The light score of the third Hamoun reel (hamoun3_fa, the satellite picture as the whole frame; no narration), one
+track for each of its two parts: the light score's setar and checks (onebit_score_air_light.py, imported, not
+copied), on the clock that src/hamoun3.py writes into film.json, in D Esfahan (D E F G A Bb C#: twelve-tone, no
+koron), as the second film's score.
 
-    the notes     a soft D5 at 0.00 s (frame 0 is not silent), A4 as the wipe starts, a low D4 as the water goes;
-                  the "where" scene and its border; during the springs a soft note only on the beats that matter:
-                  1366, 1367, 1371 (the fullest), 1375, 1378; 1379 a low D4 (the lake nearly empty); after it a note
-                  on 1384 and 1388 (above the mean), 1398 (above the mean); 1405 a low D4; the "why" scene and its
-                  card; the dams, one soft note each; this spring, the question, the call; the ending, D4 and A4
-                  struck together, ringing out before the end. Consonant pairs only (checked).
-    the level     -14 LUFS, true peak -1 dBTP or lower after AAC (the music is the only sound).
+    p1   a soft D5 at 0.00 s (frame 0 is not silent), A4 as the line moves, a low D4 as the water goes; the border;
+         during the springs a soft note only on the beats that matter: 1366, 1367, 1371 (the fullest), 1375, 1378;
+         1379 a low D4 (the lake nearly empty); then 1384 and 1388 (above the mean), 1398 (above the mean); 1405 a
+         low D4; the rain against the lake and its card; the dams, one soft note each; this spring; the next part;
+         the ending, D4 and A4 struck together, ringing out before the end
+    p2   a low D4 at 0.00 s (the storm), the second pass, the bed's name, the wind, NASA's line, the third pass; the
+         people; the dry years and their four notes; the dispute and its two boxes; the full lake, the question, the
+         call; the same ending
+    the level     -14 LUFS, true peak -1 dBTP or lower after AAC (the music is the only sound). Consonant pairs only.
 
-Writes hamoun3_fa_music.wav and hamoun3_fa_music_reel.mp4 (the silent master hamoun3_fa_reel.mp4 with this track;
-its video stream copied). --force replaces this film's own earlier outputs.
+Writes hamoun3_fa_<part>_music.wav and hamoun3_fa_<part>_music_reel.mp4 (the silent master
+hamoun3_fa_<part>_reel.mp4 with this track; its video stream copied). --force replaces this film's own earlier outputs.
 
-    python -I src/onebit_score_hamoun3_light.py [--force]
+    python -I src/onebit_score_hamoun3_light.py --cut p1 [--force]
 """
 
 from __future__ import annotations
@@ -42,47 +45,65 @@ MODE = {2, 4, 5, 7, 9, 10, 1}                        # pitch classes of D Esfaha
 ABOVE = (18, 20, 22, 32, 33)                         # springs after 1379 above the mean: 1384 1386 1388 1398 1399
 
 
-def score_notes(film: dict) -> tuple:
-    c, s = film["clock"], film["springs"]
-    end = film["end"]
+def plan_p1(film: dict, cut: dict) -> tuple:
+    q, sc, s = cut["cues"], cut["scenes"], film["springs"]
     assert [k for k in range(13, 40) if s[k]["above"]] == list(ABOVE), "the springs above the mean after 1379"
-    t = lambda k: s[k]["t"]                           # noqa: E731  (the spring k's onset; k = 0: 1366)
-    ending = end - 2.2
-    plan = (
+    t = lambda k: q["spring_t"][k]                    # noqa: E731  (the spring k's onset; k = 0: 1366)
+    ending = cut["end"] - 2.2
+    return (
         (0.00, 74, VEL_SOFT),                        # D5: soft, the first sound (frame 0 is not silent)
-        (c["wipe"][0], 69, VEL),                     # A4: the wipe starts
-        (sum(c["wipe"]) / 2 + 0.05, 62, VEL),        # D4: the water goes
-        (c["where"], 65, VEL),                       # F4: where it lies
-        (c["border"][1], 69, VEL_SOFT),              # A4: the border is drawn
-        (c["run"], 74, VEL_SOFT),                    # D5: into the springs
+        (0.45, 69, VEL),                             # A4: the line moves
+        (sum(q["wipe"]) / 2 + 0.05, 62, VEL),        # D4: the water goes
+        (q["swap"] + 0.1, 65, VEL),                  # F4: the camera pulls out
+        (q["border"][1], 69, VEL_SOFT),              # A4: the border is drawn
+        (sc["run"][0], 74, VEL_SOFT),                # D5: into the springs
         (t(0), 65, VEL),                             # F4: 1366
         (t(1) + 0.1, 69, VEL_MARK), (t(5), 74, 0.70), (t(9), 77, VEL_MARK), (t(12), 74, VEL_MARK),   # 1367 1371 1375 1378
         (t(13) + 0.1, 62, VEL),                      # 1379: D4, low (nearly empty)
         (t(18), 69, VEL_MARK), (t(22), 74, VEL_MARK),   # 1384 1388: above the mean
         (t(32), 77, VEL_MARK),                       # 1398: above the mean
         (t(39), 62, VEL),                            # 1405: D4
-        (c["why"], 70, VEL),                         # Bb4: why? the rain and the lake
-        (c["card"] + 0.6, 65, VEL_MARK),             # F4: the two bars
-        (c["where2"], 69, VEL),                      # A4: where did the water go
-        (c["pins"][0] + 0.05, 74, VEL_SOFT),         # D5: Kajaki
-        (c["pins"][1], 65, VEL_MARK),                # F4: the irrigated land
-        (c["pins"][2], 69, VEL_MARK),                # A4: Kamal Khan
-        (c["pins"][3], 74, VEL_SOFT),                # D5: Chah-nimeh
-        (c["dust"], 62, VEL),                        # D4: the dust storm
-        (c["dframes"][1] + 0.3, 65, VEL_MARK),       # F4: noon
-        (c["dframes"][2] + 0.3, 69, VEL_MARK),       # A4: an hour later
-        (c["dust2"], 74, VEL),                       # D5: since 1378
-        (c["dust2_chip"] + 0.2, 65, VEL_MARK),       # F4: the people in that storm
-        (c["lives"], 62, VEL),                       # D4: the dry years
-        (c["lives_pins"][0], 69, VEL_MARK), (c["lives_pins"][2], 74, VEL_MARK), (c["lives_pins"][4], 77, VEL_MARK),
-        (c["dispute"], 70, VEL),                     # Bb4: the dispute
-        (c["dispute_chips"][0], 65, VEL_MARK), (c["dispute_chips"][1], 62, VEL_MARK), (c["dispute_chips"][2], 65, VEL_MARK),
-        (c["now"], 65, VEL),                         # F4: this spring against the mean
-        (c["ask"], 69, VEL),                         # A4: the question
-        (c["follow"], 74, VEL_SOFT),                 # D5: the call
+        (sc["why"][0], 70, VEL),                     # Bb4: the rain and the lake
+        (q["card"] + 0.6, 65, VEL_MARK),             # F4: the two bars
+        (sc["dams"][0], 69, VEL),                    # A4: the dams and the irrigation
+        (q["pins"][0] + 0.05, 74, VEL_SOFT),         # D5: Kajaki
+        (q["pins"][1], 65, VEL_MARK),                # F4: the irrigated land
+        (q["pins"][2], 69, VEL_MARK),                # A4: Kamal Khan
+        (q["pins"][3], 74, VEL_SOFT),                # D5: Chah-nimeh
+        (sc["now"][0], 65, VEL),                     # F4: this spring against the mean
+        (q["teaser"], 69, VEL),                      # A4: the next part
         (ending, 62, VEL),                           # D4: the ending, an open fifth on the tonic
         (ending, 69, VEL),                           # A4
     )
+
+
+def plan_p2(film: dict, cut: dict) -> tuple:
+    q, sc = cut["cues"], cut["scenes"]
+    ending = cut["end"] - 2.2
+    return (
+        (0.00, 62, VEL),                             # D4: the storm (frame 0 is not silent)
+        (q["dframes"][1] + 0.45, 65, VEL_MARK),      # F4: noon
+        (q["bed"][0] + 0.1, 69, VEL),                # A4: the bed's name
+        (q["wind"][0], 74, VEL_SOFT),                # D5: the wind
+        (q["dsmall"], 70, VEL_MARK),                 # Bb4: since 1378
+        (q["dframes"][2] + 0.45, 65, VEL_MARK),      # F4: an hour later
+        (sc["health"][0], 74, VEL),                  # D5: the people in that storm
+        (sc["lives"][0], 62, VEL),                   # D4: the dry years
+        (q["notes"][0], 69, VEL_MARK), (q["notes"][1], 74, VEL_MARK), (q["notes"][2], 77, VEL_MARK), (q["notes"][3], 74, VEL_MARK),
+        (sc["dispute"][0], 70, VEL),                 # Bb4: the dispute
+        (q["boxes"][0], 65, VEL_MARK), (q["boxes"][1], 62, VEL_MARK),
+        (sc["end2"][0], 65, VEL),                    # F4: back to the lakes
+        (sum(q["wipe2"]) / 2, 69, VEL),              # A4: the full lake
+        (q["follow"], 74, VEL_SOFT),                 # D5: the call
+        (ending, 62, VEL),                           # D4: the ending, an open fifth on the tonic
+        (ending, 69, VEL),                           # A4
+    )
+
+
+def score_notes(film: dict, name: str) -> tuple:
+    cut = film["cuts"][name]
+    end = cut["end"]
+    plan = dict(p1=plan_p1, p2=plan_p2)[name](film, cut)
     allnotes = sorted(plan, key=lambda p: p[0])
     assert all(m % 12 in MODE for _, m, _ in allnotes), "every note is in D Esfahan"
     notes = [light.Note(float(tt), m, vel, light.PAN if i % 2 == 0 else -light.PAN)
@@ -93,20 +114,22 @@ def score_notes(film: dict) -> tuple:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--cut", required=True, choices=["p1", "p2"], help="the part")
     ap.add_argument("--force", action="store_true", help="replace this film's earlier music outputs")
     args = ap.parse_args()
+    base = f"{BASE}_{args.cut}"
     film = json.loads(FILM.read_text(encoding="utf-8"))
     social = onebit.OUT / "social"
-    video = social / f"{BASE}_reel.mp4"
+    video = social / f"{base}_reel.mp4"
     if video.stat().st_mtime < FILM.stat().st_mtime:
         sys.exit(f"{video.name} is older than film.json: render the film first")
-    wav, mp4 = social / f"{BASE}_music.wav", social / f"{BASE}_music_reel.mp4"
+    wav, mp4 = social / f"{base}_music.wav", social / f"{base}_music_reel.mp4"
     for f in (wav, mp4):
         if f.exists():
             if not args.force:
                 sys.exit(f"{f.name} exists: pass --force to replace it")
             f.unlink()
-    notes, end = score_notes(film)
+    notes, end = score_notes(film, args.cut)
     kit.reseed(43)
     track = kit.new_track(end, light.TAIL)
     for nt in notes:
