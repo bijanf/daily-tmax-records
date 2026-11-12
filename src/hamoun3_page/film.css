@@ -1,0 +1,91 @@
+/* «آبِ هامون کجا رفت؟»: one 1080 x 1920 stage, the satellite picture as the whole frame, drawn for a time t by
+   film.js (no CSS animation). Text and data stay inside x 96-924 and above y 1540 (Instagram's own buttons). */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+@font-face { font-family: "Lalezar"; font-weight: 400; src: url("/fonts/lalezar/Lalezar-Regular.ttf"); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url("/fonts/inter/ttf/Inter-Medium.ttf"); }
+
+:root { --wet: #1c5cab; --dry: #B5763A; --gapc: #9A8F80; --gold: #F6C445; --ink: #1d140c; --paper: #FBF7F0;
+  --river: #49c0ff; --pin: #FF8A1F; --left: 96px; --width: 828px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #17110b; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: #fff; direction: rtl;
+  font-family: "Vazirmatn", sans-serif; font-weight: 700; }
+.abs { position: absolute; }
+.ltr { direction: ltr; unicode-bidi: isolate; }
+canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+svg { position: absolute; left: 0; top: 0; overflow: visible; }
+
+/* the two soft shades that carry the words: the top and the bottom of the picture only */
+#shade-top { position: absolute; left: 0; top: 0; width: 1080px; height: 600px;
+  background: linear-gradient(180deg, rgba(16, 11, 6, 0.62) 0%, rgba(16, 11, 6, 0.46) 40%, rgba(16, 11, 6, 0.18) 76%, rgba(16, 11, 6, 0) 100%); }
+#shade-bot { position: absolute; left: 0; top: 1100px; width: 1080px; height: 820px;
+  background: linear-gradient(0deg, rgba(16, 11, 6, 0.74) 0%, rgba(16, 11, 6, 0.56) 44%, rgba(16, 11, 6, 0.22) 78%, rgba(16, 11, 6, 0) 100%); }
+
+/* the headline and its small line */
+.head { position: absolute; left: var(--left); top: 232px; width: var(--width); text-align: right; }
+.head .line { display: block; font-weight: 900; font-size: 88px; line-height: 122px; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.38), 0 0 26px rgba(0, 0, 0, 0.62); }
+.head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
+  text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.head .small { display: block; font-weight: 700; font-size: 50px; line-height: 70px; margin-top: 12px; white-space: nowrap;
+  color: #fdf6e6; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(0, 0, 0, 0.7); }
+
+/* the spring's tag: its year and its open water */
+#tag { position: absolute; left: var(--left); width: var(--width); height: 160px; }
+#tag .yr { position: absolute; right: 0; top: 0; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400;
+  font-size: 118px; line-height: 150px; white-space: nowrap; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
+#tag .val { position: absolute; left: 0; top: 6px; text-align: left; white-space: nowrap; }
+#tag .n { display: block; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 104px; line-height: 104px;
+  color: var(--gold); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
+#tag .u { display: block; font-weight: 800; font-size: 42px; line-height: 50px; color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 0, 0, 0.75); }
+#tag .u::before { content: ""; display: inline-block; width: 30px; height: 30px; border-radius: 7px; background: rgb(24, 104, 214);
+  margin-left: 12px; vertical-align: -3px; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9); }
+#tag .sub { position: absolute; right: 0; top: 136px; font-weight: 800; font-size: 42px; line-height: 52px; white-space: nowrap;
+  color: #fdf6e6; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 0, 0, 0.75); }
+#tag .nogap { font-family: "Vazirmatn", sans-serif; font-weight: 800; font-size: 46px; line-height: 104px; color: #fff; }
+
+/* the small chart and the rain card: one light card above Instagram's own text */
+.card { position: absolute; left: var(--left); top: 1286px; width: var(--width); height: 206px; border-radius: 26px;
+  background: rgba(251, 247, 240, 0.94); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42); }
+.card svg { left: 0; top: 0; }
+.legend { position: absolute; right: 22px; top: 8px; left: 22px; height: 46px; display: flex; flex-direction: row;
+  justify-content: space-between; align-items: center; direction: rtl; font-weight: 700; font-size: 36px; line-height: 46px;
+  white-space: nowrap; }
+.legend i { display: inline-block; width: 24px; height: 24px; border-radius: 6px; margin-left: 10px; vertical-align: -2px; }
+.legend b { display: inline-block; width: 44px; height: 0; border-top: 5px dashed var(--ink); margin-left: 10px; vertical-align: 9px; }
+.tick { position: absolute; top: 160px; font-weight: 700; font-size: 40px; line-height: 44px; white-space: nowrap; color: var(--ink); }
+.row { position: absolute; right: 24px; left: 24px; height: 86px; }
+.row .name { position: absolute; right: 0; top: 0; font-weight: 700; font-size: 40px; line-height: 50px; white-space: nowrap; }
+.row .less { position: absolute; left: 0; top: 0; font-weight: 900; font-size: 44px; line-height: 50px; white-space: nowrap; }
+.row .track { position: absolute; right: 0; left: 0; top: 56px; height: 22px; border-radius: 11px; background: #d8cdbb; overflow: hidden; }
+.row .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 11px; }
+.row .span { position: absolute; top: 0; bottom: 0; opacity: 0.45; }
+
+/* words on the map */
+.country { position: absolute; font-weight: 900; white-space: nowrap; color: #fff; transform: translate(-50%, -50%);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 22px rgba(0, 0, 0, 0.8); }
+.place { position: absolute; font-weight: 800; font-size: 48px; line-height: 58px; white-space: nowrap; color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 0, 0, 0.85); }
+.rivername { position: absolute; font-weight: 900; font-size: 50px; line-height: 62px; white-space: nowrap; color: #d9f1ff;
+  background: rgba(8, 26, 52, 0.66); border-radius: 16px; padding: 0 18px 6px; transform: translate(-50%, -50%); }
+.pin { position: absolute; background: var(--paper); color: var(--ink); border-radius: 18px; padding: 6px 18px 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5); white-space: nowrap; text-align: center; }
+.pin.farm { border-right: 14px solid #7ed957; }
+.pin .nm { display: block; font-weight: 900; font-size: 48px; line-height: 60px; }
+.pin .yr { display: block; font-weight: 800; font-size: 44px; line-height: 52px; color: #a03129; }
+.chip { position: absolute; left: 50%; transform: translateX(-50%); background: rgba(251, 247, 240, 0.95); color: var(--ink);
+  border-radius: 18px; padding: 8px 22px 12px; font-weight: 800; font-size: 40px; line-height: 54px; white-space: nowrap;
+  text-align: center; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); }
+.chip span { display: block; }
+#follow { position: absolute; left: var(--left); top: 1126px; width: var(--width); text-align: center; font-weight: 900;
+  font-size: 50px; line-height: 70px; white-space: nowrap; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 22px rgba(0, 0, 0, 0.8); }
+#follow span { display: block; }
+.sources { position: absolute; left: var(--left); top: 1498px; width: var(--width); text-align: right; font-weight: 500;
+  font-size: 30px; line-height: 40px; white-space: nowrap; color: #f3ead8; opacity: 0.92;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
+#wipe { position: absolute; top: 0; width: 6px; height: 1920px; background: #fff;
+  box-shadow: 0 0 22px 6px rgba(255, 255, 255, 0.75), 0 0 60px 14px rgba(120, 190, 255, 0.5); }
