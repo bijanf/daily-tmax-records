@@ -143,6 +143,12 @@ def pictures(dam: dict, takht: dict) -> tuple[dict, list]:
                 placeholder(BUILD / name, size, fa(y["py"]))
                 fake.append(name)
             out[kind][str(y["year"])] = name
+    orbit = sorted((DATA / "pics" / "orbit").glob("f*.jpg")) if (DATA / "pics" / "orbit").exists() else []
+    if orbit:                                                # the turning mountain of the hook (src/alborzice3d.py --orbit)
+        (BUILD / "orbit").mkdir(exist_ok=True)
+        for q in orbit:
+            shutil.copyfile(q, BUILD / "orbit" / q.name)
+        out["orbit"] = len(orbit)
     photo = DATA / "pics" / "close.jpg"                      # the closing photograph (Unsplash), when it is there
     if photo.exists():
         shutil.copyfile(photo, BUILD / "close.jpg")

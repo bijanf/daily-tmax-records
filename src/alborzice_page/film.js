@@ -120,11 +120,22 @@ async function main() {
 
   // ── 1 hook: Damavand's end of summer, rewound to the oldest summer ──
   function hook(sc) {
-    const f = frame(sc), Y = years("dam"), n = Y.length, lay = layer(f, files("dam"));
+    const f = frame(sc), Y = years("dam"), n = Y.length, NO = F.pics.orbit || 0;
+    // the mountain turns: F.pics.orbit frames (src/alborzice3d.py --orbit), the summers running back and the camera settling
+    // on the view of the next scenes; one <img>, its file set for the frame and awaited (window.WAIT), so nothing is preloaded
+    const lay = NO ? null : layer(f, files("dam"));
+    const box = NO ? el("div", "layer", f.base) : null, im = NO ? el("img", null, box) : null;
+    let shown = -1;
     heads(f, true); sources(f, true);
     const yc = chip(f, "", { left: L, top: 600 });           // on the left: the white lies on the right-hand flank
     f.update = (dt, u) => {
-      const pos = (n - 1) * (1 - seg(u, 0.06, 0.94)), cur = lay.set(pos, 1 + 0.06 * u);
+      const pos = (n - 1) * (1 - seg(u, 0.06, 0.94));
+      let cur;
+      if (NO) {
+        const k = Math.round(clamp(u) * (NO - 1)), a = Math.floor(pos + 1e-9), w = ease((pos - a - 0.3) / 0.4);
+        cur = Math.min(n - 1, a + (w > 0.5 ? 1 : 0));
+        if (k !== shown) { shown = k; im.src = "/build/orbit/f" + String(k).padStart(4, "0") + ".jpg"; window.WAIT = im.decode().catch(() => {}); }
+      } else cur = lay.set(pos, 1 + 0.06 * u);
       yc.textContent = F.dam.chip + fa(Y[cur].py); tick(f, dt);
     };
     return f;
@@ -141,7 +152,7 @@ async function main() {
     f.fits.push(...sbl);
     const t_in = (F.face.tag_at || 0.6) / f.len;            // the tag comes once the owner is on screen
     f.update = (dt, u) => {
-      lay.set(0, 1.06 + 0.04 * u); tick(f, dt);
+      lay.set(0, (F.pics.orbit ? 1 : 1.06) + 0.04 * u); tick(f, dt);
       show(tg, easeOut(seg(u, t_in + 0.03, t_in + 0.10))); const s0 = (F.face.sub_at || 0) / f.len || t_in + 0.14; show(sb, easeOut(seg(u, s0, s0 + 0.06)));
     };
     return f;
@@ -486,7 +497,8 @@ async function main() {
     if (mix < 1) { scenes[i - 1].update(C.scenes[i - 1].length - 1e-4, 1 - 1e-6); scenes[i].root.style.opacity = mix.toFixed(3); }
     scenes[i].update(dt, u);
     segs.forEach((s, k) => { s.style.width = (k < i ? 100 : k > i ? 0 : 100 * u0).toFixed(3) + "%"; });
-    return i;
+    const wait = window.WAIT; window.WAIT = null;
+    return wait ? wait.then(() => i) : i;                  // a frame that set a picture is ready when the picture is
   };
   window.renderAt(0);
   window.READY = true;

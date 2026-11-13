@@ -158,7 +158,7 @@ class Scene:
         p.add_light(pv.Light(light_type="headlight", color="#dfe8ff", intensity=0.25))
         self.p = p
 
-    def render(self, white, view, path: Path) -> None:
+    def render(self, white, view, path: Path, quality: int = 92) -> None:
         p = self.p
         lon, lat, fz, dist, az, el = view
         foc = A.ground(lon, lat)
@@ -194,7 +194,29 @@ class Scene:
         f = np.clip((far - HAZE_KM) / HAZE_LEN, 0, 1) * HAZE_MAX
         hz = np.array([int(A.SKY[1][i:i + 2], 16) for i in (1, 3, 5)], np.float32)
         img = img * (1 - f[..., None]) + hz * f[..., None]
-        Image.fromarray(img.round().astype(np.uint8)).resize((A.W, A.H), Image.LANCZOS).save(path, quality=92)
+        Image.fromarray(img.round().astype(np.uint8)).resize((A.W, A.H), Image.LANCZOS).save(path, quality=quality)
+
+
+def orbit(sc: Scene, wd: Path, years: list, view: tuple, nf: int, out: Path) -> None:
+    """Frames f0000.. : summers newest to oldest (smooth blend of two masks), azimuth 105 -> 60, then standing still."""
+    out.mkdir(parents=True, exist_ok=True)
+    masks = [np.load(wd / f"{y}.npz")["white"].astype(np.float32) for y in years]
+    n = len(years)
+    t00 = time.time()
+    for k in range(nf):
+        u = k / (nf - 1)
+        s_ = min(max((u - 0.06) / 0.88, 0), 1)
+        pos = (n - 1) * (1 - s_)
+        a = int(math.floor(pos + 1e-9))
+        x = min(max((pos - a - 0.3) / 0.4, 0), 1)
+        w = x * x * (3 - 2 * x)
+        al = masks[a] if a >= n - 1 else (1 - w) * masks[a] + w * masks[a + 1]
+        p_ = min(max(u / 0.92, 0), 1)
+        az = 105 + (60 - 105) * p_ * p_ * (3 - 2 * p_)
+        sc.render(al, view[:4] + (az, view[5]), out / f"f{k:04d}.jpg", quality=90)
+        if k % 20 == 0:
+            print(k, f"az {az:.1f} summer {years[a]}->{years[min(a + 1, n - 1)]} w {w:.2f}", f"{time.time() - t00:.0f} s", flush=True)
+    print("total", f"{time.time() - t00:.0f} s")
 
 
 def main() -> None:
@@ -204,6 +226,7 @@ def main() -> None:
     ap.add_argument("--out", default=str(PICS))
     ap.add_argument("--view", default="", help="lon,lat,focus_height_km,dist_km,azimuth,elevation")
     ap.add_argument("--synthetic", action="store_true")
+    ap.add_argument("--orbit", type=int, default=0, help="N frames: the camera turns from azimuth 105 to 60 while the summers run back")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
     out = Path(args.out)
@@ -218,6 +241,9 @@ def main() -> None:
         sc.render(h > 4700, view, out / f"test{args.tag}.jpg")
         return
     years = [int(y) for y in args.years.split(",")] if args.years else json.loads((wd / "years.json").read_text())
+    if args.orbit:
+        orbit(sc, wd, sorted(json.loads((wd / "years.json").read_text())), view, args.orbit, out / "orbit")
+        return
     t0 = time.time()
     sc.render(None, view, out / "dam_bare.jpg")
     print("bare", f"{time.time() - t0:.1f} s", flush=True)
