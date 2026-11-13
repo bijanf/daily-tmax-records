@@ -133,14 +133,16 @@ async function main() {
   function face1(sc) {
     const f = frame(sc), lay = layer(f, [files("dam")[0]]);
     heads(f, true); sources(f, true);
-    const tg = css(el("div", "ovcard", f.ov), { right: 156, top: 1196, padding: "12px 34px 18px", textAlign: "right" });
-    css(el("div", null, tg, F.face.name), { fontWeight: "900", fontSize: "58px", lineHeight: "78px" });
-    css(el("div", null, tg, F.face.role), { fontWeight: "500", fontSize: "38px", lineHeight: "52px", color: "#4a3a2e" });
-    const sb = css(el("div", "ovcard", f.ov, F.face.sub), { right: 156, top: 1388, padding: "6px 26px 12px", fontWeight: "700", fontSize: "40px", lineHeight: "56px" });
-    f.fits.push(sb);
+    const tg = css(el("div", "ovcard", f.ov), { right: 156, top: 1290, padding: "8px 30px 14px", textAlign: "right" });   // under the chin
+    css(el("div", null, tg, F.face.name), { fontWeight: "900", fontSize: "52px", lineHeight: "68px" });
+    css(el("div", null, tg, F.face.role), { fontWeight: "500", fontSize: "34px", lineHeight: "46px", color: "#4a3a2e" });
+    const sb = css(el("div", "ovcard", f.ov), { right: 156, top: 1440, padding: "6px 26px 12px", fontWeight: "700", fontSize: "38px", lineHeight: "52px", textAlign: "right" });
+    const sbl = F.face.sub.split(" // ").map(t => { const l = el("span", "l", sb); marked(l, t); return l; });
+    f.fits.push(...sbl);
+    const t_in = (F.face.tag_at || 0.6) / f.len;            // the tag comes once the owner is on screen
     f.update = (dt, u) => {
       lay.set(0, 1.06 + 0.04 * u); tick(f, dt);
-      show(tg, easeOut(seg(u, 0.05, 0.14))); show(sb, easeOut(seg(u, 0.17, 0.27)));
+      show(tg, easeOut(seg(u, t_in + 0.03, t_in + 0.10))); const s0 = (F.face.sub_at || 0) / f.len || t_in + 0.14; show(sb, easeOut(seg(u, s0, s0 + 0.06)));
     };
     return f;
   }

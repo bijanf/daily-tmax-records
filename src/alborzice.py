@@ -91,6 +91,16 @@ def on_camera() -> set:
     return {q["scene"] for q in json.loads(p.read_text(encoding="utf-8"))["pieces"] if "face" in q}
 
 
+def face_from(scene: str) -> float:
+    """Seconds into a scene at which the owner's video takes over (0.6 without a recording)."""
+    p = DATA / "voice" / "manifest.json"
+    if p.exists():
+        for q in json.loads(p.read_text(encoding="utf-8"))["pieces"]:
+            if q["scene"] == scene and "face" in q:
+                return float(q["face"].get("from", 0.0))
+    return 0.6
+
+
 def clock() -> tuple[dict, bool, dict]:
     """The voice's seconds per scene and, where the manifest gives the seconds at which the narrator starts each
     later sentence ("cues"), the moments the picture must turn."""
@@ -175,7 +185,7 @@ def words(dam: dict, takht: dict, facts: dict) -> dict:
     )
     labels = dict(
         hook=["تابستانِ ۱۴۰۴"],
-        face1=["بیژن فلاح", "پژوهشگرِ اقلیم", "جوابش را از ۴۰ سال عکسِ ماهواره درآوردم."],
+        face1=["بیژن فلاح", "پژوهشگرِ اقلیم", "جوابِ این سؤال را از عکس‌های // ماهواره‌ایِ ۴۰ سالِ گذشته درمی‌آورم."],
         dam=["تابستانِ ۱۴۰۴", "کیلومترمربع سفیدی", f"{fa(dr[0])} تا {fa(dr[1])}"],
         takht=["علم‌کوه", "تخت‌سلیمان · ۱۱۵ کیلومتر غربِ دماوند", "تابستانِ ۱۴۰۴",
                f"میانه‌ی {fa(takht['early'][0])} تا {fa(takht['early'][1])}", f"میانه‌ی {fa(takht['late'][0])} تا {fa(takht['late'][1])}",
@@ -185,7 +195,7 @@ def words(dam: dict, takht: dict, facts: dict) -> dict:
         budget=["تابستانِ ۱۳۷۴", "برفی که از تابستان گذشت", "این سال‌ها: تقریباً هیچ", "۲۰ سانتی‌متر"],
         thr=["یخچال‌های کوهستان", "الان: حدودِ ۱٫۴ درجه", "بازه‌ی برآورد: ۱٫۵ تا ۳"],
         fut=["انتشارِ کم", "انتشارِ زیاد", fut_low, "تقریباً همه"],
-        close=["با هر دهمِ درجه گرمایش، // یخِ بیشتری از کوه‌ها آب می‌شود.", "این را برای کسی بفرستید // که {دماوند} را دوست دارد",
+        close=["با هر دهمِ درجه گرمایشِ کره‌ی زمین، // یخِ بیشتری از کوه‌ها آب خواهد شد.", "این را برای کسانی بفرستید // که {دماوند} را دوست دارند",
                "دنبال کنید: // هر هفته، آب و اقلیمِ ایران با داده"])
     return dict(scenes=S, labels=labels, tag="یخچال‌های البرز", fut_low=fut_low)
 
@@ -248,7 +258,8 @@ def film() -> dict:
                    median_early=takht["median_early"], median_late=takht["median_late"], early=takht["early"], late=takht["late"],
                    place="علم‌کوه", place2="تخت‌سلیمان · ۱۱۵ کیلومتر غربِ دماوند", chip="تابستانِ ", bracket=f"{fa(tr[0])} تا {fa(tr[1])}",
                    med_early=f"میانه‌ی {fa(takht['early'][0])} تا {fa(takht['early'][1])}", med_late=f"میانه‌ی {fa(takht['late'][0])} تا {fa(takht['late'][1])}"),
-        face=dict(name="بیژن فلاح", role="پژوهشگرِ اقلیم", sub="جوابش را از ۴۰ سال عکسِ ماهواره درآوردم."),
+        face=dict(name="بیژن فلاح", role="پژوهشگرِ اقلیم", tag_at=face_from("face1"), sub_at=4.3 if on_camera() else 0,   # he starts «جوابِ این سؤال» 4.5 s into the scene (the transcript)
+                  sub="جوابِ این سؤال را از عکس‌های // ماهواره‌ایِ ۴۰ سالِ گذشته درمی‌آورم."),
         mech=dict(snow="برفِ تازه", ice="یخِ تیره و کثیف", back=["۹ از ۱۰ برمی‌گردد", "۱ از ۱۰ برمی‌گردد"], pct=["حدودِ ۹۰٪", "گاهی فقط ۱۰٪"],
                   ring=["سفیدیِ کمتر", "گرمای بیشتر", "ذوبِ بیشتر"], of="از ۱۰ برمی‌گردد",
                   snow_sink=5, ice_bounce=3),

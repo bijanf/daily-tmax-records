@@ -61,6 +61,7 @@ def sound(film: dict, man: dict) -> Path:
             clean(VOICE / f"v_{q['scene']}.wav", w)
             _, x = wavfile.read(w)
             x = x.astype(np.float64) / 32768.0
+            x *= 10 ** ((VOICE_LUFS - kit.integrated_lufs(x)) / 20)       # every piece at the same loudness: memo and camera differ
             i = int(round((start[q["scene"]] + man["lead"]) * SR))
             m = min(len(x), n - i)
             voice[i:i + m] += x[:m]
@@ -72,7 +73,7 @@ def sound(film: dict, man: dict) -> Path:
     bed = np.vstack([bed, np.zeros((max(0, n - len(bed)), 2))])[:n]
     bed *= 10 ** ((VOICE_LUFS - UNDER - kit.integrated_lufs(bed)) / 20)
     # the bed comes up in the gaps: voice activity (50-ms level), held 0.25 s, smoothed over 0.4 s
-    lvl = np.sqrt(uniform_filter1d(voice ** 2, int(0.05 * SR)))
+    lvl = np.sqrt(np.maximum(uniform_filter1d(voice ** 2, int(0.05 * SR)), 0.0))
     act = maximum_filter1d((lvl > 10 ** (-45 / 20)).astype(float), int(0.25 * SR))
     env = uniform_filter1d(act, int(0.4 * SR))
     gain = 10 ** (UP * (1 - env) / 20)
@@ -98,14 +99,16 @@ def picture(film: dict, man: dict) -> Path | None:
     for k, q in enumerate(faces):
         f, s = q["face"], sc[q["scene"]]
         shown = min(f["shown"], s["length"])
-        nfr = int(round(shown * film["fps"]))
-        cmd += ["-ss", f"{max(0.0, f['video_start']):.3f}", "-t", f"{shown:.3f}", "-i", f["video"],
-                "-framerate", str(film["fps"]), "-start_number", "0", "-i", str(BUILD / "overlay" / q["scene"] / "f%05d.png")]
+        n0 = int(round(f.get("from", 0.0) * film["fps"]))              # the face comes in here (a J-cut: the voice is already on)
+        nfr = int(round(shown * film["fps"])) - n0
+        cmd += ["-ss", f"{max(0.0, f['video_start'] + n0 / film['fps']):.3f}", "-t", f"{(nfr + 10) / film['fps']:.3f}", "-i", f["video"],
+                "-framerate", str(film["fps"]), "-start_number", str(n0), "-i", str(BUILD / "overlay" / q["scene"] / "f%05d.png")]
         a, o = 1 + 2 * k, 2 + 2 * k
-        t0, t1 = s["start"], s["start"] + nfr / film["fps"]
+        t0 = s["start"] + n0 / film["fps"]
+        t1 = t0 + nfr / film["fps"]
         flt += [f"[{a}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps={film['fps']},setsar=1,"
-                f"format=yuv420p,trim=end_frame={nfr},setpts=PTS-STARTPTS[c{k}]",
-                f"[{o}:v]trim=end_frame={nfr},setpts=PTS-STARTPTS[o{k}]",
+                f"format=yuv420p,trim=end_frame={nfr + 10},setpts=PTS-STARTPTS[c{k}]",      # a few frames to spare: the window below ends it
+                f"[{o}:v]setpts=PTS-STARTPTS[o{k}]",
                 f"[c{k}][o{k}]overlay=0:0:format=auto,setpts=PTS-STARTPTS+{t0:.4f}/TB[f{k}]",
                 f"[{last}][f{k}]overlay=0:0:enable='between(t,{t0:.4f},{t1 - 0.5 / film['fps']:.4f})':eof_action=pass[v{k}]"]
         last = f"v{k}"
