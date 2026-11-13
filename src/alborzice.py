@@ -16,6 +16,7 @@ so the film re-times itself when the manifest changes. The page src/alborzice_pa
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import statistics
 import sys
@@ -25,9 +26,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "alborzice"
-BUILD = ROOT / "outputs" / "onebit" / "alborzice"
+CUT = os.environ.get("ALBORZICE_CUT", "")                  # "short": the finding only (hook, face, Damavand, Alam-Kuh, close)
+BUILD = ROOT / "outputs" / "onebit" / ("alborzice_" + CUT if CUT else "alborzice")
 FONTS = ROOT / "data" / "fonts"
-SCENES = ("hook", "face1", "dam", "takht", "mech", "budget", "thr", "fut", "close")
+ALL = ("hook", "face1", "dam", "takht", "mech", "budget", "thr", "fut", "close")
+SCENES = ("hook", "face1", "dam", "takht", "close") if CUT == "short" else ALL
 VOICE = dict(hook=3.0, face1=4.5, dam=8.5, takht=12.5, mech=15.5, budget=12.0, thr=11.5, fut=8.0, close=9.5)   # estimates, seconds
 LEAD, TAIL = 0.3, 0.5
 LAST_PY = 1405                                           # the film shows every measured summer, the newest one too

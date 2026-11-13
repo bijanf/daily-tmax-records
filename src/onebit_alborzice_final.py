@@ -22,6 +22,7 @@ on top; after that the film's picture returns. Without a face entry the film's f
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -36,10 +37,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import onebit_persian as kit  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = ROOT / "outputs" / "onebit" / "alborzice"
+CUT = os.environ.get("ALBORZICE_CUT", "")                  # as in src/alborzice.py
+LONG = ROOT / "outputs" / "onebit" / "alborzice"
+BUILD = ROOT / "outputs" / "onebit" / ("alborzice_" + CUT if CUT else "alborzice")
 SOCIAL = ROOT / "outputs" / "onebit" / "social"
 VOICE = ROOT / "data" / "alborzice" / "voice"
-STEM = "alborzice_fa"
+STEM = f"alborzice_{CUT}_fa" if CUT else "alborzice_fa"
 SR = kit.SR
 VOICE_LUFS, UNDER, UP = -16.0, 13.0, 4.0
 
@@ -57,6 +60,8 @@ def sound(film: dict, man: dict) -> Path:
     voice = np.zeros(n)
     with tempfile.TemporaryDirectory() as tmp:
         for q in man["pieces"]:
+            if q["scene"] not in start:               # a cut leaves scenes out
+                continue
             w = Path(tmp) / "v.wav"
             clean(VOICE / f"v_{q['scene']}.wav", w)
             _, x = wavfile.read(w)
@@ -66,10 +71,25 @@ def sound(film: dict, man: dict) -> Path:
             m = min(len(x), n - i)
             voice[i:i + m] += x[:m]
     voice *= 10 ** ((VOICE_LUFS - kit.integrated_lufs(voice)) / 20)
-    _, bed = wavfile.read(SOCIAL / f"{STEM}_bed.wav")
+    _, bed = wavfile.read(SOCIAL / "alborzice_fa_bed.wav")
     bed = bed.astype(np.float64) / 32768.0
     if bed.ndim == 1:
         bed = np.stack([bed, bed], axis=1)
+    if CUT:                                            # a cut keeps the long film's music: each scene's own stretch of the bed,
+        whole = {q["key"]: q for q in json.loads((LONG / "film.json").read_text(encoding="utf-8"))["cuts"]["a"]["scenes"]}
+        out, xf, at_end = np.zeros((0, 2)), int(0.6 * SR), None           # a 0.6-s crossfade where two stretches were not neighbours
+        for q in cut["scenes"]:
+            w = whole[q["key"]]
+            assert abs(w["length"] - q["length"]) < 1e-6, q["key"]
+            i0 = int(round(w["start"] * SR))
+            piece = bed[i0:i0 + int(round(q["length"] * SR))]
+            if at_end is not None and abs(at_end - i0) > 2:
+                lead = bed[max(0, i0 - xf):i0]
+                r = np.linspace(0.0, 1.0, len(lead))[:, None]
+                out[-len(lead):] = out[-len(lead):] * (1 - r) + lead * r
+            out = np.vstack([out, piece])
+            at_end = i0 + len(piece)
+        bed = out
     bed = np.vstack([bed, np.zeros((max(0, n - len(bed)), 2))])[:n]
     bed *= 10 ** ((VOICE_LUFS - UNDER - kit.integrated_lufs(bed)) / 20)
     # the bed comes up in the gaps: voice activity (50-ms level), held 0.25 s, smoothed over 0.4 s
@@ -90,7 +110,7 @@ def picture(film: dict, man: dict) -> Path | None:
     """The silent reel with the owner's video in the scenes that are seen on camera."""
     cut = film["cuts"]["a"]
     sc = {s["key"]: s for s in cut["scenes"]}
-    faces = [q for q in man["pieces"] if "face" in q]
+    faces = [q for q in man["pieces"] if "face" in q and q["scene"] in sc]
     if not faces:
         return None
     reel = SOCIAL / f"{STEM}_reel.mp4"

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import multiprocessing as mp
 import shutil
 import sys
@@ -32,8 +33,9 @@ import onebit_elnino26i as base  # noqa: E402  (the server, the page loader, the
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "src" / "alborzice_page"
-BUILD = ROOT / "outputs" / "onebit" / "alborzice"
-STEM = "alborzice_fa"
+CUT = os.environ.get("ALBORZICE_CUT", "")                  # as in src/alborzice.py
+BUILD = ROOT / "outputs" / "onebit" / ("alborzice_" + CUT if CUT else "alborzice")
+STEM = f"alborzice_{CUT}_fa" if CUT else "alborzice_fa"
 FACE = ("face1", "close")
 base.Handler.mount = dict(page=PAGE, build=BUILD, fonts=base.FONTS)      # this film's page and pictures
 
