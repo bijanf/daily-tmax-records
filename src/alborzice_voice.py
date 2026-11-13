@@ -70,8 +70,12 @@ def main() -> None:
         p = plan[scene]
         spans = [(float(sp[0]), float(sp[1]), sp[2] if len(sp) > 2 else p["file"]) for sp in p["spans"]]   # [start, end] or [start, end, file]
         parts, starts, t = [], [], 0.0
+        # one gain per recording inside a piece (its loudest sample to 0.9): the pause detector's floor is absolute, and a
+        # quiet recording (the phone a metre away) lost its soft last syllables to it («دارند», 13 Nov 2026)
+        gain = {f: 0.9 / max(1e-6, max(float(np.max(np.abs(raw(f)[int(a * SR):int(b * SR)]))) for a, b, g in spans if g == f))
+                for f in {sp[2] for sp in spans}}
         for k, (a, b, f) in enumerate(spans):
-            x = raw(f)[int(a * SR):int(b * SR)]
+            x = raw(f)[int(a * SR):int(b * SR)] * gain[f]
             joined_before = k > 0 and spans[k - 1][2] == f and abs(spans[k - 1][1] - a) < 1e-6      # a cut only marks a turn: no fade
             joined_after = k + 1 < len(spans) and spans[k + 1][2] == f and abs(spans[k + 1][0] - b) < 1e-6
             if not (p.get("face") and k == 0):                 # the span seen on camera keeps its own timing: the lips must match
