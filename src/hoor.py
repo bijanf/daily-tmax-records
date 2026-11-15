@@ -17,7 +17,13 @@ side (the Karkheh, the border embankment), causes on both sides, shares conteste
   water use in BOTH countries and a border embankment (about 65 km, 1388 = 2009; Iraqi Civil Society, KBA 8056,
   Reuters 2025); oil (Azadegan) is an official's and the press's claim, contested: caption only, not on screen.
 
+- The opening (the owner on the first cut, 15 Nov 2026: «معلوم نیست هورالعظیم کجاست؛ باید از کره‌ی زمین اولش زوم کنی آدم
+  بفهمه»): the film opens on the whole Earth and falls to the marsh in hoor_zoom.ZOOM_T seconds, resting at the scale
+  of Iran and Iraq for the names («ایران», «عراق», «خلیجِ فارس») and a gold pin on the place; the before/after wipe
+  follows the landing. The last 0.8 s plays the same frames backwards, so the loop closes on the globe.
+
     python -I src/get_hoor.py
+    python -I src/get_hoor_zoom.py
     python -I src/hoor.py
 """
 
@@ -34,6 +40,7 @@ from PIL import Image, ImageFilter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import get_hoor as gh  # noqa: E402
+import hoor_zoom as hz  # noqa: E402
 from onebit import fa  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -131,17 +138,34 @@ def border() -> list:
     return pts
 
 
-def clock_of(n: int) -> dict:
+DYKE_LAT = (31.14, 31.79)                            # where the 2025 picture shows the straight wet/dry edge on the border (about 75 km)
+
+
+def clock_of(bars: list) -> dict:
     """The scenes (s) and their cues. Each scene is sized by the owner's reading rule (reading(), asserted)."""
-    hook, run, side, why, end = (0.0, 7.0), (7.0, 19.0), (19.0, 26.5), (26.5, 35.5), (35.5, 43.0)
-    t0, s1, s2, k1 = run[0] + 0.6, 0.36, 0.20, SPLIT - FIRST           # the early springs slower (their headline is longer)
-    step = s2
-    st = [round(t0 + s1 * k if k <= k1 else t0 + s1 * k1 + s2 * (k - k1), 3) for k in range(n)]
-    assert st[-1] + 0.5 < run[1], st[-1]
-    return dict(hook=hook, run=run, side=side, why=why, close=end, end=end[1], cover=1.15,
-                wipe1=(0.35, 1.9), border=(3.0, 3.9), labels=3.3, t0=t0, step=step, spring_t=st,
-                split=st[SPLIT - FIRST], side_wipe=(side[0], side[0] + 1.2), split_on=side[0] + 1.6,
-                pins=(why[0] + 0.8, why[0] + 1.6, why[0] + 2.4), share=why[0] + 3.4,
+    n = len(bars)
+    Z = hz.ZOOM_T                                                          # the zoom from the globe lands here
+    hook = (0.0, 7.8)
+    # the springs: the early ones slower (their headline is longer), the ones without a picture a little slower too
+    # (their note has to be read), the rest fast
+    t0, k1 = hook[1] + 0.6, SPLIT - FIRST
+    dur = [0.32 if k < k1 else 0.25 if bars[k]["held"] else 0.20 for k in range(n)]
+    st = [round(t0 + sum(dur[:k]), 3) for k in range(n)]
+    run = (hook[1], round(st[-1] + 0.95, 1))
+    held = [k for k in range(n) if bars[k]["held"]]
+    assert held == list(range(held[0], held[-1] + 1)), "the springs without a picture are one block"
+    side = (run[1], run[1] + 7.2)
+    why_a = (side[1], side[1] + 5.3)                                       # two halves, two rivers, the embankment
+    why = (why_a[1], why_a[1] + 6.6)                                       # the causes on both sides, the hedge
+    end = (why[1], why[1] + 7.5)
+    out = (end[1], end[1] + 0.8)                                           # the same zoom backwards: the loop closes on the globe
+    return dict(hook=hook, run=run, side=side, whyA=why_a, why=why, close=end, out=out, end=out[1], cover=Z + 0.3, zoom=Z,
+                far=(hz.DWELL[0] - 0.18, hz.DWELL[0] + 0.02, hz.DWELL[1], hz.DWELL[1] + 0.25),   # the far names: in, out (gone before they reach the credit line)
+                pin=(Z - 0.65, Z - 0.25), land=(Z - 0.55, Z - 0.1),            # the pin leaves, the border and the near tags come
+                wipe1=(Z + 1.0, Z + 2.5), labels=Z - 0.3, t0=t0, spring_t=st,
+                held=(st[held[0]], st[held[-1] + 1]),                         # the block of springs without a clean picture
+                split=st[k1], side_wipe=(side[0], side[0] + 1.2), split_on=side[0] + 1.6,
+                pins=(why_a[0] + 0.6, why_a[0] + 1.2, why_a[0] + 1.8), share=why[0] + 0.8,
                 now_wipe=(end[0], end[0] + 1.2), follow=end[0] + 2.4, back=(end[1] - 0.7, end[1]))
 
 
@@ -150,16 +174,20 @@ def reading(W: dict, C: dict, bars: list) -> None:
     import onebit_reading as rd
     wt = lambda xs: sum(rd.weight(x) for x in xs)        # noqa: E731
     tag = [W["spring"].format("۱۳۷۱"), "۱٬۰۰۰", W["unit"]]
-    plan = [("hook", C["hook"], [W["hook"]], [*tag, W["iran"], W["iraq"]], C["labels"] + 0.2),
+    plan = [("hook", C["hook"], [W["hook"]],
+             [W["iran"], W["iraq"], W["gulf"], W["hoor"], *tag, W["iran"], W["iraq"], W["spring"].format("۱۴۰۵"), "۳۲۸"],
+             sum(C["wipe1"]) / 2),                                        # the last string: this spring's tag, half-way through the wipe
             ("run 1", (C["run"][0], C["split"]), [W["era1"]], [*tag], C["run"][0] + 0.3),
             ("run 2", (C["split"], C["run"][1]), [W["era2"]], [W["held"]], C["split"]),
+            ("held", C["held"], [W["held"]], [], C["held"][0]),            # the note over the springs without a picture
             ("side", C["side"], [W["side"], W["side_small"]], [*tag, W["iran"], W["iraq"]], C["split_on"]),
-            ("why", C["why"], [W["why"], W["share"]], [W["karkheh"], W["tigris"], W["dyke"]], C["share"]),
+            ("why a", C["whyA"], [W["why_a"]], [W["karkheh"], W["tigris"], W["dyke"], W["iran"], W["iraq"]], C["pins"][2]),
+            ("why b", C["why"], [W["why"], W["share"]], [], C["share"]),
             ("close", (C["close"][0], C["back"][0]), [W["close"], *W["follow"]], tag, C["follow"])]
     print("\nreading (seconds the rule needs, seconds given):")
     for name, (a, b), full, half, last in plan:
         w = wt(full) + rd.LABELS * wt(half)
-        need = max(rd.SETTLE + w / rd.WPS, last - a + rd.HOLD)
+        need = max(rd.SETTLE + w / rd.WPS, last - a + (rd.HOLD if name != "held" else 0))   # the held note stands from its start
         print(f"  {name:6s} {wt(full):4.1f} + {wt(half):4.1f}/2 words -> {need:4.1f} s needed, {b - a:4.1f} s given")
         assert b - a + 0.051 >= need, (name, round(need, 2), round(b - a, 2))
 
@@ -183,29 +211,36 @@ def main() -> None:
     words = dict(
         hook="آبِ {هورالعظیم} کجا رفت؟", spring="بهارِ {}", this_spring="بهارِ امسال",
         unit="کیلومترمربع آبِ باز", iran="ایران", iraq="عراق", hoor="هورالعظیم", hawizeh="هورِ حویزه",
+        gulf="خلیجِ فارس",
         border="مرز",
         era1=f"{fa(solar(FIRST))} تا {fa(solar(SPLIT - 1))}: // هر {fa(c['n_early'])} بهار {{بیش از {fa(LINE)}}}",
-        era2=f"از {fa(solar(SPLIT))}: فقط {fa(k_above)} بهار، // {{بعد از سیلِ {fa(yrs_above[0])}}}" if k_above else "",
+        era2=f"از {fa(solar(SPLIT))}: فقط {fa(k_above)} بهار // {{{fa(yrs_above[0])} تا {fa(yrs_above[-1])}، بعد از سیل}}",
         held="بدونِ تصویرِ صاف",
+        why_a="دو نیمه، {دو رود}",
         why="خشکسالی، سدها، برداشتِ آب // {در هر دو کشور}",
-        karkheh="رودِ کرخه، از ایران", tigris="شاخه‌های دجله، از عراق", dyke="خاک‌ریزِ مرزی، ۱۳۸۸",
+        karkheh="رودِ کرخه، از ایران", tigris="شاخه‌های دجله، از عراق", dyke="خاک‌ریزِ مرزی، حدودِ ۱۳۸۸",
         share="سهمِ هر عامل محلِ بحث است",
         side="بهارِ {}: // آبِ باز {بیشتر در سمتِ ایران}",
         close="شما {هورالعظیمِ پُرآب} را // دیده‌اید؟", follow=["برای کسی بفرستید", "که اهلِ خوزستان است"],
         src_water="منبع: لندست (USGS)؛ مقایسه‌شده با آبِ سطحیِ JRC",
         src_map="مرز: Natural Earth؛ خاک‌ریز: گزارش‌های رسانه‌ها و سازمان‌های محیط‌زیستی",
+        src_zoom="زمین: Sentinel-2 cloudless (EOX)؛ مرز: Natural Earth",
     )
     side_year = LAST - 1
     si, sq = sp.loc[side_year, "water_iran"], sp.loc[side_year, "water_iraq"]
     assert si > sq, (si, sq)
     words["side"] = words["side"].replace("{}", fa(solar(side_year)), 1)
     words["side_small"] = f"ایران {fa(round(si / 10) * 10)}، عراق {fa(round(sq / 10) * 10)} کیلومترمربع"
-    clock = clock_of(len(bars))
+    assert yrs_above == [1398, 1399, 1400], yrs_above                    # the headline names them as one run of years
+    clock = clock_of(bars)
     reading(words, clock, bars)
-    film = dict(fps=FPS, size=[W, H], clock=clock, end=clock["end"], cover_t=0.0, side_year=side_year, grid=dict(w=pic["size"][0], h=pic["size"][1], box=list(gh.BOX)),
+    zoom = hz.build(full)                                                  # the frames of the opening, and its camera
+    film = dict(fps=FPS, size=[W, H], clock=clock, end=clock["end"], cover_t=clock["cover"], side_year=side_year, zoom=zoom, dyke_lat=list(DYKE_LAT),
+                grid=dict(w=pic["size"][0], h=pic["size"][1], box=list(gh.BOX)),
                 full=full, now=LAST, bars=bars, counts=c, line=LINE, words=words, border=lines,
                 places=dict(hoor=(47.80, 31.62), hawizeh=(47.52, 31.45), iran=(47.93, 31.50), iraq=(47.50, 31.50),
-                            karkheh=(47.95, 31.30), tigris=(47.47, 31.22), dyke=(47.70, 31.45)),
+                            karkheh=(47.95, 31.30), tigris=(47.47, 31.22), dyke=(47.70, 31.45),
+                            iran_far=(54.3, 32.4), iraq_far=(43.4, 33.0), gulf=(51.0, 27.2)),
                 colours=dict(wet="#1c5cab", gold="#F6C445", ink="#1d140c", paper="#FBF7F0", eco="#a03129"))
     (BUILD / "film.json").write_text(json.dumps(film, ensure_ascii=False, indent=1), encoding="utf-8")
     print("full spring:", full, solar(full), sp.loc[full, "water_all"], "| this spring:", sp.loc[LAST].to_dict())

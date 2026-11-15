@@ -1,6 +1,7 @@
 """The light score of the Hoor al-Azim reel (hoor_fa; no narration): the light score's setar and checks
 (onebit_score_air_light.py, imported, not copied), on the clock that src/hoor.py writes into film.json, in G Mahur
-(G A B C D E F#). Few notes, each on a cue: a soft D5 at 0.00 s, the wipe from a full spring to this one, the border,
+(G A B C D E F#). Few notes, each on a cue: a soft D5 at 0.00 s on the Earth, the zoom's two falls and its rest over
+Iran and Iraq, the landing, the wipe from a full spring to this one as a falling figure,
 the springs (A4 where the second era begins, G5, the highest note, once: the flood spring of 1398), the side scene,
 the causes (three labels, then the hedge), the close, the call, and the ending, G4 and D5 struck together.
     the level     -14 LUFS, true peak -1 dBTP or lower after AAC (the music is the only sound).
@@ -37,22 +38,25 @@ def score_notes(film: dict) -> tuple:
     c = film["clock"]
     end = film["end"]
     ending = end - 2.2
-    w1 = c["wipe1"]
+    w1, z, far = c["wipe1"], c["zoom"], c["far"]
     flood = c["spring_t"][[b["year"] for b in film["bars"]].index(2019)]
     plan = (
-        (0.00, 74, VEL_SOFT),                        # D5: soft, the first sound
-        (w1[0], 67, VEL),                            # G4: the wipe starts
-        (sum(w1) / 2, 71, VEL),                      # B4: half-way
-        (w1[1], 74, VEL),                            # D5: this spring
-        (c["border"][0], 67, VEL_MARK),              # G4: the border is drawn
-        (c["border"][1] + 0.4, 74, VEL_SOFT),        # D5: Iran, Iraq
+        (0.00, 74, VEL_SOFT),                        # D5: soft, the first sound: the Earth
+        (0.50, 71, VEL_MARK),                        # B4: the fall towards the region ...
+        (far[1], 67, VEL),                           # G4: ... and the rest over Iran and Iraq (the names)
+        (far[2] - 0.1, 71, VEL_MARK),                # B4: the fall to the marsh begins
+        (z, 67, VEL),                                # G4: the landing on the full spring
+        (w1[0], 74, VEL),                            # D5: the wipe starts ...
+        (sum(w1) / 2, 71, VEL),                      # B4: ... the water goes ...
+        (w1[1], 67, VEL),                            # G4: ... this spring (a falling figure)
         (c["run"][0], 67, VEL),                      # G4: the springs
         (c["split"], 69, VEL),                       # A4: the second era begins
         (flood, 79, VEL_SOFT),                       # G5: the flood spring, the highest note, once
         (c["side"][0], 67, VEL),                     # G4: the side scene
         (c["side_wipe"][1], 71, VEL),                # B4
-        (c["why"][0], 67, VEL),                      # G4: the causes
-        (c["pins"][0], 71, VEL_MARK), (c["pins"][1], 74, VEL_MARK), (c["pins"][2], 67, VEL_SOFT),
+        (c["whyA"][0], 67, VEL),                     # G4: two halves, two rivers
+        (c["pins"][0], 71, VEL_MARK), (c["pins"][1], 74, VEL_MARK), (c["pins"][2], 67, VEL_SOFT),   # the Karkheh, the Tigris, the embankment
+        (c["why"][0], 74, VEL),                      # D5: the causes
         (c["share"], 71, VEL),                       # B4: the hedge
         (c["close"][0], 74, VEL),                    # D5: the close
         (c["follow"], 71, VEL),                      # B4: the call

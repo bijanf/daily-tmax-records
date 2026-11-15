@@ -49,7 +49,7 @@ def main() -> None:
     port = srv.server_address[1]
     if args.stills or args.at is not None:
         from playwright.sync_api import sync_playwright
-        times = args.at or [0.0, 1.15, 4.5, 9.0, 15.0, 18.6, 23.5, 30.5, 34.9, 39.0, film["end"]]
+        times = args.at or [0.0, 0.6, 1.5, 2.4, 2.8, film["cover_t"], 5.6, 9.6, 15.6, 19.2, 24.1, 31.1, 35.5, 39.6, 43.3, 44.0]
         folder = args.out or base.SOCIAL
         folder.mkdir(parents=True, exist_ok=True)
         with sync_playwright() as pw:
