@@ -119,7 +119,7 @@ async function main() {
   head("end", Wd.end, null, st("end") + 0.3, END + 9);
 
   // the spring's tag (hamoun3_page): the year with its small line on the right, the number with its unit on the left;
-  // in a wipe each block shows only while it lies wholly on its own spring's side of the line
+  // in a wipe the tag is the spring's that holds most of the frame, switched whole at the middle
   const mkTag = () => { const box = el("div", "tag", stage), yr = el("div", "yr", box), sb = el("div", "sub", box), val = el("div", "val", box);
     return { box, yr, sb, val, n: el("span", "n", val), u: el("span", "u", val, Wd.unit), sl: el("span", "subl", val) }; };
   const tagA = mkTag(), tagB = mkTag();
@@ -127,10 +127,9 @@ async function main() {
     if (sp) { T.yr.textContent = Wd.spring.replace("{}", sp.label); T.n.textContent = sp.shown; }
     T.sb.textContent = sb; T.sl.textContent = ""; css(T.box, { top }); show(T.box, sp ? on : 0);
     let oYr = 1, oVal = 1;
-    if (sp && cutX !== null) {
-      const yrLeft = 924 - Math.max(T.yr.offsetWidth, T.sb.offsetWidth), valRight = 96 + T.val.offsetWidth, FW = 36;
-      if (side === "left") { oYr = seg(cutX, 924 - FW, 924); oVal = seg(cutX, valRight - FW, valRight); }
-      else { oYr = 1 - seg(cutX, yrLeft, yrLeft + FW); oVal = 1 - seg(cutX, 96, 96 + FW); }
+    if (sp && cutX !== null) {                         // the whole tag of the spring that holds most of the frame: both blocks
+      const o = cutX >= 540 ? 1 : 0;                     // switch together at the middle, no blend frame (INSTA, 16 Nov: block by block, the wipe
+      oYr = oVal = side === "left" ? o : 1 - o;         // back showed 1397's year beside 1398's number for about 0.5 s)
     }
     show(T.yr, oYr); show(T.sb, oYr); show(T.val, oVal);
   }
