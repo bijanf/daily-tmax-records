@@ -29,7 +29,8 @@ camera) and the pictures; src/hamounenso_page/ draws any moment; src/onebit_hamo
   ENSO to the Hamoun itself: the reel says «سنجشِ ما».
 - The hook: spring 1398 (after El Niño, 1,581 km2) and 1397 (after La Niña, 0.1 km2), the one pair of neighbouring
   springs whose winters are the same under ONI and RONI, JFM and DJF (16 Nov 2026: the first cut used 1399, neutral
-  under RONI, +0.10).
+  under RONI, +0.10). JRC's water for spring 1398 is larger, 1,948 km2 against our 1,581 (2020: 2,270 against 2,206):
+  the reel shows our lower number and the first comment says so.
 - No guarantee: spring 1403 (2024), after an El Niño winter (JFM ONI +1.5, RONI +0.8: "strong" only under ONI, so not
   said), had about 590 km2; FEWS NET, 22 Feb 2024: "An El Niño-driven boost in precipitation that was anticipated for
   Central Southwest Asia has fallen short" (upstream October-February 99 % of its mean in CRU, 86 % in ERA5; March-April
