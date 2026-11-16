@@ -116,10 +116,21 @@ def _inside(pts: list) -> list:
     return [[round(x, 5), round(y, 5)] for x, y in pts if w <= x <= e and s <= y <= n]
 
 
+def _read_zip(path: Path) -> list:
+    """(record dict, shapely geometry) for every feature of a zipped shapefile, read with pyshp (no geopandas:
+    the Mac's environment has none)."""
+    import shapefile
+    from shapely.geometry import shape
+    with zipfile.ZipFile(path) as z:
+        stem = next(n[:-4] for n in z.namelist() if n.endswith(".shp"))
+        files = {k: io.BytesIO(z.read(f"{stem}.{k}")) for k in ("shp", "shx", "dbf")}
+    r = shapefile.Reader(**files)
+    return [(rec.as_dict(), shape(sh.__geo_interface__)) for sh, rec in zip(r.shapes(), r.records())]
+
+
 def lines() -> None:
-    import geopandas as gpd
     from shapely.geometry import LineString, MultiLineString
-    from shapely.ops import linemerge
+    from shapely.ops import linemerge, unary_union
 
     def parts(geom) -> list:
         if geom is None or geom.is_empty:
@@ -127,9 +138,21 @@ def lines() -> None:
         g = linemerge(geom) if isinstance(geom, MultiLineString) else geom
         return [list(p.coords) for p in (g.geoms if isinstance(g, MultiLineString) else [g]) if isinstance(p, LineString)]
 
-    land = gpd.read_file(f"zip://{NE / 'ne_10m_admin_0_countries.zip'}")
-    name = "ADMIN"
-    shp = {c: land.loc[land[name] == c].geometry.union_all() for c in ("Iran", "Afghanistan", "Pakistan")}
+    try:
+        import geopandas as gpd
+        land = gpd.read_file(f"zip://{NE / 'ne_10m_admin_0_countries.zip'}")
+        shp = {c: land.loc[land["ADMIN"] == c].geometry.union_all() for c in ("Iran", "Afghanistan", "Pakistan")}
+        riv = gpd.read_file(f"zip://{NE / 'ne_10m_rivers_lake_centerlines.zip'}")
+        col = "name" if "name" in riv.columns else "name_en"
+        hel = riv.loc[riv[col].fillna("").str.contains("Helmand|Hilmand|Hirmand", case=False)]
+        hel_geoms, hel_names = list(hel.geometry), sorted(set(hel[col]))
+    except ImportError:                               # the same lines with pyshp and shapely
+        land = _read_zip(NE / "ne_10m_admin_0_countries.zip")
+        shp = {c: unary_union([g for rec, g in land if rec["ADMIN"] == c]) for c in ("Iran", "Afghanistan", "Pakistan")}
+        riv = _read_zip(NE / "ne_10m_rivers_lake_centerlines.zip")
+        hits = [(rec, g) for rec, g in riv
+                if any(k in str(rec.get("name") or "").lower() for k in ("helmand", "hilmand", "hirmand"))]
+        hel_geoms, hel_names = [g for _r, g in hits], sorted({str(r.get("name")) for r, _g in hits})
     for c, g in shp.items():
         assert g is not None and not g.is_empty, c
     out = {}
@@ -139,18 +162,12 @@ def lines() -> None:
         assert segs, (a, b)
         out[f"{a}-{b}"] = segs
         print(f"border {a}-{b}: {len(segs)} pieces, {sum(len(s) for s in segs)} points")
-    riv = gpd.read_file(f"zip://{NE / 'ne_10m_rivers_lake_centerlines.zip'}")
-    col = "name" if "name" in riv.columns else "name_en"
-    hel = riv.loc[riv[col].fillna("").str.contains("Helmand|Hilmand|Hirmand", case=False)]
-    assert len(hel), sorted(set(riv[col].dropna()))[:40]
+    assert hel_geoms, "no Helmand in Natural Earth's rivers"
     segs = []
-    for geom in hel.geometry:
+    for geom in hel_geoms:
         segs += [s for s in (_inside(p) for p in parts(geom)) if len(s) > 1]
     out["Helmand"] = segs
-    print(f"Helmand: {len(hel)} features, {len(segs)} pieces, {sum(len(s) for s in segs)} points; names "
-          f"{sorted(set(hel[col]))}")
-    near = riv.cx[59.0:69.5, 29.0:35.5]
-    print("rivers in the region:", sorted(set(near[col].dropna())))
+    print(f"Helmand: {len(hel_geoms)} features, {len(segs)} pieces, {sum(len(s) for s in segs)} points; names {hel_names}")
     (OUT / "lines.json").write_text(json.dumps(out))
     print("saved lines.json")
 
