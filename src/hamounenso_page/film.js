@@ -165,7 +165,7 @@ async function main() {
   });
 
   // the last words and the sources (a source may have two lines: stacked up from the bottom line)
-  const endPic = css(el("div", "chip", stage, Wd.end_pic), { top: 1176 });   // the end's full lake is 1399's, said on it
+  const endPic = css(el("div", "chip", stage, Wd.end_pic), { top: 1176 });   // the end's full lake is the hook's El Niño spring (1398), said on it
   const follow = el("div", null, stage); follow.id = "follow";
   Wd.follow.forEach(s => el("span", null, follow, s)); css(follow, { top: 1330 }); fit([...follow.children], 828, 40, 1.4);
   const srcs = {};
@@ -202,7 +202,7 @@ async function main() {
     }
     ctx.globalAlpha = 1;
     let xLine = -1, cutX = null;
-    if (cur === "hook") {                             // 1399 (after El Niño) under the line, 1400 (after La Niña) behind it
+    if (cur === "hook") {                             // 1398 (after El Niño) under the line, 1397 (after La Niña) behind it
       const wp = wipeP(seg(t, Q.wipe[0], Q.wipe[1])), xw = 1080 * (1 - wp);
       put(SA, 1);
       if (wp > 0) clipped(xw, 1080, () => put(SB, 1));
@@ -210,7 +210,7 @@ async function main() {
       if (wp > 0.002 && wp < 0.998) xLine = xw;
     } else if (cur === "tally" || cur === "why") put(SB, 1);
     else if (cur === "now") { const p = ease(seg(t, Q.pic[0], Q.pic[1])); if (p < 1) put(SB, 1); if (p > 0) put(SU, p); }
-    else {                                            // the end: 1403, then 1399 from the left (the loop's frame 0)
+    else {                                            // the end: 1403, then 1398 from the left (the loop's frame 0)
       const w2 = ease(seg(t, Q.wipe2[0], Q.wipe2[1])), xr = 1080 * w2;
       put(SU, 1);
       if (w2 > 0) clipped(0, xr, () => put(SA, 1));
@@ -279,7 +279,7 @@ async function main() {
     // the tags: the hook's two springs, the caveat's spring, frame 0's spring again at the end
     let a1 = null, s1 = "", on1 = 0, a2 = null, on2 = 0, top = 1150;
     if (cur === "hook") { a1 = SA; s1 = Wd.after_en; a2 = SB; on1 = on2 = 1 - seg(t, en("hook") - 0.3, en("hook")); }
-    else if (cur === "now") { a1 = SU; s1 = Wd.after_strong; on1 = seg(t, Q.pic[1], Q.pic[1] + 0.3) * (1 - seg(t, en("now") - 0.3, en("now"))); }
+    else if (cur === "now") { a1 = SU; s1 = Wd.after_en; on1 = seg(t, Q.pic[1], Q.pic[1] + 0.3) * (1 - seg(t, en("now") - 0.3, en("now"))); }
     else if (back) { a1 = SA; s1 = Wd.after_en; on1 = seg(t, Q.back[0] + 0.3, Q.back[0] + 0.6); }
     setTag(tagA, a1, s1, top, on1, cur === "hook" ? cutX : null, "left");
     setTag(tagB, a2, Wd.after_ln, top, on2, cutX, "right");

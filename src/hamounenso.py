@@ -27,9 +27,13 @@ camera) and the pictures; src/hamounenso_page/ draws any moment; src/onebit_hamo
   favours a wetter cold season in southwest Asia (Mariotti 2007, GRL, doi:10.1029/2007GL030078), La Niña a dry one
   more strongly than El Niño a wet one (Hoell et al. 2018, J. Climate, doi:10.1175/JCLI-D-17-0456.1). No paper links
   ENSO to the Hamoun itself: the reel says «سنجشِ ما».
-- No guarantee: spring 1403 (2024), after a strong El Niño winter (JFM ONI +1.5), had about 590 km2; FEWS NET, 22 Feb
-  2024: "An El Niño-driven boost in precipitation that was anticipated for Central Southwest Asia has fallen short"
-  (the caption). On screen the reviewed sentence of the Hamoun 2 reel, «با بارشِ مشابه، آبِ کمتری به هامون می‌رسد»:
+- The hook: spring 1398 (after El Niño, 1,581 km2) and 1397 (after La Niña, 0.1 km2), the one pair of neighbouring
+  springs whose winters are the same under ONI and RONI, JFM and DJF (16 Nov 2026: the first cut used 1399, neutral
+  under RONI, +0.10).
+- No guarantee: spring 1403 (2024), after an El Niño winter (JFM ONI +1.5, RONI +0.8: "strong" only under ONI, so not
+  said), had about 590 km2; FEWS NET, 22 Feb 2024: "An El Niño-driven boost in precipitation that was anticipated for
+  Central Southwest Asia has fallen short" (upstream October-February 99 % of its mean in CRU, 86 % in ERA5; March-April
+  122 and 155 % brought October-April to 108 and 113 %: the caption says both). On screen the reviewed sentence of the Hamoun 2 reel, «با بارشِ مشابه، آبِ کمتری به هامون می‌رسد»:
   since about 2004 the Helmand's flow at the border fell "despite large amounts of upstream precipitation" (Akbari et
   al. 2022, J. Great Lakes Res. 48:876-889, doi:10.1016/j.jglr.2022.05.004).
 
@@ -65,8 +69,9 @@ FPS = 30
 W, H = 1080, 1920
 GW, GH = h3.GW, h3.GH
 FIRST, LAST = 2000, 2026                              # the springs of 1379-1405
-HOOK = (2020, 2021)                                   # 1399 after an El Niño winter, 1400 after a La Niña winter
-BUT = 2024                                            # 1403 after a strong El Niño winter
+HOOK = (2019, 2018)                                   # 1398 after an El Niño winter, 1397 after a La Niña winter: the same
+                                                      # under ONI and RONI, JFM and DJF (1399, the first choice, is neutral under RONI)
+BUT = 2024                                            # 1403 after an El Niño winter ("strong" under ONI only: not said)
 TILE = (180, 215)                                     # px of a tile's picture (twice its size on screen)
 CLASSES = ("en", "ne", "ln")
 
@@ -98,8 +103,8 @@ def counted(rows: list) -> dict:
     p = float(fisher_exact([[d["en"], n["en"] - d["en"]], [d["ln"], n["ln"] - d["ln"]]])[1])
     assert 0.012 < p < 0.014, p
     by = {r["year"]: r for r in rows}
-    assert by[HOOK[0]]["cls"] == "en" and by[HOOK[1]]["cls"] == "ln" and by[BUT]["cls"] == "en" and by[BUT]["oni"] >= 1.5
-    assert v2.shown(by[HOOK[0]]["km2"]) == "۲٬۲۱۰" and v2.shown(by[HOOK[1]]["km2"]) == "۳" and v2.shown(by[BUT]["km2"]) == "۵۹۰"
+    assert by[HOOK[0]]["cls"] == "en" and by[HOOK[1]]["cls"] == "ln" and by[BUT]["cls"] == "en"
+    assert v2.shown(by[HOOK[0]]["km2"]) == "۱٬۵۸۰" and v2.shown(by[HOOK[1]]["km2"]) == "۰" and v2.shown(by[BUT]["km2"]) == "۵۹۰"
     en = [r["km2"] for r in rows if r["cls"] == "en"]
     print(f"springs 1379-1405 by the winter before them (JFM ONI +-0.5): El Niño {n['en']} ({d['en']} nearly dry, least "
           f"{min(en):.0f} km2), neutral {n['ne']} ({d['ne']}), La Niña {n['ln']} ({d['ln']}); Fisher p {p:.3f}")
@@ -135,6 +140,8 @@ def robustness(rows: list) -> None:
             assert de == 0, (idx, season)
             p = fisher_exact([[de, len(e) - de], [dl, len(lo) - dl]])[1]
             print(f"  {idx.upper()} {season}: El Niño {len(e)} springs ({de} nearly dry), La Niña {len(lo)} ({dl}), p {p:.3f}")
+            # the springs on screen keep their winter under every index and season (16 Nov: 1399 did not)
+            assert round(o[HOOK[0]], 2) >= 0.5 and round(o[HOOK[1]], 2) <= -0.5 and round(o[BUT], 2) >= 0.5, (idx, season)
 
 
 def rain_numbers() -> dict:
@@ -249,7 +256,7 @@ def pictures(rows: list, rebuild: bool) -> dict:
 
 NEW = dict(
     hook="ال‌نینو برای {هامون} آب می‌آورد؟", spring="بهارِ {}", unit="کیلومترمربع آبِ باز",
-    after_en="بعد از زمستانِ ال‌نینو", after_ln="بعد از زمستانِ لانینا", after_strong="بعد از زمستانِ ال‌نینوی قوی",
+    after_en="بعد از زمستانِ ال‌نینو", after_ln="بعد از زمستانِ لانینا",
     iran="ایران", afg="افغانستان", zabol="زابل", lake="هامون", river="رودِ هیرمند",
     tally1="۲۶ بهارِ هامون، از ۱۳۷۹", col_lead="زمستانِ",
     cols=("ال‌نینو", "خنثی", "لانینا"), count="{} از {}", dry="تقریباً بی‌آب",
@@ -258,7 +265,7 @@ NEW = dict(
     rows=("زمستانِ ال‌نینو", "زمستانِ لانینا"), more="{} تا {}٪ بیشتر", less="{} تا {}٪ کمتر",
     now="امسال: {ال‌نینوی قوی} // ولی تضمین نیست", now_small="با بارشِ مشابه، آبِ کمتری به هامون می‌رسد",
     end="بهارِ ۱۴۰۶ را با هم // {از فضا} می‌بینیم", follow=("برای کسی بفرستید", "که هامون را می‌شناسد"),
-    end_pic="تصویر: بهارِ {}",                         # the end's full lake is 1399 (the GO/NO-GO: never read as 1406)
+    end_pic="تصویر: بهارِ {}",                         # the end's full lake is the hook's El Niño spring, 1398 (the GO/NO-GO: never read as 1406)
     src_water="منبع: لندست (USGS)؛ مقایسه‌شده با آبِ سطحیِ JRC",
     src_map="زمینه: Sentinel-2 cloudless (EOX)؛ مرز و رود: Natural Earth",
     src_tally="سنجشِ ما: لندست؛ زمستان: شاخصِ ONI، ژانویه تا مارس (NOAA) // تقریباً بی‌آب: کمتر از ۱۰۰ کیلومترمربع آبِ باز",
@@ -291,19 +298,20 @@ def reading(words: dict, c: dict) -> None:
     Wd, S, Q = words, c["scenes"], c["cues"]
     wt = lambda xs: sum(rd.weight(x) for x in xs)        # noqa: E731
     years = [r["label"] for r in words["_rows"]]
-    tag = lambda y, sub, n: [Wd["spring"].format(y), sub, n, Wd["unit"]]   # noqa: E731
+    by = {r["year"]: r for r in words["_rows"]}
+    tag = lambda y, sub: [Wd["spring"].format(by[y]["label"]), sub, v2.shown(by[y]["km2"]), Wd["unit"]]   # noqa: E731
     counts = [Wd["count"].format(fa(0), fa(8)), Wd["count"].format(fa(4), fa(8)), Wd["count"].format(fa(6), fa(10))]
     plan = [
         ("hook", S["hook"], [Wd["hook"]],
-         [*tag("۱۳۹۹", Wd["after_en"], "۲٬۲۱۰"), *tag("۱۴۰۰", Wd["after_ln"], "۳")[:3], Wd["iran"], Wd["afg"], Wd["zabol"]],
+         [*tag(HOOK[0], Wd["after_en"]), *tag(HOOK[1], Wd["after_ln"])[:3], Wd["iran"], Wd["afg"], Wd["zabol"]],
          Q["labels"][2]),
         ("tally, first headline", (S["tally"][0], Q["swap"]), [Wd["tally1"], *counts, Wd["dry"]],
          [*(f"{Wd['col_lead']} {c}" for c in Wd["cols"]), *years], Q["cols"][2]["count"]),
         ("tally, second headline", (Q["swap"], S["tally"][1]), [Wd["tally2"]], [], Q["swap"]),
         ("why", S["why"], [Wd["why"], *Wd["rows"], Wd["rain_more"], Wd["rain_less"]],
          [Wd["river"], Wd["lake"]], Q["card"]),
-        ("now", S["now"], [Wd["now"], Wd["now_small"]], tag("۱۴۰۳", Wd["after_strong"], "۵۹۰"), Q["small"]),
-        ("end", (S["end"][0], Q["back"][0]), [Wd["end"], *Wd["follow"]], [Wd["end_pic"].format("۱۳۹۹")], Q["follow"]),
+        ("now", S["now"], [Wd["now"], Wd["now_small"]], tag(BUT, Wd["after_en"]), Q["small"]),
+        ("end", (S["end"][0], Q["back"][0]), [Wd["end"], *Wd["follow"]], [Wd["end_pic"]], Q["follow"]),
     ]
     print("\nreading (words in full + labels at half weight; seconds the rule needs, seconds given):")
     total = 0.0

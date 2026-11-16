@@ -8,7 +8,7 @@ D Esfahan (D E F G A Bb C#: twelve-tone, no koron), the mode of the Hamoun 3 sco
                 low D4; D5 with the second headline (no spring nearly without water after El Niño)
     the rain    Bb4 as the camera leaves for the mountains, F4 as the bars grow
     this year   A4 with the headline, F4 with «با بارشِ مشابه ...»
-    the end     A4 as the full lake of 1399 comes back, D5 with the call to send it on, D4 and A4 struck together,
+    the end     A4 as the hook's full lake (1398) comes back, D5 with the call to send it on, D4 and A4 struck together,
                 ringing out before the loop
     the level   -14 LUFS, true peak -1 dBTP or lower after AAC (the music is the only sound). Consonant pairs only.
 
@@ -60,7 +60,7 @@ def plan(cut: dict) -> tuple:
         (q["card"] + 0.6, 65, VEL_MARK),             # F4: the bars grow
         (sc["now"][0], 69, VEL),                     # A4: this year
         (q["small"], 65, VEL_MARK),                  # F4: with similar precipitation, less water
-        (sum(q["wipe2"]) / 2, 69, VEL),              # A4: the full lake of 1399 comes back
+        (sum(q["wipe2"]) / 2, 69, VEL),              # A4: the hook's full lake (1398) comes back
         (q["follow"], 74, VEL_SOFT),                 # D5: the call
         (ending, 62, VEL),                           # D4: the ending, an open fifth on the tonic
         (ending, 69, VEL),                           # A4
