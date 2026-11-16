@@ -156,12 +156,13 @@ async function main() {
 
   // the rain card: El Niño and La Niña winters upstream against the 40 winters' mean (CRU and ERA5 as a range)
   const card = css(el("div", "card", stage), { top: 1196 });   // ends at 1402, above the sources' three lines (1418-1538)
-  const SCALE = 25;                                   // % at the full length of a bar
+  const SCALE = 25;                                   // % at the end of a half track (the bars diverge from the mean)
   const rows = [[Wd.rows[0], Wd.rain_more, F.rain.en, col.more, 12], [Wd.rows[1], Wd.rain_less, F.rain.ln, col.less, 108]].map(([nm, txt, v, c, top]) => {
     const r = css(el("div", "row", card), { top }); const n = el("div", "name", r, nm), l = el("div", "less", r, txt); l.style.color = c;
     fit([n], 400, 30, 1.25);
     const tr = el("div", "track", r), sp = el("div", "span", tr), fl = el("div", "fill", tr); fl.style.background = c; sp.style.background = c;
-    const a = v.map(Math.abs); return { lo: Math.min(...a) / SCALE, hi: Math.max(...a) / SCALE, fl, sp };
+    css(el("div", "zero", tr), { left: "50%", width: 4, marginLeft: -2, background: col.ink });   // the 40 winters' mean
+    const a = v.map(Math.abs); return { lo: Math.min(...a) / SCALE, hi: Math.max(...a) / SCALE, fl, sp, more: v[0] > 0 };
   });
 
   // the last words and the sources (a source may have two lines: stacked up from the bottom line)
@@ -202,8 +203,8 @@ async function main() {
     }
     ctx.globalAlpha = 1;
     let xLine = -1, cutX = null;
-    if (cur === "hook") {                             // 1398 (after El Niño) under the line, 1397 (after La Niña) behind it
-      const wp = wipeP(seg(t, Q.wipe[0], Q.wipe[1])), xw = 1080 * (1 - wp);
+    if (cur === "hook") {                             // 1398 (after El Niño) under the line, 1397 (after La Niña) behind it; then back to 1398
+      const wp = wipeP(seg(t, Q.wipe[0], Q.wipe[1])) - wipeP(seg(t, Q.wipeback[0], Q.wipeback[1])), xw = 1080 * (1 - wp);
       put(SA, 1);
       if (wp > 0) clipped(xw, 1080, () => put(SB, 1));
       cutX = xw;
@@ -287,7 +288,10 @@ async function main() {
     // the rain card
     const cardOn = win(t, Q.card, en("why"), 0.4, 0.25); show(card, cardOn);
     if (cardOn > 0) { const p = ease(seg(t, Q.card + 0.4, Q.card + 1.5));
-      rows.forEach(r => { css(r.fl, { width: (100 * r.lo * p).toFixed(2) + "%" }); css(r.sp, { right: (100 * r.lo * p).toFixed(2) + "%", width: (100 * (r.hi - r.lo) * p).toFixed(2) + "%" }); }); }
+      // diverging from the mean (code review, 16 Nov: one-sided bars made «کمتر» the longer bar): more to the left, less to the right
+      rows.forEach(r => { const lo = 50 * r.lo * p, hi = 50 * r.hi * p, a = r.more ? "right" : "left", b = r.more ? "left" : "right";
+        css(r.fl, { [a]: "50%", [b]: "auto", width: lo.toFixed(2) + "%", borderRadius: 0 });
+        css(r.sp, { [a]: (50 + lo).toFixed(2) + "%", [b]: "auto", width: (hi - lo).toFixed(2) + "%" }); }); }
 
     show(follow, seg(t, Q.follow, Q.follow + 0.35) * (1 - seg(t, Q.back[0], Q.back[0] + 0.3)));
     show(endPic, cur === "end" ? seg(t, Q.wipe2[1] - 0.2, Q.wipe2[1] + 0.1) * (1 - seg(t, Q.back[0], Q.back[0] + 0.3)) : 0);

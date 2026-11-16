@@ -141,7 +141,8 @@ def robustness(rows: list) -> None:
             assert de == 0, (idx, season)
             p = fisher_exact([[de, len(e) - de], [dl, len(lo) - dl]])[1]
             print(f"  {idx.upper()} {season}: El Niño {len(e)} springs ({de} nearly dry), La Niña {len(lo)} ({dl}), p {p:.3f}")
-            # the springs on screen keep their winter under every index and season (16 Nov: 1399 did not)
+            # the PICTURED springs (the hook's two, the caveat's) keep their winter under every index and season (16 Nov:
+            # 1399 did not); the tally's tiles, counts and the rain bars rest on JFM ONI as labelled (RONI in the comment)
             assert round(o[HOOK[0]], 2) >= 0.5 and round(o[HOOK[1]], 2) <= -0.5 and round(o[BUT], 2) >= 0.5, (idx, season)
 
 
@@ -277,12 +278,14 @@ NEW = dict(
 
 def cut() -> dict:
     """The clock: five scenes, each sized by the owner's reading rule (asserted in reading())."""
-    hook, tally, why, now, end = (0.0, 7.0), (7.0, 20.4), (20.4, 28.3), (28.3, 36.9), (36.9, 44.9)
+    # the hook wipes to 1397 by 2.4 s (the skip window) and back to 1398 at 4.0-5.0 s, so each spring's tag stands about
+    # 2 s whole (code review, 16 Nov: with one wipe the El Niño spring's tag was whole for 0.8 s only)
+    hook, tally, why, now, end = (0.0, 8.0), (8.0, 21.4), (21.4, 29.3), (29.3, 37.9), (37.9, 45.9)
     t = tally[0]
     cols = []
     for k, (start, n) in enumerate(((t + 0.6, 8), (t + 2.1, 8), (t + 3.6, 10))):   # the tiles come column by column
         cols.append(dict(tiles=[round(start + 0.12 * i, 3) for i in range(n)], count=round(start + 0.12 * n + 0.25, 3)))
-    cues = dict(wipe=(0.0, 2.4), border=(3.0, 3.9), labels=(3.2, 3.35, 3.5),
+    cues = dict(wipe=(0.0, 2.4), wipeback=(4.0, 5.0), border=(2.6, 3.5), labels=(2.8, 2.95, 3.1),
                 dim=(t, t + 0.5), cols=cols, swap=round(t + 8.8, 2),             # the second headline of the tally
                 river=(why[0] + 0.6, why[0] + 2.4), card=why[0] + 1.5,
                 pic=(now[0] + 0.2, now[0] + 0.9), small=now[0] + 2.2,
@@ -305,7 +308,7 @@ def reading(words: dict, c: dict) -> None:
     plan = [
         ("hook", S["hook"], [Wd["hook"]],
          [*tag(HOOK[0], Wd["after_en"]), *tag(HOOK[1], Wd["after_ln"])[:3], Wd["iran"], Wd["afg"], Wd["zabol"]],
-         Q["labels"][2]),
+         max(Q["labels"][2], Q["wipeback"][1])),
         ("tally, first headline", (S["tally"][0], Q["swap"]), [Wd["tally1"], *counts, Wd["dry"]],
          [*(f"{Wd['col_lead']} {c}" for c in Wd["cols"]), *years], Q["cols"][2]["count"]),
         ("tally, second headline", (Q["swap"], S["tally"][1]), [Wd["tally2"]], [], Q["swap"]),

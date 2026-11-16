@@ -126,3 +126,10 @@ svg { position: absolute; left: 0; top: 0; overflow: visible; }
 /* the causes on the map: a pin's name, the arrow out of the basin */
 .arrowlab { position: absolute; font-weight: 800; font-size: 40px; line-height: 50px; white-space: nowrap; color: #fff;
   background: rgba(16, 11, 6, 0.72); border-radius: 14px; padding: 2px 16px 6px; }
+
+/* the code review of 16 Nov: the locator's dot is centred once, on the station; text that crosses the river's line
+   gets a dark ground (the close's caveat, the first line of the call, the sources) */
+#locator .dot { margin: 0; transform: translate(-50%, -50%); }
+.head .small.chip { display: inline-block; background: rgba(16, 11, 6, 0.66); border-radius: 14px; padding: 0 16px 4px; }
+#follow span:first-child { display: table; margin: 0 auto; background: rgba(16, 11, 6, 0.66); border-radius: 14px; padding: 0 18px 4px; }   /* its own line, centred */
+.sources { left: auto; right: 96px; width: auto; max-width: 828px; background: rgba(16, 11, 6, 0.5); border-radius: 10px; padding: 0 10px; }

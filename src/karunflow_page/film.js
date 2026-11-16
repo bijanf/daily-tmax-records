@@ -49,13 +49,14 @@ async function main() {
   svg("path", { d: "M0 0 L10 5 L0 10 z", fill: col.gold }, mk);
   const arrow = svg("path", { fill: "none", stroke: col.gold, "stroke-width": 9, "stroke-linecap": "round", "marker-end": "url(#head)" }, lay);
 
-  const loc = el("div", null, stage); loc.id = "locator"; loc.appendChild(IM.loc); el("div", "dot", loc);
+  const loc = el("div", null, stage); loc.id = "locator"; loc.appendChild(IM.loc);
+  css(el("div", "dot", loc), { left: F.locator.dot[0], top: F.locator.dot[1] });   // on the station (film.json), centred once
 
   const heads = {};
   [["hook", Wd.hook, []], ["low", Wd.low_head, [Wd.low_small]], ["year", Wd.year_head, []], ["why", Wd.why_head, [Wd.why_small, Wd.share]], ["close", Wd.close, [Wd.caveat]]].forEach(([name, text, smalls]) => {
     const box = el("div", "head", stage), lines = text.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
     fit(lines, 828, 58, 1.39);
-    const sm = smalls.map(s => { const e = el("span", "small", box, s); fit([e], 828, 38, 1.4); return e; });
+    const sm = smalls.map(s => { const e = el("span", "small" + (name === "close" ? " chip" : ""), box, s); fit([e], 828, 38, 1.4); return e; });
     heads[name] = { box, sm };
   });
 
@@ -105,7 +106,7 @@ async function main() {
 
   const follow = el("div", null, stage); follow.id = "follow"; Wd.follow.forEach((s, i) => el("span", i ? "gold" : null, follow, s)); fit([...follow.children], 828, 40, 1.4);
   const src = { gauge: el("div", "sources", stage, Wd.src_gauge), map: el("div", "sources", stage, Wd.src_map), why: el("div", "sources", stage, Wd.src_why) };
-  Object.values(src).forEach(e => fit([e], 888, 22, 1.25));
+  Object.values(src).forEach(e => fit([e], 808, 22, 1.25));         // 828 less the ground's padding
 
   window.renderAt = async function (t0) { draw(clamp(t0, 0, END)); };
 
@@ -159,7 +160,7 @@ async function main() {
     css(lakeDot, { left: qd[0], top: qd[1] }); show(lakeDot, lakeOn);
     css(lakeLab, { left: Math.max(96 + lakeLab.offsetWidth / 2, qd[0] - 24 - lakeLab.offsetWidth / 2), top: qd[1] + 50 }); show(lakeLab, lakeOn);
     const aOn = whyOn * seg(t, Q.transfer, Q.transfer + 0.4), grow = ease(seg(t, Q.transfer, Q.transfer + 0.6));
-    const A0 = [905, 660], A1 = [975, 585];                           // out of the basin to the east, below the headline, inside x 984
+    const A0 = [900, 662], A1 = [962, 594];                           // out of the basin to the east, below the headline, inside x 984
     arrow.setAttribute("d", `M${A0[0]} ${A0[1]} L${lerp(A0[0], A1[0], grow).toFixed(1)} ${lerp(A0[1], A1[1], grow).toFixed(1)}`);
     arrow.setAttribute("opacity", aOn.toFixed(3));
     css(transferLab, { left: A0[0] - transferLab.offsetWidth - 18, top: A0[1] - 22 }); show(transferLab, aOn);

@@ -50,6 +50,7 @@ def plan(cut: dict) -> tuple:
         (0.00, 74, VEL_SOFT),                        # D5: soft, the first sound (frame 0 is not silent)
         (0.45, 69, VEL),                             # A4: the line moves
         (sum(q["wipe"]) / 2 + 0.05, 62, VEL),        # D4: the water goes (the spring after La Niña)
+        (q["wipeback"][1], 74, VEL_MARK),            # D5: the water back (the El Niño spring again)
         (q["border"][1], 65, VEL_SOFT),              # F4: the border is drawn
         (sc["tally"][0], 74, VEL_SOFT),              # D5: into the springs
         (q["cols"][0]["count"], 77, VEL_MARK),       # F5: after El Niño, none nearly without water
@@ -144,11 +145,15 @@ def main() -> None:
     after = os.stat(video)
     if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
         fails.append("(e) the silent reel was rewritten")
-    # the loudness each second: no stretch of digital silence (the 12 Nov lesson: print it after every score)
+    # the loudness in every one-second window (0.1-s steps): no stretch of digital silence (the 12 Nov lesson; code
+    # review of 16 Nov: whole seconds alone missed a 1.4-s gap)
     mono = m.mean(axis=1)
-    rms = [20 * np.log10(np.sqrt(np.mean(mono[int(s * SR):int((s + 1) * SR)] ** 2)) + 1e-12) for s in range(int(end))]
-    print("(f) RMS per second (dBFS): " + " ".join(f"{r:.0f}" for r in rms))
-    if min(rms[:-1]) < -70:
+    hop = SR // 10
+    rms = [20 * np.log10(np.sqrt(np.mean(mono[k:k + SR] ** 2)) + 1e-12) for k in range(0, len(mono) - SR, hop)]
+    last = int((end - 1.5) * 10)                                             # the ending's fade is allowed to go quiet
+    low = min(rms[:last])
+    print(f"(f) quietest one-second window before the ending: {low:.1f} dBFS at {rms.index(low) / 10:.1f} s (limit -70)")
+    if low < -70:
         fails.append("(f) a silent second")
     print("saved", wav, "\nsaved", mp4)
     if fails:

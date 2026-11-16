@@ -38,6 +38,7 @@ Ahvaz (they take their water below the gauge), shares of the causes, a rain-agai
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import sys
 from pathlib import Path
@@ -168,8 +169,10 @@ def rain() -> dict:
     for f in sorted(glob.glob(str(ROOT / "data" / "water" / "cru_ts4.10.*.pre.dat.nc"))):
         ds = xr.open_dataset(f).sel(lon=slice(w, e), lat=slice(s, n))
         parts.append(ds["pre"].weighted(np.cos(np.radians(ds.lat))).mean(("lat", "lon")).to_series())
+    assert len(parts) >= 12, len(parts)                                      # CRU TS 4.10, 1901-2025, decade files
     p = pd.concat(parts).sort_index()
     p = p[~p.index.duplicated()]
+    assert p.index.min().year <= 1950 and p.index.max().year >= 2016, (p.index.min(), p.index.max())
     p = p[p.index.month.isin([10, 11, 12, 1, 2, 3, 4])]
     g = p.groupby(wy(p.index))
     oa = g.sum()[g.size() == 7]
@@ -179,13 +182,36 @@ def rain() -> dict:
     return dict(before=b, after=a)
 
 
+def locator_dot(k: dict) -> list:
+    """Where the station is on the corner locator: the locator is zoom frame k["locator"]["frame"] (centred on the lake
+    box, not on Ahvaz), so the dot is put by zoomkit's forward projection (the satellite page's zproj), in the frame's
+    centre square as the 228-px picture inside the locator's border shows it (code review, 16 Nov: the dot sat at the
+    picture's centre and, centred twice, 12 px off that)."""
+    Z, i, BA = k["zoom"], k["locator"]["frame"], k["grids"]["gotvand"]["box"]
+    lon, lat = karun.AHVAZ
+    d2r = math.pi / 180
+    Sz, wE = Z["S"][i], Z["wE"][i]
+    p, dl, p0 = lat * d2r, (lon - Z["lon0"]) * d2r, Z["lat0"] * d2r
+    xo = 540 + Sz * Z["R"] * math.cos(p) * math.sin(dl)
+    yo = 960 - Sz * Z["R"] * (math.cos(p0) * math.sin(p) - math.sin(p0) * math.cos(p) * math.cos(dl))
+    srel = Sz / Z["s1"]
+    xe = 540 + (lon - Z["lon0"]) / (BA[2] - BA[0]) * Z["base"] * srel * W
+    ye = 960 - (lat - Z["lat0"]) / (BA[3] - BA[1]) * Z["base"] * srel * H
+    x, y = (1 - wE) * xo + wE * xe, (1 - wE) * yo + wE * ye
+    side = 228                                                               # 236 px less the 4-px border on each side
+    dot = [round(x * side / W, 1), round((y - (H - W) / 2) * side / W, 1)]
+    print(f"locator: Ahvaz at frame {i}: ({x:.1f}, {y:.1f}) px of the frame -> ({dot[0]}, {dot[1]}) in the {side}-px picture (its centre {side / 2})")
+    assert 0 < dot[0] < side and 0 < dot[1] < side, dot
+    return dot
+
+
 def assets() -> dict:
     """The map of the river and the corner locator, as the satellite cut built them (src/karun.py)."""
     k = json.loads((karun.BUILD / "film.json").read_text(encoding="utf-8"))
     BUILD.mkdir(parents=True, exist_ok=True)
     for f in (k["card"]["file"], k["locator"]["file"]):
         shutil.copy2(karun.BUILD / f, BUILD / f)
-    return dict(card=k["card"], locator=k["locator"])
+    return dict(card=k["card"], locator=dict(k["locator"], dot=locator_dot(k)))
 
 
 NEW = dict(
@@ -207,7 +233,7 @@ def cut() -> dict:
     low = (hook[1], hook[1] + 7.3)
     year = (low[1], low[1] + 6.6)
     why = (year[1], year[1] + 9.3)
-    close = (why[1], why[1] + 7.4)
+    close = (why[1], why[1] + 8.3)
     back = (close[1] - 0.7, close[1])
     return dict(
         scenes=dict(hook=hook, low=low, year=year, why=why, close=close), end=close[1], cover_t=2.6,                              # both bars and the half mark (frame 0 has the first bar)
@@ -228,7 +254,7 @@ def reading(Wd: dict, c: dict, labels: dict) -> None:
         ("low", S["low"], [Wd["low_head"], Wd["low_small"]], [*labels["pair"], *labels["pair_n"]], Q["low_small"]),
         ("year", S["year"], [Wd["year_head"]], [*Wd["seasons"], *labels["legend"]], Q["spring"]),
         ("why", S["why"], [Wd["why_head"], Wd["why_small"], Wd["share"]], [Wd["lake"], Wd["transfer"]], Q["share"]),
-        ("close", (S["close"][0], Q["back"][0]), [Wd["close"], *Wd["follow"]], [labels["caveat"]], Q["follow"]),
+        ("close", (S["close"][0], Q["back"][0]), [Wd["close"], *Wd["follow"], labels["caveat"]], [], Q["follow"]),   # the caveat is a sentence, read in full
     ]
     print("\nreading (words in full + labels at half weight; seconds the rule needs, seconds given):")
     total = 0.0
@@ -255,7 +281,6 @@ def main() -> None:
     labels = dict(pair=[label(p) for p in pair], pair_n=[fa(r10(p["mean"])) for p in pair], legend=legend, caveat=caveat)
     words = dict(NEW, low_head=low_head, caveat=caveat, legend=legend)
     reading(words, c, labels)
-    k = json.loads((karun.BUILD / "film.json").read_text(encoding="utf-8"))
     film = dict(
         fps=FPS, size=[W, H], cut=c, end=c["end"], cover_t=c["cover_t"], card=A["card"], locator=A["locator"], words=words,
         pair=[dict(label=label(p), value=r10(p["mean"]), shown=fa(r10(p["mean"]))) for p in pair],
@@ -265,7 +290,6 @@ def main() -> None:
         colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", river="#49c0ff", before="#3F8FBF", after="#D9573B"),
         rain=dict(before=round(rn["before"]), after=round(rn["after"])),
     )
-    assert k["card"]["box"] == A["card"]["box"]
     (BUILD / "film.json").write_text(json.dumps(film, ensure_ascii=False, indent=1), encoding="utf-8")
     print("saved", BUILD / "film.json", "| end", c["end"])
 
