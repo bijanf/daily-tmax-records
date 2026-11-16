@@ -12,8 +12,10 @@ film shows what appeared along it:
 - downstream, south of Ahvaz, the watered fields (green in late summer, when nothing has rained since spring): the
   cane units of the development plan and other irrigated crops, where 1369 has bare plain.
 
-The film opens on the whole Earth and falls to the lake (zoomkit.py; the mosaic it falls through is of 2016, so it
-lands on the lake as it is now and the wipe runs BACK to 1369, then forward again). Between the two places a map of
+Since 16 Nov 2026 (the owner, after the Hoor reel stalled: the first 3 s are Instagram's skip window) the film opens
+on the lake as it is now and wipes BACK to 1369 within 2 s, then forward again; the zoom from the globe is gone from the
+opening: a corner locator (one zoomkit frame over Iran, its outline, a gold dot on the dam) says where the lake is
+from frame 0, and the film ends on frame 0's picture (the first cut, b1320e3, opened with a 3-s zoom). Between the two places a map of
 the river (the same mosaic, the Karun's line from OpenStreetMap) carries a marker down the river. The causes are
 named without shares (fact check of 16 Nov 2026: no source gives shares; the transfers' volumes are disputed).
 
@@ -137,18 +139,30 @@ def card(tones: np.ndarray) -> dict:
                 km_fields=float(km[i_fields] - km[i_dam]))
 
 
+def locator_png(zoom: dict) -> dict:
+    """The corner locator: one frame of the zoom at the scale of the country (just before its rest over Iran), a square
+    about the frame's centre, which is the lake (zoomkit centres every frame on the place)."""
+    i = max(0, int(round((zoomkit.DWELL[0] - 0.05) * FPS)))
+    src = BUILD / zoom["dir"] / f"z{i:03d}.jpg"
+    im = Image.open(src).convert("RGB")
+    assert im.size == (W, H), im.size
+    side = W
+    box = (0, H // 2 - side // 2, W, H // 2 + side // 2)
+    im.crop(box).resize((300, 300), Image.LANCZOS).save(BUILD / "locator.jpg", quality=92)
+    print(f"locator: zoom frame {i} ({src.name}), the centre square {side} px -> 300 px")
+    return dict(file="locator.jpg", frame=i)
+
+
 def clock_of() -> dict:
-    Z = zoomkit.ZOOM_T
-    a = (Z, 12.6)                                    # the lake
+    Z = 0.0                                          # no zoom in the opening (16 Nov 2026): the lake from frame 0
+    a = (Z, 11.7)                                    # the lake: now, back to 1369 by 1.9 s, forward again
     c = (a[1], a[1] + 3.4)                           # the map: down the river
     b = (c[1], c[1] + 8.4)                           # the fields
     why = (b[1], b[1] + 5.5)
     end = (why[1], why[1] + 7.5)
     out = (end[1], end[1] + 0.8)
-    return dict(zoom=Z, hook=(0.0, 4.4), a=a, card=c, b=b, why=why, close=end, out=out, end=out[1], cover=Z + 0.4,
-                far=(zoomkit.DWELL[0] - 0.18, zoomkit.DWELL[0] + 0.02, zoomkit.DWELL[1], zoomkit.DWELL[1] + 0.25),
-                pin=(Z - 0.65, Z - 0.25), land=(Z - 0.4, Z - 0.05),
-                head_a=4.4, a_back=(5.6, 6.9), a_fwd=(8.6, 9.9),
+    return dict(zoom=Z, hook=(0.0, 5.0), a=a, card=c, b=b, why=why, close=end, out=out, end=out[1], cover=0.0,
+                head_a=5.0, a_back=(0.4, 1.9), a_fwd=(8.0, 9.3), locator=(0.0, 5.6),
                 head_b=b[0], b_back=(b[0] + 1.4, b[0] + 2.7), b_fwd=(b[0] + 4.2, b[0] + 5.5),
                 share=why[0] + 0.8, follow=end[0] + 2.4, back=(end[0], end[0] + 0.6))
 
@@ -159,7 +173,7 @@ def reading(Wd: dict, C: dict) -> None:
     wt = lambda xs: sum(rd.weight(x) for x in xs)    # noqa: E731
     tag = [Wd["summer"].format("۱۴۰۵"), "۹۱", Wd["unit_a"], Wd["summer"].format("۱۳۶۹"), "۳"]
     tagb = [Wd["summer"].format("۱۴۰۵"), "۱٬۰۰۰", Wd["unit_b"], Wd["summer"].format("۱۳۶۹"), "۶۰"]
-    plan = [("hook", C["hook"], [Wd["hook"]], [Wd["iran"], Wd["gulf"], Wd["karun"], Wd["dam"]], C["far"][1]),
+    plan = [("hook", C["hook"], [Wd["hook"]], [*tag, Wd["dam"]], C["a_back"][1]),
             ("lake", (C["head_a"], C["a"][1]), [Wd["head_a"], Wd["small_a"]], [*tag, Wd["dam"]], sum(C["a_fwd"]) / 2),
             ("map", C["card"], [Wd["head_c"]], [Wd["dam"], Wd["ahvaz"], Wd["river"]], C["card"][0] + 0.4),
             ("fields", C["b"], [Wd["head_b"], Wd["small_b"]], [*tagb, Wd["river"]], sum(C["b_fwd"]) / 2),
@@ -181,6 +195,7 @@ def main() -> None:
     zoomkit.configure(place)
     zoom = zoomkit.build()
     crd = card(zoomkit.tones())
+    locator = locator_png(zoom)
     r10 = lambda v: round(v / 10) * 10               # noqa: E731
     words = dict(
         hook="آبِ {کارون} کجا می‌رود؟", summer="تابستانِ {}", iran="ایران", gulf="خلیجِ فارس", karun="کارون",
@@ -200,7 +215,7 @@ def main() -> None:
                 fields={str(BEFORE): dict(year=fa(solar(BEFORE)), n=fa(r10(n["fields_then"]))), str(NOW): dict(year=fa(solar(NOW)), n=fa(r10(n["fields_now"])))})
     clock = clock_of()
     reading(words, clock)
-    film = dict(fps=FPS, size=[W, H], clock=clock, end=clock["end"], cover_t=clock["cover"], zoom=zoom, grids=grids, card=crd,
+    film = dict(fps=FPS, size=[W, H], clock=clock, end=clock["end"], cover_t=clock["cover"], zoom=zoom, grids=grids, card=crd, locator=locator,
                 before=BEFORE, now=NOW, tags=tags, numbers=n, words=words,
                 places=dict(dam=DAM, ahvaz=AHVAZ, river_b=(48.385, 31.035), iran_far=(54.3, 32.4), gulf=(51.0, 27.2)),
                 colours=dict(wet="#1c5cab", gold="#F6C445", ink="#1d140c", paper="#FBF7F0", river="#49c0ff"))

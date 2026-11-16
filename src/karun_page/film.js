@@ -1,9 +1,9 @@
 /* «آبِ کارون کجا می‌رود؟»: window.renderAt(t) draws the frame of time t (seconds) from /build/film.json, which
    src/karun.py writes (every string, number, the clock, the colours). Every frame is a pure function of t.
-   The film: a zoom from the whole Earth to the Gotvand lake (pictures drawn by src/zoomkit.py, /build/zoom/z000.jpg ...),
-   the lake now, wiped back to 1369 and forward again; a map of the river with a marker running down it; the fields
-   south of Ahvaz now, wiped back to 1369 and forward again; the causes; the closing question; the zoom backwards.
-   renderAt loads the zoom frame it needs and returns a promise that resolves when the frame is drawn. */
+   The film (since 16 Nov 2026): the Gotvand lake now from frame 0 with a corner locator, wiped back to 1369 within 2 s
+   (the skip window) and forward again; a map of the river with a marker running down it; the fields
+   south of Ahvaz now, wiped back to 1369 and forward again; the causes; the closing question; frame 0 again (the loop).
+   The zoom's pictures (src/zoomkit.py) are no longer drawn: one of them is the locator. */
 "use strict";
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const seg = (t, a, b) => clamp((t - a) / (b - a));
@@ -34,7 +34,7 @@ async function main() {
   const load = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("no picture " + src)); im.src = "/build/" + src; });
   const IM = {};
   await Promise.all([["a" + THEN, `p_gotvand_${THEN}.jpg`], ["a" + NOW, `p_gotvand_${NOW}.jpg`], ["b" + THEN, `p_fields_${THEN}.jpg`], ["b" + NOW, `p_fields_${NOW}.jpg`],
-    ["card", CD.file]].map(async ([k, f]) => { IM[k] = await load(f); }));
+    ["card", CD.file], ["loc", F.locator.file]].map(async ([k, f]) => { IM[k] = await load(f); }));
   await Promise.all(['900 88px "Vazirmatn"', '900 60px "Vazirmatn"', '800 48px "Vazirmatn"', '700 48px "Vazirmatn"', '500 32px "Vazirmatn"', '400 118px "Lalezar"'].map(f => document.fonts.load(f, "کارون ۱۴۰۵")));
 
   // the places: each picture is the frame (1080 x 1920) at scale 1; a slow push m about the frame's centre
@@ -68,6 +68,8 @@ async function main() {
   const riverLine = svg("path", { fill: "none", stroke: col.river, "stroke-width": 6, "stroke-linecap": "round", "stroke-linejoin": "round" }, riverG);
   const riverDone = svg("path", { fill: "none", stroke: col.gold, "stroke-width": 8, "stroke-linecap": "round", "stroke-linejoin": "round" }, riverG);
   const wipe = el("div", null, stage); wipe.id = "wipe";
+  // the corner locator: where the lake is (Iran's outline, a gold dot on the dam), from frame 0 through the hook
+  const loc = el("div", null, stage); loc.id = "locator"; loc.appendChild(IM.loc); el("div", "dot", loc);
 
   const heads = {};
   [["hook", Wd.hook, null], ["a", Wd.head_a, Wd.small_a], ["c", Wd.head_c, null], ["b", Wd.head_b, Wd.small_b], ["why", Wd.why, Wd.share], ["close", Wd.close, null]].forEach(([name, text, small]) => {
@@ -103,20 +105,15 @@ async function main() {
   const wipeX = (t, back, fwd) => t < back[0] ? 1080 : t < fwd[0] ? 1080 * (1 - ease(seg(t, back[0], back[1]))) : 1080 * ease(seg(t, fwd[0], fwd[1]));
 
   window.renderAt = async function (t0) {
-    const t = clamp(t0, 0, END);
-    let zi = -1;
-    if (t < Z.t) zi = Math.min(Z.n - 1, Math.round(t * F.fps));
-    else if (t >= C.out[0]) zi = zAtScale(Math.exp(lerp(Math.log(Z.S[Z.n - 1]), Math.log(Z.S[0]), ease(seg(t, C.out[0], C.out[1] - 1 / F.fps)))));   // the film's last frame is the globe of frame 0
-    const zim = zi >= 0 ? await zframe(zi) : t < Z.t + 0.2 ? await zframe(Z.n - 1) : null;
-    draw(t, zi, zim);
+    draw(clamp(t0, 0, END), -1, null);              // no zoom frames: the lake from frame 0, frame 0 again at the end
   };
 
   function draw(t, zi, zim) {
-    const zt = zi >= 0 ? zi / F.fps : Z.t, back = t >= C.out[0];   // the zoom's own clock of the frame on screen
+    const zt = zi >= 0 ? zi / F.fps : Z.t, back = t >= C.out[0];   // back: the last frames, frame 0 again
     ctx.fillStyle = "#17110b"; ctx.fillRect(0, 0, 1080, 1920);
     // which scene: z (a zoom frame), a (the lake), c (the map), b (the fields; the causes stand on it), e (the lake again, the close)
-    const inA = t >= Z.t && t < C.card[0], inC = t >= C.card[0] && t < C.b[0], inB = t >= C.b[0] && t < C.close[0], inE = t >= C.close[0] && t < C.out[0];
-    const sq = x => x * x, mA = 1 + 0.045 * sq(Math.sin(Math.PI * seg(t, Z.t, C.a[1]))), mB = 1 + 0.045 * sq(Math.sin(Math.PI * seg(t, C.b[0], C.close[0] + 0.6))), mC = 1 + 0.05 * seg(t, C.card[0], C.card[1]);
+    const inA = t >= C.zoom && t < C.card[0], inC = t >= C.card[0] && t < C.b[0], inB = t >= C.b[0] && t < C.close[0], inE = t >= C.close[0] && t < C.out[0];
+    const sq = x => x * x, mA = 1 + 0.045 * sq(Math.sin(Math.PI * seg(t, C.zoom, C.a[1]))), mB = 1 + 0.045 * sq(Math.sin(Math.PI * seg(t, C.b[0], C.close[0] + 0.6))), mC = 1 + 0.05 * seg(t, C.card[0], C.card[1]);
     let xA = 1080, xB = 1080, wx = -1;
     const dC0 = seg(t, C.card[0], C.card[0] + 0.4), dC1 = seg(t, C.card[1] - 0.4, C.card[1]), dE = seg(t, C.back[0], C.back[1]);   // the dissolves
     if (zi >= 0) { ctx.drawImage(zim, 0, 0, 1080, 1920); }
@@ -147,12 +144,12 @@ async function main() {
     tagN.textContent = TG[stop][yr].n;
     tagU.textContent = stop === "fields" ? Wd.unit_b : Wd.unit_a;
     css(tag, { top: 1290 });
-    show(tag, back ? 0 : zi >= 0 ? seg(zt, Z.t - 0.3, Z.t) : inA ? 1 - seg(t, C.a[1] - 0.3, C.a[1]) : inB ? win(t, C.b[0] + 0.3, C.b[1], 0.3, 0.3) : inE ? dE * (1 - seg(t, C.follow - 0.4, C.follow - 0.1)) : 0);
+    show(tag, back ? seg(t, C.out[0], C.out[0] + 0.3) : zi >= 0 ? seg(zt, Z.t - 0.3, Z.t) : inA ? 1 - seg(t, C.a[1] - 0.3, C.a[1]) : inB ? win(t, C.b[0] + 0.3, C.b[1], 0.3, 0.3) : inE ? dE * (1 - seg(t, C.follow - 0.4, C.follow - 0.1)) : 0);
 
     // the names on the pictures
     const put = (e, q, o, dx = 0, dy = 0) => { const hw = e.offsetWidth / 2; css(e, { left: clamp(q[0] + dx, 96 + hw, 984 - hw), top: q[1] + dy }); show(e, o); };
     const pA = zi >= 0 ? (lon, lat) => zproj(zi, lon, lat) : proj(BOX.a, inE ? 1 : mA);
-    const damOn = zi >= 0 ? seg(zt, C.land[0], C.land[1]) : inA ? 1 - seg(t, C.a[1] - 0.3, C.a[1]) : inE ? dE : 0;
+    const damOn = back ? 1 : inA ? 1 - seg(t, C.a[1] - 0.3, C.a[1]) : inE ? dE : 0;
     const qd = pA(P.dam[0], P.dam[1]);
     css(dots.dam, { left: qd[0], top: qd[1] }); show(dots.dam, damOn); put(L.dam, qd, damOn, -150, -44);
     const pB = proj(BOX.b, mB), riverOn = inB ? win(t, C.b[0] + 0.5, C.close[0], 0.3, 0.3) : 0;
@@ -175,16 +172,17 @@ async function main() {
     show(dots.cdam, cOn); show(dots.cahvaz, cOn); show(dots.marker, cOn);
 
     // the zoom's own words (functions of the zoom's clock, so the zoom back out ends on frame 0's picture)
-    const farOn = zi >= 0 && !back ? seg(zt, C.far[0], C.far[1]) * (1 - seg(zt, C.far[2], C.far[3])) : 0;
+    const farOn = 0;
     for (const key in FAR) { const q = zi >= 0 ? zproj(zi, P[key][0], P[key][1]) : [0, 0]; css(FAR[key], { left: q[0], top: q[1] }); show(FAR[key], farOn); }
     const pinOn = zi >= 0 ? 1 - seg(zt, C.pin[0], C.pin[1]) : 0, ph = (zt / 0.9) % 1, rr = 40 + 80 * ph;
     show(pin, pinOn); css(pinRing, { width: rr, height: rr }); show(pinRing, pinOn * (1 - ph));
     // the name stands above the pin: below it, it sat on the head of the Gulf and the pin read as coastal
-    css(pinName, { left: 540, top: 960 - 74 }); show(pinName, zi >= 0 ? 1 - seg(zt, C.far[2] + 0.15, C.far[3] + 0.15) : 0);
+    css(pinName, { left: 540, top: 960 - 74 }); show(pinName, 0);
 
     // the sources
-    show(src.zoom, zi >= 0 ? 1 - seg(zt, Z.t - 0.45, Z.t - 0.2) : 0);
-    show(src.pic, zi >= 0 ? seg(zt, Z.t - 0.2, Z.t) : inA ? 1 - seg(t, C.a[1] - 0.3, C.a[1]) : inB ? win(t, C.b[0] + 0.3, C.b[1], 0.3, 0.3) : inE ? dE : 0);
+    show(src.zoom, 0);
+    show(loc, Math.max(win(t, 0, C.locator[1], 0.3, 0.4), back ? seg(t, C.out[0], C.out[0] + 0.3) : 0));
+    show(src.pic, back ? 1 : inA ? 1 - seg(t, C.a[1] - 0.3, C.a[1]) : inB ? win(t, C.b[0] + 0.3, C.b[1], 0.3, 0.3) : inE ? dE : 0);
     show(src.card, cOn);
     show(src.why, win(t, C.why[0], C.why[1]));
   }

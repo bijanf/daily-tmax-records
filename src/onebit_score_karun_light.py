@@ -1,7 +1,7 @@
 """The light score of the Karun reel (karun_fa; no narration): the light score's setar and checks
 (onebit_score_air_light.py, imported, not copied), on the clock that src/karun.py writes into film.json, in G Mahur
-(G A B C D E F#). Few notes, each on a cue: a soft D5 at 0.00 s on the Earth, the zoom's two falls and its rest over
-Iran, the landing on the lake; each wipe back to 1369 falls to G4 and each wipe forward rises again (the fields' return
+(G A B C D E F#). Few notes, each on a cue: a soft D5 at 0.00 s on the lake (since 16 Nov 2026 the film opens on it,
+no zoom), the wipe back to 1369 within 2 s, a soft B4 in the hook's hold; each wipe back to 1369 falls to G4 and each wipe forward rises again (the fields' return
 ends on G5, the highest note, once); the map, the causes, the close, the call, and the ending, G4 and D5 struck together.
     the level     -14 LUFS, true peak -1 dBTP or lower after AAC (the music is the only sound).
 
@@ -37,17 +37,13 @@ def score_notes(film: dict) -> tuple:
     c = film["clock"]
     end = film["end"]
     ending = end - 2.2
-    z, far = c["zoom"], c["far"]
     ab, af, bb, bf = c["a_back"], c["a_fwd"], c["b_back"], c["b_fwd"]
     plan = (
-        (0.00, 74, VEL_SOFT),                        # D5: soft, the first sound: the Earth
-        (0.50, 71, VEL_MARK),                        # B4: the fall towards the region ...
-        (far[1], 67, VEL),                           # G4: ... and the rest over Iran (the names)
-        (far[2] - 0.1, 71, VEL_MARK),                # B4: the fall to the lake begins
-        (z, 67, VEL),                                # G4: the landing on the lake
-        (c["head_a"], 74, VEL),                      # D5: "this lake"
+        (0.00, 74, VEL_SOFT),                        # D5: soft, the first sound: the lake now
         (ab[0], 71, VEL_MARK),                       # B4: the wipe back starts ...
-        (ab[1], 67, VEL),                            # G4: ... 1369, no lake
+        (ab[1], 67, VEL),                            # G4: ... 1369, no lake (within the skip window)
+        ((ab[1] + c["head_a"]) / 2, 71, VEL_MARK),   # B4: the hook's hold
+        (c["head_a"], 74, VEL),                      # D5: "this lake"
         (af[0], 71, VEL_MARK),                       # B4: forward again ...
         (af[1], 74, VEL),                            # D5: ... the lake
         (c["card"][0] + 0.3, 67, VEL),               # G4: the map
@@ -63,6 +59,13 @@ def score_notes(film: dict) -> tuple:
         (c["follow"], 71, VEL),                      # B4: the call
         (ending, 67, VEL),                           # G4: the ending, an open fifth on the tonic
         (ending, 74, VEL),                           # D5
+        # one soft note in each long reading hold (the 12 Nov lesson: no second of digital silence; G, B, D only)
+        (c["head_a"] + 1.6, 67, VEL_MARK),           # G4: "this lake" holds
+        (af[1] + 1.5, 71, VEL_MARK),                 # B4: the lake again, before the map
+        (bf[1] + 1.6, 74, VEL_MARK),                 # D5: the fields, before the causes
+        (c["share"] + 1.9, 74, VEL_MARK),            # D5: the causes hold
+        (c["share"] + 3.7, 71, VEL_MARK),            # B4
+        (c["follow"] + 1.8, 67, VEL_MARK),           # G4: the call holds
     )
     allnotes = sorted(plan, key=lambda p: p[0])
     assert all(m % 12 in MODE for _, m, _ in allnotes), "every note is in G Mahur"
