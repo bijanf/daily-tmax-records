@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import get_hoor as gh  # noqa: E402
 
 OUT = gh.OUT / "zoom"
-UA = {"User-Agent": "daily-tmax-records/hoor (research reel)"}
+UA = {"User-Agent": "reel-map-fetch/1.0"}
 WMS = ("https://tiles.maps.eox.at/wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=s2cloudless&STYLES="
        "&SRS=EPSG:4326&BBOX={},{},{},{}&WIDTH={}&HEIGHT={}&FORMAT=image/jpeg")
 LON0, LAT0 = (gh.BOX[0] + gh.BOX[2]) / 2, (gh.BOX[1] + gh.BOX[3]) / 2          # the frame's centre
