@@ -75,6 +75,7 @@ def plan(cut: dict) -> tuple:
         (q["small"] + 2.1, 74, VEL_MARK),            # D5
         (q["small"] + 4.1, 69, VEL_MARK),            # A4
         (q["small"] + 6.0, 65, VEL_MARK),            # F4
+        (q["follow"] + 1.6, 69, VEL_MARK),           # A4: the call holds (the sliding check found 1.4 s of silence here)
     )
 
 
