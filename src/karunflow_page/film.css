@@ -104,7 +104,8 @@ svg { position: absolute; left: 0; top: 0; overflow: visible; }
   white-space: nowrap; color: #fdf6e6; }
 #panel .bar { position: absolute; top: 6px; height: 58px; border-radius: 10px; }
 #panel .val { position: absolute; top: 0; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 66px; line-height: 70px;
-  white-space: nowrap; color: var(--gold); transform: translateX(-100%); }
+  white-space: nowrap; color: var(--gold); transform: translateX(-100%); z-index: 3; background: rgba(16, 11, 6, 0.94);
+  border-radius: 12px; padding: 0 10px; }   /* above the 400 line, which runs through it (GO/NO-GO, 16 Nov) */
 #panel .unit { position: absolute; left: 30px; top: 24px; font-weight: 700; font-size: 32px; line-height: 40px; color: #f3ead8; }
 #panel .tick { position: absolute; top: 84px; width: 0; height: 172px; border-left: 4px dashed var(--gold); }
 #panel .ticklab { position: absolute; font-weight: 900; font-size: 36px; line-height: 44px; white-space: nowrap; color: var(--ink);

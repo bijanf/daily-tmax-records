@@ -159,7 +159,7 @@ async function main() {
     css(lakeDot, { left: qd[0], top: qd[1] }); show(lakeDot, lakeOn);
     css(lakeLab, { left: Math.max(96 + lakeLab.offsetWidth / 2, qd[0] - 24 - lakeLab.offsetWidth / 2), top: qd[1] + 50 }); show(lakeLab, lakeOn);
     const aOn = whyOn * seg(t, Q.transfer, Q.transfer + 0.4), grow = ease(seg(t, Q.transfer, Q.transfer + 0.6));
-    const A0 = [952, 640], A1 = [1046, 560];                          // out of the basin to the east, below the headline
+    const A0 = [905, 660], A1 = [975, 585];                           // out of the basin to the east, below the headline, inside x 984
     arrow.setAttribute("d", `M${A0[0]} ${A0[1]} L${lerp(A0[0], A1[0], grow).toFixed(1)} ${lerp(A0[1], A1[1], grow).toFixed(1)}`);
     arrow.setAttribute("opacity", aOn.toFixed(3));
     css(transferLab, { left: A0[0] - transferLab.offsetWidth - 18, top: A0[1] - 22 }); show(transferLab, aOn);
