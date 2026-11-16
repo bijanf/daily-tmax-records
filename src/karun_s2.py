@@ -10,6 +10,11 @@ no-data, saturated, cloud, cirrus or snow, and not shadow unless the pixel is wa
 averaged into the 30-m grid cells (B03, B04, B08 from 10 m; B11 from 20 m). A date counts when at least 90 % of the
 polygon is clear.
 
+The reader (band) stays inside each file: a boundless read with a smaller out_shape drops the resampling (every pixel
+a nearest pick) and shifts the 20-m bands by about a pixel, which read the lake 3 to 5 % too small (found by the review
+of 16 Nov 2026). With it corrected: green land within 3 % of Landsat in 2023-2026; the lake 86, 84, 64, 93 km2 against
+Landsat's 91, 91, 73, 92 (2 to 5 % smaller on near-same days; 2025's date is 25 days later in the drawdown).
+
     data/karun/s2.csv     place, date, clear share, km2
 
     python -I src/karun_s2.py
@@ -26,7 +31,7 @@ import rasterio
 from rasterio.crs import CRS
 from rasterio.env import Env
 from rasterio.warp import Resampling, reproject, transform_bounds
-from rasterio.windows import from_bounds
+from rasterio.windows import Window, from_bounds
 from shapely.geometry import Polygon, shape
 from shapely.ops import unary_union
 
@@ -64,9 +69,12 @@ def band(feats: list, key: str, name: str, resampling) -> np.ndarray:
         with Env(**dr.ENV), rasterio.open(dr.signed(f["assets"][key]["href"])) as src:
             bb = transform_bounds(CRS.from_epsg(4326), src.crs, *b, densify_pts=21)
             win = from_bounds(*bb, transform=src.transform).round_offsets(op="floor").round_lengths(op="ceil")
-            k = max(1, round(gk.M / abs(src.transform.a)))                # read near the grid's own 30 m (the file's overviews),
-            shape_ = (max(1, int(win.height) // k), max(1, int(win.width) // k))   # not the 10-m pixels: a tenth of the download
-            arr = src.read(1, window=win, boundless=True, fill_value=0, out_shape=shape_,
+            win = win.intersection(Window(0, 0, src.width, src.height))    # inside the file: a boundless read drops the
+            if win.width < 1 or win.height < 1:                            # resampling and shifts a decimated array
+                continue
+            k = 3 if abs(src.transform.a) < 15 else 1                      # 10-m bands at 30 m (the file's overviews, averaged);
+            shape_ = (max(1, int(win.height) // k), max(1, int(win.width) // k))   # the 20-m bands and SCL as they are
+            arr = src.read(1, window=win, out_shape=shape_,
                            resampling=Resampling.nearest if key == "SCL" else Resampling.average).astype(np.float32)
             st, crs = src.window_transform(win) * rasterio.Affine.scale(win.width / shape_[1], win.height / shape_[0]), src.crs
         arr[arr == 0] = np.nan
