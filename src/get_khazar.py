@@ -4,8 +4,8 @@ THE PICTURES. NASA's daily corrected-reflectance mosaics (GIBS / Worldview, Web 
 late summers (1 August to 30 September) of 2001-2026. One sensor per year: MODIS on Terra for 2001-2019 (a stable
 10:30 orbit in those years) and VIIRS on NOAA-20 from 2020 (Terra's orbit drifts after 2020: its 2026 pictures are
 washed out by glint). For every day of the window a small picture is scored (the share without data, the share that
-is bright and grey: cloud), the clearest days are fetched at full size, and a year's picture is the median of them
-per pixel and band (true colour, and the infrared composite that tells open water from salt and land: MODIS bands
+is bright and grey: cloud), the clearest days are fetched at full size (twelve for the north-east, five elsewhere), and a year's picture is the
+median of them per pixel and band (true colour, and the infrared composite that tells open water from salt and land: MODIS bands
 7-2-1, VIIRS bands M11-I2-I1).
 
     frames (9:16 in Web Mercator):  ne    the north-east shelf (Kazakhstan's coast, the Ural's mouth, Kaydak)
@@ -52,7 +52,10 @@ R = 6378137.0
 YEARS = range(2001, 2027)
 WINDOW = ("08-01", "09-30")
 SWITCH = 2020                                            # from this year VIIRS on NOAA-20; before it MODIS on Terra
-N_BEST = 5                                               # days in a year's median picture
+N_BEST = dict(ne=12, sea=5, south=5)                     # days in a year's median picture. Twelve for the north-east, where the
+# shore itself moves from day to day (wind on a flat shelf, and the sea's fall from August to September): on single days
+# of one late summer the open water of the measured rectangle ranges over about 0.35-0.65 of 2001's, and five days can
+# all fall in one low episode (the first build's 2024: 0.39 against 0.48 from twelve days)
 GIBS = ("https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1"
         "&LAYERS={}&STYLES=&SRS=EPSG:3857&BBOX={},{},{},{}&WIDTH={}&HEIGHT={}&FORMAT=image/jpeg&TIME={}")
 GIBS_STATIC = ("https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1"
@@ -151,11 +154,11 @@ def probe(names: tuple = ("ne", "sea", "south")) -> None:
               {int(y): int(((g.nodata < 0.002) & (g.cloud < 0.05)).sum()) for y, g in df.groupby(df.day.str[:4])}, flush=True)
 
 
-def best(name: str, year: int, n: int = N_BEST) -> list:
+def best(name: str, year: int, n: int | None = None) -> list:
     """The clearest days of a year's window: no swath gap, the least cloud."""
     df = pd.read_csv(OUT / f"probe_{name}.csv")
     g = df[(df.day.str[:4] == str(year)) & (df.nodata < 0.002)].sort_values("cloud")
-    return list(g.day.head(n))
+    return list(g.day.head(n or N_BEST[name]))
 
 
 def _day(job):
@@ -166,7 +169,7 @@ def _day(job):
     return path
 
 
-def year_picture(name: str, year: int, n: int = N_BEST) -> dict:
+def year_picture(name: str, year: int, n: int | None = None) -> dict:
     """The median of the clearest days, per pixel and band: true colour and the infrared composite."""
     (OUT / "days").mkdir(parents=True, exist_ok=True)
     tc, ir = layers(year)

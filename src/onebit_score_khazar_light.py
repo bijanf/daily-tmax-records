@@ -3,8 +3,8 @@
 E, G and B only (every pair that rings together is consonant; the mode's other notes are not used). A soft E5 on the
 first picture; the wipe back to 2001 falls to E4 and the wipe forward rises to E5 again; through the run of the
 summers the notes fall as the sea does and the last summer is struck on E5; a note on the first dam and on the last;
-the river's four low years on E5; the sea's peak of 1374 on E5 and the way down after it; a note on each line that
-arrives and a soft note in each reading hold (no second of digital silence: check f); the ending, E4 and B4 struck
+the river's four low years on E5; the sea's peak of 1374 on E5 and the way down after it; rising notes with the
+vapour; a note on each line that arrives and a soft note in each reading hold (no second of digital silence: check f); the ending, E4 and B4 struck
 together, rings out before the loop. The two cuts share one clock, so the music is the same.
     the level     -14 LUFS, true peak -1 dBTP or lower after AAC (the music is the only sound).
 
@@ -66,7 +66,7 @@ def score_notes(film: dict) -> tuple:
         (pins[10], E5, VEL),                         # the last dam
         (pins[10] + 1.4, B4, VEL_MARK),
         (c["e"][0], E4, VEL),                        # the river's years
-        (c["small_e"], G4, VEL_MARK),                # where it is measured
+        (c["e"][0] + 1.6, G4, VEL_MARK),             # the columns grow
         (c["bars"][1], B4, VEL_MARK),                # the columns stand
         (c["late"], E5, VEL),                        # the four low years
         (c["late"] + 1.6, G4, VEL_MARK),
@@ -79,9 +79,9 @@ def score_notes(film: dict) -> tuple:
         (peak + 4.1, B4, VEL_MARK),
         (c["g"][0], E4, VEL),                        # why
         (c["small_g"], G4, VEL_MARK),                # the shares are open
-        (c["chip_g"], B4, VEL),                      # Iran's own river
-        (c["chip_g"] + 1.6, E5, VEL_MARK),
-        (c["chip_g"] + 3.2, G4, VEL_MARK),
+        (c["small_g"] + 1.0, B4, VEL),               # the vapour rises ...
+        (c["small_g"] + 2.5, E5, VEL_MARK),
+        (c["small_g"] + 4.0, G4, VEL_MARK),
         (c["h"][0], E5, VEL),                        # the question
         (c["follow"], B4, VEL),                      # the call
         (c["follow"] + 1.3, G4, VEL_MARK),

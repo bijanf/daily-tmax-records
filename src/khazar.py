@@ -17,11 +17,11 @@ files):
               by 2024 Makhachkala and Anzali were back within 15 cm of 1977. NASA altimetry agrees on the fall
               (1995-2024: 2.43 m against Makhachkala's 2.37 m) and gives the newest years.
   the north   NASA's daily pictures (MODIS on Terra to 2019, VIIRS on NOAA-20 from 2020), the median of each late
-              summer's five clearest days; open water = dark in the near and the shortwave infrared. In the rectangle
-              of Court et al. 2025 (45.27-47.12 N, 52.05-53.43 E) the open water of 2022 is 0.61 of 2001's (the paper:
-              0.605) and that of 2026 is 0.53 (the paper for 2024: 0.54): about half. Single summers swing with the
-              wind on this flat shelf (2024 reads 0.39), so no yearly area runs on screen: the running number is the
-              sea's level.
+              summer's twelve clearest days; open water = dark in the near and the shortwave infrared. In the
+              rectangle of Court et al. 2025 (45.27-47.12 N, 52.05-53.43 E) the open-water AREA of 2022 and of 2026
+              is measured against 2001's (the paper: 0.605 for 2022, 0.54 for 2024): about half. On single days of
+              one late summer it ranges over about 0.35-0.65 (wind on a flat shelf, and the fall from August to
+              September), so no yearly area runs on screen: the running number is the sea's level.
   the causes  Chen et al. 2017 (more evaporation over the sea, dominant) against Duku et al. 2026 (less inflow, mainly
               the Volga): both on screen, the shares left open.
 
@@ -122,8 +122,10 @@ def numbers() -> dict:
     assert n["volga_years"] == 84 and (n["volga_first"], n["volga_last"]) == (1938, 2024), n       # «میانگینِ ۸۴ سال»، «۱۳۱۷ تا ۱۴۰۳»
     assert 0.875 < n["volga_ratio"] < 0.885, n               # «۱۲٪ کمتر» than the 84-year average
     assert 0.77 < n["volga_ratio_rise"] < 0.80, n            # 78 % of 1978-1995 (caption)
+    assert 1.10 < rise_years / mean < 1.16, n                # «ولگا پرآب»: 1978-1995 carried about 13 % more than the 84-year average
+    assert 2.40 <= n["rise_makh"] <= 2.60, n                 # «حدودِ ۲ متر و نیم»: Makhachkala, the gauge the card's line shows
     assert all(200 < x < 215 for x in n["volga_late_years"]), n     # four low years, each still above 200 km3: not shut
-    assert 2.35 < n["rise_four"] < 2.50 and 2.35 < n["rise_anzali"] < 2.45, n     # «۲٫۴ متر بالا آمد»
+    assert 2.35 < n["rise_four"] < 2.50 and 2.35 < n["rise_anzali"] < 2.45, n     # the four-gauge mean and Anzali (caption, first comment)
     assert abs(n["back_makh"]) < 0.2 and abs(n["back_anzali"]) < 0.2, n           # «تا ۱۴۰۳: برگشت به حدودِ سطحِ ۱۳۵۶»
     assert abs(n["alt_fall_2024"] - n["fall_makh_2024"]) < 0.12, n                # the altimetry and the gauge agree on the fall
     assert -2.25 < level[LAST] < -1.85, level[LAST]          # «حدودِ ۲ متر»
@@ -238,7 +240,8 @@ def other_pictures() -> dict:
     x0, y0 = px(b[0], b[3])
     x1, y1 = px(b[2], b[1])
     return dict(wide=dict(file="wide.jpg", box=list(gk.FRAMES["wide"]["box"])), south=dict(file="south.jpg", box=list(gk.FRAMES["south"]["box"])),
-                locator=dict(file="locator.jpg", frame=[x0 / 390, y0 / 693, x1 / 390, y1 / 693], iran=[px(53.2, 35.9)[0] / 390, px(53.2, 35.9)[1] / 693]))
+                locator=dict(file="locator.jpg", frame=[x0 / 390, max(0.012, y0 / 693), x1 / 390, y1 / 693],      # the film's frame reaches a little north of this picture
+                             iran=[px(53.2, 35.9)[0] / 390, px(53.2, 35.9)[1] / 693]))
 
 
 def rivers() -> dict:
@@ -272,12 +275,12 @@ def rivers() -> dict:
 # ---------------------------------------------------------------- the clock, the words, the reading rule
 
 def clock_of() -> dict:
-    a = (0.0, 7.6)                                   # the north-east: now, back to 2001 by 1.7 s, forward again by 3.7 s; the ruler
-    b = (a[1], a[1] + 6.8)                           # every late summer 2001-2026, the level running; the rectangle
-    c = (b[1], b[1] + 7.8)                           # the Volga on the map; its dams in the order they were built
-    e = (c[1], c[1] + 7.8)                           # the river's 84 years
-    f = (e[1], e[1] + 7.8)                           # Iran's coast: the rise of 1356-1374
-    g = (f[1], f[1] + 7.2)                           # why it falls
+    a = (0.0, 7.4)                                   # the north-east: now, back to 2001 by 1.7 s, forward again by 3.7 s; the ruler
+    b = (a[1], a[1] + 7.4)                           # every late summer 2001-2026, the level running; the rectangle
+    c = (b[1], b[1] + 7.0)                           # the Volga on the map; its dams in the order they were built
+    e = (c[1], c[1] + 6.8)                           # the river's 84 years
+    f = (e[1], e[1] + 8.0)                           # Iran's coast: the rise of 1356-1374
+    g = (f[1], f[1] + 6.8)                           # why it falls
     h = (g[1], g[1] + 5.0)                           # the north-east again: the question
     out = (h[1], h[1] + 0.8)
     run0 = b[0] + 0.9
@@ -285,12 +288,12 @@ def clock_of() -> dict:
     years = [round(run0 + i * step, 3) for i in range(LAST - FIRST + 1)]
     pins0 = c[0] + 2.6
     return dict(a=a, b=b, c=c, e=e, f=f, g=g, h=h, out=out, end=round(out[1], 3), cover=0.0,
-                a_back=(0.5, 1.7), a_fwd=(2.5, 3.7), ruler=4.1, locator=(0.0, a[1] - 0.3),
+                a_back=(0.5, 1.7), a_fwd=(2.5, 3.7), ruler=3.9, locator=(0.0, a[1] - 0.3),
                 rect=b[0] + 0.4, years=years, river=(c[0] + 0.4, c[0] + 2.4), chip_c=c[0] + 1.0,
                 pins=[round(pins0 + i * 0.25, 3) for i in range(len(DAMS))],
-                card=(e[0] + 0.3, f[1] - 0.2), bars=(e[0] + 0.6, e[0] + 2.8), late=e[0] + 3.2, small_e=e[0] + 1.6,
+                card=(e[0] + 0.3, f[1] - 0.2), bars=(e[0] + 0.6, e[0] + 2.8), late=e[0] + 3.2,
                 line=(f[0] + 0.9, f[0] + 3.2), small_f=f[0] + 1.4,
-                small_g=g[0] + 1.4, chip_g=g[0] + 2.2, follow=h[0] + 1.2)
+                small_g=g[0] + 1.4, vapour=g[0] + 0.6, follow=h[0] + 1.2)
 
 
 def reading(Wd: dict, C: dict) -> None:
@@ -301,9 +304,9 @@ def reading(Wd: dict, C: dict) -> None:
     plan = [("hook", C["a"], [max((Wd["hook_a"], Wd["hook_b"]), key=rd.weight)], [Wd["tag_now"], Wd["tag_then"], Wd["shore"], Wd["ruler"], Wd["loc_iran"]], C["ruler"]),
             ("run", C["b"], [Wd["head_b"]], [Wd["unit_b"], Wd["rect"], "۱۴۰۵", "۲٫۱"], C["rect"]),
             ("volga", C["c"], [Wd["head_c"]], [Wd["chip_c"], Wd["russia"], Wd["kazakhstan"], Wd["sea"], "۱۳۵۹"], C["chip_c"]),
-            ("flow", C["e"], [Wd["head_e"], Wd["small_e"]], [Wd["leg_bar"], Wd["leg_mean"], Wd["late"], Wd["tick0"], Wd["tick1"]], C["late"]),
-            ("rise", C["f"], [Wd["head_f"], Wd["small_f"]], [Wd["leg_line"], Wd["gilan"], Wd["mazandaran"]], C["small_f"]),
-            ("why", C["g"], [Wd["head_g"], Wd["small_g"]], [Wd["chip_g"]], C["chip_g"]),
+            ("flow", C["e"], [Wd["head_e"]], [Wd["leg_up"], Wd["leg_down"], Wd["leg_unit"], Wd["leg_mean"], Wd["late"], Wd["tick0"]], C["late"]),
+            ("rise", C["f"], [Wd["head_f"], Wd["small_f"]], [Wd["leg_line"], Wd["gilan"], Wd["mazandaran"], Wd["y_low"], Wd["y_high"]], C["small_f"]),   # the colour key was read in the scene before
+            ("why", C["g"], [Wd["head_g"], Wd["small_g"]], [Wd["vapour"]], C["small_g"]),
             ("close", C["h"], [Wd["head_h"], Wd["follow"]], [], C["follow"])]
     print("\nreading (seconds the rule needs, seconds given):")
     short, total = [], 0.0
@@ -323,31 +326,30 @@ def words_of(n: dict, m: dict) -> dict:
     less = round(100 * (1 - n["volga_ratio"]))
     lev = abs(n["level"][LAST])
     return dict(
-        hook_a="روسیه جلوی آبِ خزر را گرفته؟ // جاهایی {بیش از ۵۰ کیلومتر} عقب‌تر",
-        hook_b="آبِ خزر کجا رفت؟ // جاهایی {بیش از ۵۰ کیلومتر} عقب‌تر",
+        hook_a="روسیه جلوی آبِ خزر را گرفته؟ // ساحل، جاهایی {بیش از ۵۰ کیلومتر} عقب‌تر",      # the owner's decision; not rendered without his yes
+        hook_b="آبِ خزر کجا رفت؟ // ساحل، جاهایی {بیش از ۵۰ کیلومتر} عقب‌تر",
         tag_now=f"تابستانِ {fa(persian(LAST))}", tag_then=f"تابستانِ {fa(persian(FIRST))}",
         shore=f"ساحلِ {fa(persian(FIRST))}", ruler="۵۰ کیلومتر", loc_iran="ایران",
-        head_b=f"{{{fa(round(lev))} متر}} افتِ سطحِ دریا: // {{نیمی}} از آبِ این کادر رفت",
+        head_b=f"{{{fa(round(lev))} متر}} افتِ سطحِ دریا: // {{حدودِ نیمی}} از پهنه‌ی آبیِ این کادر رفت",
         unit_b=f"سطحِ دریا نسبت به {fa(persian(FIRST))}", metre="متر", rect="این کادر",
         head_c=f"می‌گویند ولگا را بسته‌اند. // آخرین سدِ بزرگش: {{{fa(persian(2026) - persian(1980))} سال پیش}}",
         chip_c="ولگا: حدودِ ۸۰٪ // آبِ رودهای خزر", russia="روسیه", kazakhstan="قزاقستان", sea="دریای خزر",
-        head_e=f"ولگا بسته نشده؛ // اما {{{fa(less)}٪ کمتر}} آب می‌آورد",
-        small_e="اندازه‌گیری: پایین‌تر از آخرین سد",
-        leg_bar="هر ستون: یک سال", leg_mean=f"میانگین: {fa(round(n['volga_mean']))} کیلومترمکعب",
+        head_e=f"آبِ ولگا قطع نشده؛ // {{{fa(less)}٪ کمتر}} از میانگینِ {fa(n['volga_years'])} سال",
+        leg_up="بالای میانگین", leg_down="زیرِ میانگین", leg_unit="کیلومترمکعب در سال", leg_mean=f"میانگین: {fa(round(n['volga_mean']))}",
         late=f"{fa(persian(2021))} تا {fa(persian(2024))}: {fa(round(late))}", tick0=fa(persian(1938)), tick1=fa(persian(2024)),
-        head_f=f"با همین سدها، {fa(persian(1977))} تا {fa(persian(1995))}: // دریا {{{fa(f'{n['rise_four']:.1f}')} متر بالا آمد}}",
+        head_f=f"{fa(persian(1977))} تا {fa(persian(1995))}: ولگا پرآب، // دریا {{حدودِ ۲ متر و نیم}} بالاتر",
         small_f="خانه‌های ساحلی آسیبِ شدید دیدند",
-        leg_line="خط: سطحِ دریا", y_low=fa(persian(1977)), y_high=fa(persian(1995)),
+        leg_line="سطحِ دریا", y_low=fa(persian(1977)), y_high=fa(persian(1995)),
         gilan="گیلان", mazandaran="مازندران",
-        head_g="چرا پایین می‌رود؟ // {رودها کمتر، تبخیر بیشتر}", small_g="سهمِ هر کدام هنوز بحث دارد",
-        chip_g=f"سفیدرودِ ایران هم: {fa(round(100 * n['sefid'][2]))}٪ کمتر",
+        head_g="چرا پایین می‌رود؟ // {آبِ رودها کمتر، تبخیر بیشتر}", small_g="سهمِ هر کدام هنوز بحث دارد",
+        vapour="تبخیر",
         head_h="بالا آمدنِ دریا را // {یادتان هست؟}", follow="برای یک شمالی بفرستید",
         src_a="تصویر: MODIS و VIIRS، ناسا // عقب‌نشینی: Court و همکاران ۲۰۲۵؛ سنجش روی همین تصویرها",
-        src_b="سطحِ دریا: ارتفاع‌سنجیِ ماهواره‌ای، ناسا // آبِ کادر: سنجش روی همین تصویرها؛ Court و همکاران ۲۰۲۵",
+        src_b="سطحِ دریا: ارتفاع‌سنجیِ ماهواره‌ای، ناسا // پهنه‌ی آب: سنجش روی همین تصویرها؛ Court و همکاران ۲۰۲۵",
         src_c="سدها: ۱۱ نیروگاهِ آبیِ ولگا و کاما؛ نقشه: Blue Marble، ناسا",
-        src_e=f"داده: کمیته‌ی آب‌وهواشناسیِ پنج کشورِ خزر (CASPCOM)، {fa(persian(1938))} تا {fa(persian(2024))}",
-        src_f="سطحِ دریا: ایستگاه‌های CASPCOM // آسیب: Kakroodi و همکاران ۲۰۱۵",
-        src_g="Chen و همکاران ۲۰۱۷؛ Duku و همکاران ۲۰۲۶ // سفیدرود: CASPCOM",
+        src_e=f"داده: کمیته‌ی آب‌وهواشناسیِ پنج کشورِ خزر (CASPCOM) // ایستگاه: سرِ دلتا، پایین‌تر از همه‌ی سدها؛ {fa(persian(1938))} تا {fa(persian(2024))}",
+        src_f="سطحِ دریا: ایستگاهِ ماخاچ‌قلعه، CASPCOM // آسیب: Kakroodi و همکاران ۲۰۱۵",
+        src_g="Chen و همکاران ۲۰۱۷؛ Duku و همکاران ۲۰۲۶ // Court و همکاران ۲۰۲۵",
         src_h="منابع در کامنتِ اول",
     )
 
@@ -370,11 +372,11 @@ def main() -> None:
     ruler = [[52.28, 45.42], [52.28 + 50.0 / km_lon, 45.42]]
     film = dict(fps=FPS, size=[W, H], clock=clock, end=clock["end"], cover_t=clock["cover"], numbers=n, measure=m, words=words,
                 ne=ne, run=run, wide=oth["wide"], south=oth["south"], locator=oth["locator"], rivers=riv, chart=num["chart"],
-                dams=[dict(lon=d[1], lat=d[2], year=d[3], label=fa(persian(d[3]))) for d in sorted(DAMS, key=lambda d: d[3])],
+                dams=[dict(lon=d[1], lat=d[2], year=d[3], label=fa(persian(d[3])), at="left" if d[0].startswith("Volga") else "above")
+                      for d in sorted(DAMS, key=lambda d: d[3])],
                 rect=list(COURT["box"]), ruler=ruler,
                 places=dict(shore=(53.55, 46.05), russia=(42.0, 54.2), kazakhstan=(53.6, 48.2), sea_wide=(51.0, 46.6),
-                            chip_c=(49.3, 50.3), gilan=(49.5, 37.1), mazandaran=(52.6, 36.78),
-                            sefid=(49.94, 37.47)),
+                            chip_c=(49.3, 50.3), gilan=(49.5, 37.1), mazandaran=(52.6, 36.78), vapour=(49.75, 38.42)),
                 colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", river="#49c0ff", wet="#1c5cab", dry="#B5763A", pin="#FF8A1F"))
     assert abs(b[3] - 48.78) < 0.01
     (BUILD / "film.json").write_text(json.dumps(film, ensure_ascii=False, indent=1), encoding="utf-8")

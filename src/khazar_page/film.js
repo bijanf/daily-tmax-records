@@ -5,8 +5,8 @@
    The scenes: a the north-east now with the shore of 2001 as a gold line, wiped back to 2001 and forward again, a
    50-km ruler; b every late summer 2001-2026 with the sea's level running and the rectangle of the published
    measurement; c the Volga drawn on the map, its dams in the order they began to work; e the river's 84 years as
-   columns against their average; f Iran's coast and the sea's level under the same columns; g why it falls; h the
-   north-east again and the question; then frame 0 again (the loop). */
+   columns against their average; f Iran's coast and the sea's level under the same columns; g why it falls (drawn
+   vapour over the sea); h the north-east again and the question; then frame 0 again (the loop). */
 "use strict";
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const seg = (t, a, b) => clamp((t - a) / (b - a));
@@ -52,7 +52,7 @@ async function main() {
   // a picture is the frame at scale 1 (Web Mercator); a slow push m about the frame's centre; lon/lat to the frame under that push
   const proj = (box, m) => { const y0 = MERC(box[3]), y1 = MERC(box[1]); return (lon, lat) => [540 + m * 1080 * ((lon - box[0]) / (box[2] - box[0]) - 0.5), 960 + m * 1920 * ((y0 - MERC(lat)) / (y0 - y1) - 0.5)]; };
   const push = (name, t) => name === "a" ? 1 + 0.04 * Math.pow(Math.sin(Math.PI * seg(t, 0, C.a[1])), 2)
-    : name === "b" || name === "h" ? 1
+    : name === "b" ? 1 : name === "h" ? 1 + 0.03 * seg(t, C.h[0], C.out[0])
     : name === "c" || name === "e" ? 1 + 0.05 * seg(t, C.c[0], C.e[1] + DIS)
     : 1 + 0.05 * seg(t, C.f[0], C.g[1] + DIS);
 
@@ -84,9 +84,9 @@ async function main() {
   const rulerLine = svg("path", { fill: "none", stroke: "#fff", "stroke-width": 7, "stroke-linecap": "round" }, rulerG);
   // scene g: water leaving the sea's surface
   const wispG = svg("g", {}, lay);
-  svg("rect", { x: 0, y: 560, width: 1080, height: 900 }, svg("clipPath", { id: "seazone" }, defs));
+  svg("rect", { x: 0, y: 648, width: 1080, height: 820 }, svg("clipPath", { id: "seazone" }, defs));      // the vapour keeps below the small line
   wispG.setAttribute("clip-path", "url(#seazone)");
-  const WISPS = [[50.2, 38.75], [51.1, 38.9], [52.0, 38.8], [52.9, 38.7], [50.7, 38.2], [51.6, 38.3], [52.5, 38.2], [53.3, 38.1], [51.0, 37.6], [51.9, 37.65], [52.8, 37.55], [50.3, 37.9], [53.4, 37.45], [52.3, 37.2]];
+  const WISPS = [[50.9, 38.2], [51.8, 38.15], [52.7, 38.2], [53.5, 38.05], [50.5, 37.7], [51.4, 37.75], [52.3, 37.7], [53.2, 37.65], [51.0, 37.25], [51.9, 37.2], [52.8, 37.15], [53.6, 37.25], [50.1, 38.05]];
   const wisps = WISPS.map(() => [svg("path", { fill: "none", stroke: "rgba(8,26,52,0.6)", "stroke-width": 18, "stroke-linecap": "round", "stroke-linejoin": "round", opacity: 0 }, wispG),
     svg("path", { fill: "none", stroke: "#fff", "stroke-width": 9, "stroke-linecap": "round", "stroke-linejoin": "round", opacity: 0 }, wispG)]);
   const wipe = el("div", null, stage); wipe.id = "wipe";
@@ -99,9 +99,9 @@ async function main() {
 
   // the headlines: one box a scene (the hook is scene a's), a small line under some
   const heads = {};
-  [["a", HOOK, null], ["b", Wd.head_b, null], ["c", Wd.head_c, null], ["e", Wd.head_e, Wd.small_e], ["f", Wd.head_f, Wd.small_f], ["g", Wd.head_g, Wd.small_g], ["h", Wd.head_h, null]].forEach(([name, text, small]) => {
+  [["a", HOOK, null], ["b", Wd.head_b, null], ["c", Wd.head_c, null], ["e", Wd.head_e, null], ["f", Wd.head_f, Wd.small_f], ["g", Wd.head_g, Wd.small_g], ["h", Wd.head_h, null]].forEach(([name, text, small]) => {
     const box = el("div", "head", stage), lines = text.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
-    lines.forEach(l => fit([l], WIDE, 56, 1.42));         // each line by itself: a short line keeps its size
+    lines.forEach(l => fit([l], WIDE, 50, 1.42));         // each line by itself: a short line keeps its size
     const sm = small ? el("span", "small", box, small) : null; if (sm) fit([sm], WIDE, 40, 1.4);
     heads[name] = { box, sm };
   });
@@ -115,18 +115,17 @@ async function main() {
     ["c", chip(Wd.russia, "land"), "russia", 0, 0], ["c", chip(Wd.kazakhstan, "land"), "kazakhstan", 0, 0], ["c", chip(Wd.sea, "land sea"), "sea_wide", 0, 0],
     ["e", chip(Wd.russia, "land"), "russia", 0, 0],
     ["f", chip(Wd.gilan, "land"), "gilan", 0, 0], ["f", chip(Wd.mazandaran, "land"), "mazandaran", 0, 0]];
-  const rulerChip = chip(Wd.ruler), rectChip = chip(Wd.rect), chipC = chip("", "chip water"), chipG = chip(Wd.chip_g), yearChip = chip("", "chip year");
+  const rulerChip = chip(Wd.ruler), rectChip = chip(Wd.rect), chipC = chip("", "chip water"), vapourChip = chip(Wd.vapour, "chip water"), yearChip = chip("", "chip year");
   Wd.chip_c.split(" // ").forEach(s => el("span", null, chipC, s));
-  const markG = el("div", "mark", stage);
 
   // the card (scenes e and f): the Volga's years as columns against their average; under them the sea's level
   const CH = F.chart, NY = CH.years.length, PX0 = 26, PW = 776, PITCH = PW / NY, BARW = 6.2, VMAX = 340;
   const xOf = k => PX0 + PW - (k + 0.5) * PITCH;         // the years run from the right to the left, as the words do
   const card = el("div", null, stage); card.id = "card";
   const legE = el("div", "legend", card), legF = el("div", "legend", card);
-  const item = (leg, tg, text) => { const it = el("span", null, leg); el(tg, null, it); it.appendChild(document.createTextNode(text)); };
-  item(legE, "i", Wd.leg_bar); item(legE, "b", Wd.leg_mean);
-  item(legF, "i", Wd.leg_bar); item(legF, "u", Wd.leg_line);
+  const item = (leg, tg, text, cls) => { const it = el("span", null, leg); el(tg, cls || null, it); it.appendChild(document.createTextNode(text)); };
+  item(legE, "i", Wd.leg_up); item(legE, "i", Wd.leg_down, "dry"); el("span", null, legE, Wd.leg_unit);  // the two colours, the columns' unit
+  item(legF, "i", Wd.leg_up); item(legF, "i", Wd.leg_down, "dry"); item(legF, "u", Wd.leg_line);
   const cs = svg("svg", { width: 828, height: 410, viewBox: "0 0 828 410" }, card);
   const band = svg("rect", { fill: col.gold, opacity: 0 }, cs);
   const bars = CH.flow.map((v, k) => svg("rect", { x: xOf(k) - BARW / 2, width: BARW, rx: 1.6, fill: v === null ? "none" : v >= CH.mean ? col.wet : col.dry }, cs));
@@ -140,6 +139,8 @@ async function main() {
   const tickLow = css(el("div", "tick", card, Wd.y_low), { left: xOf(kOf(CH.low)), transform: "translateX(-50%)" });
   const tickHigh = css(el("div", "tick", card, Wd.y_high), { left: xOf(kOf(CH.high)), transform: "translateX(-50%)" });
   const lateNote = css(el("div", "tick late", card, Wd.late), { left: 26 });
+  const noteE = css(el("div", "tick mean", card), { left: 500, transform: "translateX(-50%)" });   // the dashed line's value, beside the four years' value
+  el("b", null, noteE); noteE.appendChild(document.createTextNode(Wd.leg_mean));
   const LV = CH.level.filter(v => v !== null), LMIN = Math.min(...LV) - 8, LMAX = Math.max(...LV) + 8;
 
   const follow = el("div", null, stage); follow.id = "follow"; el("span", null, follow, Wd.follow);
@@ -192,7 +193,6 @@ async function main() {
       show(heads[k].box, on[k]);
       heads[k].box.style.transform = k === "a" || back ? "none" : `translateY(${(14 * (1 - ease(seg(t, C[k][0] + 0.15, C[k][0] + 0.45)))).toFixed(1)}px)`;
     });
-    show(heads.e.sm, seg(t, C.small_e, C.small_e + 0.3));
     show(heads.f.sm, seg(t, C.small_f, C.small_f + 0.3));
     show(heads.g.sm, seg(t, C.small_g, C.small_g + 0.3));
     show(follow, back ? on.h : win(t, C.follow, C.h[1] + 1, 0.35, 0.3));
@@ -247,7 +247,8 @@ async function main() {
         if (t >= C.pins[j]) newest = j;
         core.setAttribute("cx", q[0].toFixed(1)); core.setAttribute("cy", q[1].toFixed(1)); core.setAttribute("opacity", o.toFixed(3));
         ring.setAttribute("cx", q[0].toFixed(1)); ring.setAttribute("cy", q[1].toFixed(1)); ring.setAttribute("r", (16 + 26 * pulse).toFixed(1)); ring.setAttribute("opacity", (o * (1 - pulse)).toFixed(3)); });
-      if (newest >= 0 && on.c > 0.001) { yearChip.textContent = F.dams[newest].label; const q = p(F.dams[newest].lon, F.dams[newest].lat); put(yearChip, q, on.c, -96, -8); }
+      if (newest >= 0 && on.c > 0.001) { const dm = F.dams[newest]; yearChip.textContent = dm.label; const q = p(dm.lon, dm.lat);
+        put(yearChip, q, on.c, dm.at === "left" ? -96 : 0, dm.at === "left" ? -8 : -58); }                // above its own dot (left of it where a chip stands above)
       else show(yearChip, 0);
       put(chipC, p(P.chip_c[0], P.chip_c[1]), on.c * seg(t, C.chip_c, C.chip_c + 0.35), 0, 0, 924);
     } else { show(yearChip, 0); show(chipC, 0); }
@@ -268,7 +269,7 @@ async function main() {
       const hl = TALL * Math.max(...CH.flow.slice(k0, k1 + 1)) / VMAX;
       lateBox.setAttribute("x", (xOf(k1) - BARW / 2 - 5).toFixed(1)); lateBox.setAttribute("width", (xOf(k0) - xOf(k1) + BARW + 10).toFixed(1));
       lateBox.setAttribute("y", (BASE - hl - 6).toFixed(1)); lateBox.setAttribute("height", (hl + 10).toFixed(1)); lateBox.setAttribute("opacity", lo.toFixed(3));
-      show(lateNote, lo);
+      show(lateNote, lo); show(noteE, shOut * seg(t, C.bars[1] - 0.3, C.bars[1]));
       show(legE, shOut); show(legF, shIn);
       // the years of the rise: a band over both rows; the sea's level as a line, drawn from the first year to the last
       const r0 = kOf(CH.low), r1 = kOf(CH.high);
@@ -284,16 +285,15 @@ async function main() {
       show(tick0, 1); show(tick1, Math.max(1 - seg(t, C.late - 0.25, C.late), shIn)); show(tickLow, shIn); show(tickHigh, shIn);
     }
 
-    // scene g: the sea's water leaving as vapour (drawn wisps that rise and fade), and Iran's own largest river into the sea
+    // scene g: the sea's water leaving as vapour (drawn lines that rise and fade), with its name
     const gOn = on.g;
     wispG.setAttribute("opacity", gOn.toFixed(3));
     if (gOn > 0.001) {
-      wisps.forEach((pair, j) => { const q = pr.g(WISPS[j][0], WISPS[j][1]), u = ((t - C.g[0]) / 2.4 + j * 0.37) % 1, y = q[1] + 40 - 120 * u, x = q[0], a = Math.min(1, 2.2 * Math.sin(Math.PI * u));
+      wisps.forEach((pair, j) => { const q = pr.g(WISPS[j][0], WISPS[j][1]), u = ((t - C.g[0]) / 2.4 + j * 0.37) % 1, y = q[1] + 40 - 96 * u, x = q[0], a = Math.min(1, 2.2 * Math.sin(Math.PI * u)) * seg(y - 32, 652, 700);   // whole or not there: none is cut at the small line
         const d = `M${x.toFixed(1)} ${(y + 76).toFixed(1)}c-30 -19 30 -33 0 -52s30 -33 0 -52M${(x - 22).toFixed(1)} ${(y - 6).toFixed(1)}l22 -26l22 26`;   // a rising, waving line with an arrow's tip
         pair.forEach((w, n) => { w.setAttribute("d", d); w.setAttribute("opacity", ((n ? 0.95 : 0.8) * a).toFixed(3)); }); });
-      const q = pr.g(P.sefid[0], P.sefid[1]), o = gOn * seg(t, C.chip_g, C.chip_g + 0.35);
-      css(markG, { left: q[0], top: q[1] }); show(markG, o); put(chipG, q, o, 150, 84, 924);
-    } else { show(markG, 0); show(chipG, 0); }
+      put(vapourChip, pr.g(P.vapour[0], P.vapour[1]), gOn * seg(t, C.vapour, C.vapour + 0.35), 0, 0, 924);
+    } else show(vapourChip, 0);
 
     // the locator and the sources
     show(loc, back ? on.a : win(t, 0, C.locator[1], 0.3, 0.4));
