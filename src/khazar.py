@@ -134,7 +134,7 @@ def numbers() -> dict:
     chart = dict(years=[int(y) for y in range(1938, 2025)],
                  flow=[(round(float(flow[y]), 1) if y in flow.index else None) for y in range(1938, 2025)],
                  level=[(round(float(mk[y]), 1) if y in mk.index else None) for y in range(1938, 2025)],      # Makhachkala, cm above -28.0 m
-                 mean=round(mean, 1), rise=[1978, 1995], late=[2021, 2024], low=1977, high=1995)
+                 mean=round(mean, 1), rise=[1978, 1995], late=[2021, 2024], low=1977, high=1995)      # rise: the years of the band (the Volga's wet years, in which the gauge climbed from its low of 1977)
     return dict(n=n, chart=chart)
 
 
@@ -278,8 +278,8 @@ def clock_of() -> dict:
     a = (0.0, 7.4)                                   # the north-east: now, back to 2001 by 1.7 s, forward again by 3.7 s; the ruler
     b = (a[1], a[1] + 7.4)                           # every late summer 2001-2026, the level running; the rectangle
     c = (b[1], b[1] + 7.0)                           # the Volga on the map; its dams in the order they were built
-    e = (c[1], c[1] + 6.8)                           # the river's 84 years
-    f = (e[1], e[1] + 8.0)                           # Iran's coast: the rise of 1356-1374
+    e = (c[1], c[1] + 7.0)                           # the river's 84 years
+    f = (e[1], e[1] + 8.4)                           # Iran's coast: the rise of 1357-1374
     g = (f[1], f[1] + 6.8)                           # why it falls
     h = (g[1], g[1] + 5.0)                           # the north-east again: the question
     out = (h[1], h[1] + 0.8)
@@ -330,24 +330,24 @@ def words_of(n: dict, m: dict) -> dict:
         hook_b="آبِ خزر کجا رفت؟ // ساحل، جاهایی {بیش از ۵۰ کیلومتر} عقب‌تر",
         tag_now=f"تابستانِ {fa(persian(LAST))}", tag_then=f"تابستانِ {fa(persian(FIRST))}",
         shore=f"ساحلِ {fa(persian(FIRST))}", ruler="۵۰ کیلومتر", loc_iran="ایران",
-        head_b=f"{{{fa(round(lev))} متر}} افتِ سطحِ دریا: // {{حدودِ نیمی}} از پهنه‌ی آبیِ این کادر رفت",
+        head_b=f"{{{fa(round(lev))} متر}} افتِ سطحِ دریا: // {{حدودِ نیمی}} از پهنه‌ی آبِ این کادر رفت",
         unit_b=f"سطحِ دریا نسبت به {fa(persian(FIRST))}", metre="متر", rect="این کادر",
         head_c=f"می‌گویند ولگا را بسته‌اند. // آخرین سدِ بزرگش: {{{fa(persian(2026) - persian(1980))} سال پیش}}",
         chip_c="ولگا: حدودِ ۸۰٪ // آبِ رودهای خزر", russia="روسیه", kazakhstan="قزاقستان", sea="دریای خزر",
-        head_e=f"آبِ ولگا قطع نشده؛ // {{{fa(less)}٪ کمتر}} از میانگینِ {fa(n['volga_years'])} سال",
+        head_e=f"ولگا هنوز آب می‌آورد؛ // {fa(persian(2021))} تا {fa(persian(2024))}: {{{fa(less)}٪ کمتر}} از میانگین",
         leg_up="بالای میانگین", leg_down="زیرِ میانگین", leg_unit="کیلومترمکعب در سال", leg_mean=f"میانگین: {fa(round(n['volga_mean']))}",
         late=f"{fa(persian(2021))} تا {fa(persian(2024))}: {fa(round(late))}", tick0=fa(persian(1938)), tick1=fa(persian(2024)),
-        head_f=f"{fa(persian(1977))} تا {fa(persian(1995))}: ولگا پرآب، // دریا {{حدودِ ۲ متر و نیم}} بالاتر",
+        head_f=f"{fa(persian(1978))} تا {fa(persian(1995))}: ولگا پرآب، // دریا {{حدودِ ۲ متر و نیم}} بالا آمد",
         small_f="خانه‌های ساحلی آسیبِ شدید دیدند",
-        leg_line="سطحِ دریا", y_low=fa(persian(1977)), y_high=fa(persian(1995)),
+        leg_line="سطحِ دریا", y_low=fa(persian(1978)), y_high=fa(persian(1995)),
         gilan="گیلان", mazandaran="مازندران",
         head_g="چرا پایین می‌رود؟ // {آبِ رودها کمتر، تبخیر بیشتر}", small_g="سهمِ هر کدام هنوز بحث دارد",
         vapour="تبخیر",
         head_h="بالا آمدنِ دریا را // {یادتان هست؟}", follow="برای یک شمالی بفرستید",
-        src_a="تصویر: MODIS و VIIRS، ناسا // عقب‌نشینی: Court و همکاران ۲۰۲۵؛ سنجش روی همین تصویرها",
-        src_b="سطحِ دریا: ارتفاع‌سنجیِ ماهواره‌ای، ناسا // پهنه‌ی آب: سنجش روی همین تصویرها؛ Court و همکاران ۲۰۲۵",
-        src_c="سدها: ۱۱ نیروگاهِ آبیِ ولگا و کاما؛ نقشه: Blue Marble، ناسا",
-        src_e=f"داده: کمیته‌ی آب‌وهواشناسیِ پنج کشورِ خزر (CASPCOM) // ایستگاه: سرِ دلتا، پایین‌تر از همه‌ی سدها؛ {fa(persian(1938))} تا {fa(persian(2024))}",
+        src_a="تصویر: MODIS و VIIRS، ناسا // عقب‌نشینی: Court ۲۰۲۵؛ سنجش روی همین تصویرها",
+        src_b="سطحِ دریا: ارتفاع‌سنجیِ ماهواره‌ای، ناسا // پهنه‌ی آب: سنجش روی همین تصویرها؛ Court ۲۰۲۵",
+        src_c="سدها: ۱۱ نیروگاهِ ولگا و کاما؛ سهمِ ولگا: Chen ۲۰۱۶ // نقشه: Blue Marble، ناسا",
+        src_e=f"داده: کمیته‌ی آب‌وهواشناسیِ پنج کشورِ خزر (CASPCOM) // میانگینِ {fa(n['volga_years'])} سال؛ ایستگاه: سرِ دلتا، پایین‌تر از همه‌ی سدها",
         src_f="سطحِ دریا: ایستگاهِ ماخاچ‌قلعه، CASPCOM // آسیب: Kakroodi و همکاران ۲۰۱۵",
         src_g="Chen و همکاران ۲۰۱۷؛ Duku و همکاران ۲۰۲۶ // Court و همکاران ۲۰۲۵",
         src_h="منابع در کامنتِ اول",

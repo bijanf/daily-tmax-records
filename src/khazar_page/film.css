@@ -51,6 +51,7 @@ svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
 .chip.gold { background: var(--gold); color: var(--ink); }
 .chip.water { background: rgba(8, 26, 52, 0.86); color: #d9f1ff; font-weight: 900; font-size: 48px; line-height: 62px; text-align: center; }
 .chip.water span { display: block; }
+.chip.water.big { font-size: 58px; line-height: 74px; padding: 2px 22px 8px; }
 .chip.year { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 54px; line-height: 62px; padding: 0 16px 2px;
   background: var(--paper); color: var(--ink); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
 .land { position: absolute; font-weight: 900; font-size: 60px; line-height: 76px; white-space: nowrap; color: #fff;
@@ -66,15 +67,15 @@ svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 0, 0, 0.95); }
 
 /* the card: the river's years (columns against their average) and, under them, the sea's level (a line) */
-#card { position: absolute; left: var(--left); top: 1046px; width: var(--low); height: 410px; border-radius: 26px;
+#card { position: absolute; left: var(--left); top: 1034px; width: var(--low); height: 410px; border-radius: 26px;
   background: rgba(251, 247, 240, 0.985); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42); overflow: hidden; }
 #card svg { position: absolute; left: 0; top: 0; }
 #card .legend { position: absolute; right: 22px; left: 22px; top: 8px; height: 50px; display: flex; flex-direction: row;
-  justify-content: space-between; align-items: center; direction: rtl; font-weight: 800; font-size: 34px; line-height: 50px; white-space: nowrap; }
+  justify-content: space-between; align-items: center; direction: rtl; font-weight: 800; font-size: 36px; line-height: 50px; white-space: nowrap; }
 #card .legend i { display: inline-block; width: 20px; height: 26px; border-radius: 5px; margin-left: 9px; vertical-align: -3px; background: var(--wet); }
 #card .legend i.dry { background: var(--dry); }
 #card .legend u { display: inline-block; width: 44px; height: 0; border-top: 7px solid #0d6b6b; margin-left: 10px; vertical-align: 9px; text-decoration: none; }
-#card .tick { position: absolute; top: 356px; font-weight: 800; font-size: 38px; line-height: 44px; white-space: nowrap; color: var(--ink); }
+#card .tick { position: absolute; top: 354px; font-weight: 800; font-size: 40px; line-height: 46px; white-space: nowrap; color: var(--ink); }
 #card .tick.late { font-weight: 900; color: #8b2a1e; }
 #card .tick.mean b { display: inline-block; width: 44px; height: 0; border-top: 5px dashed var(--ink); margin-left: 10px; vertical-align: 10px; }
 
@@ -82,7 +83,7 @@ svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
 #follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
   font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
 .sources { position: absolute; left: var(--left); bottom: 380px; width: var(--low); text-align: right; font-weight: 500;
-  font-size: 30px; line-height: 40px; white-space: nowrap; color: #f3ead8; opacity: 0.94;
+  font-size: 34px; line-height: 44px; white-space: nowrap; color: #f3ead8; opacity: 0.94;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
 .sources span { display: block; }
 #wipe { position: absolute; top: 0; width: 6px; height: 1920px; background: #fff;

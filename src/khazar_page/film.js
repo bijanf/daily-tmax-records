@@ -115,7 +115,7 @@ async function main() {
     ["c", chip(Wd.russia, "land"), "russia", 0, 0], ["c", chip(Wd.kazakhstan, "land"), "kazakhstan", 0, 0], ["c", chip(Wd.sea, "land sea"), "sea_wide", 0, 0],
     ["e", chip(Wd.russia, "land"), "russia", 0, 0],
     ["f", chip(Wd.gilan, "land"), "gilan", 0, 0], ["f", chip(Wd.mazandaran, "land"), "mazandaran", 0, 0]];
-  const rulerChip = chip(Wd.ruler), rectChip = chip(Wd.rect), chipC = chip("", "chip water"), vapourChip = chip(Wd.vapour, "chip water"), yearChip = chip("", "chip year");
+  const rulerChip = chip(Wd.ruler), rectChip = chip(Wd.rect), chipC = chip("", "chip water"), vapourChip = chip(Wd.vapour, "chip water big"), yearChip = chip("", "chip year");
   Wd.chip_c.split(" // ").forEach(s => el("span", null, chipC, s));
 
   // the card (scenes e and f): the Volga's years as columns against their average; under them the sea's level
@@ -136,10 +136,10 @@ async function main() {
   const levelLine = svg("path", { fill: "none", stroke: "#0d6b6b", "stroke-width": 6, "stroke-linejoin": "round", "stroke-linecap": "round" }, cs);
   const kOf = y => CH.years.indexOf(y);
   const tick0 = css(el("div", "tick", card, Wd.tick0), { right: 26 }), tick1 = css(el("div", "tick", card, Wd.tick1), { left: 26 });
-  const tickLow = css(el("div", "tick", card, Wd.y_low), { left: xOf(kOf(CH.low)), transform: "translateX(-50%)" });
-  const tickHigh = css(el("div", "tick", card, Wd.y_high), { left: xOf(kOf(CH.high)), transform: "translateX(-50%)" });
+  const tickLow = css(el("div", "tick", card, Wd.y_low), { left: xOf(kOf(CH.rise[0])), transform: "translateX(-50%)" });      // the band's first year
+  const tickHigh = css(el("div", "tick", card, Wd.y_high), { left: xOf(kOf(CH.rise[1])), transform: "translateX(-50%)" });   // and its last
   const lateNote = css(el("div", "tick late", card, Wd.late), { left: 26 });
-  const noteE = css(el("div", "tick mean", card), { left: 500, transform: "translateX(-50%)" });   // the dashed line's value, beside the four years' value
+  const noteE = css(el("div", "tick mean", card), { left: 540, transform: "translateX(-50%)" });   // the dashed line's value, beside the four years' value
   el("b", null, noteE); noteE.appendChild(document.createTextNode(Wd.leg_mean));
   const LV = CH.level.filter(v => v !== null), LMIN = Math.min(...LV) - 8, LMAX = Math.max(...LV) + 8;
 
@@ -248,7 +248,8 @@ async function main() {
         core.setAttribute("cx", q[0].toFixed(1)); core.setAttribute("cy", q[1].toFixed(1)); core.setAttribute("opacity", o.toFixed(3));
         ring.setAttribute("cx", q[0].toFixed(1)); ring.setAttribute("cy", q[1].toFixed(1)); ring.setAttribute("r", (16 + 26 * pulse).toFixed(1)); ring.setAttribute("opacity", (o * (1 - pulse)).toFixed(3)); });
       if (newest >= 0 && on.c > 0.001) { const dm = F.dams[newest]; yearChip.textContent = dm.label; const q = p(dm.lon, dm.lat);
-        put(yearChip, q, on.c, dm.at === "left" ? -96 : 0, dm.at === "left" ? -8 : -58); }                // above its own dot (left of it where a chip stands above)
+        const od = newest === 0 ? seg(t, C.pins[0], C.pins[0] + 0.18) : 1;                                // the first chip comes with its dot
+        put(yearChip, q, on.c * od, dm.at === "left" ? -96 : 0, dm.at === "left" ? -8 : -58); }           // above its own dot (left of it where a chip stands above)
       else show(yearChip, 0);
       put(chipC, p(P.chip_c[0], P.chip_c[1]), on.c * seg(t, C.chip_c, C.chip_c + 0.35), 0, 0, 924);
     } else { show(yearChip, 0); show(chipC, 0); }
@@ -272,7 +273,7 @@ async function main() {
       show(lateNote, lo); show(noteE, shOut * seg(t, C.bars[1] - 0.3, C.bars[1]));
       show(legE, shOut); show(legF, shIn);
       // the years of the rise: a band over both rows; the sea's level as a line, drawn from the first year to the last
-      const r0 = kOf(CH.low), r1 = kOf(CH.high);
+      const r0 = kOf(CH.rise[0]), r1 = kOf(CH.rise[1]), rl = kOf(CH.low);   // the band: the wet years; the guide: the level of the year before them
       band.setAttribute("x", (xOf(r1) - PITCH / 2).toFixed(1)); band.setAttribute("width", (xOf(r0) - xOf(r1) + PITCH).toFixed(1));
       band.setAttribute("y", 62); band.setAttribute("height", 288); band.setAttribute("opacity", (0.36 * shIn).toFixed(3));
       const yL = v => 344 - 108 * (v - LMIN) / (LMAX - LMIN);
@@ -281,7 +282,7 @@ async function main() {
       CH.level.forEach((v, k) => { if (v === null || k > upto + 0.001) return; dl += (pen ? "L" : "M") + xOf(k).toFixed(1) + " " + yL(v).toFixed(1); pen = true; });
       levelLine.setAttribute("d", dl); levelLine.setAttribute("opacity", lp > 0 ? 1 : 0);
       const gl = seg(t, C.line[1], C.line[1] + 0.5);                        // the level of 1977, carried to the last year
-      guide.setAttribute("x1", xOf(r0)); guide.setAttribute("x2", lerp(xOf(r0), xOf(NY - 1), gl)); guide.setAttribute("y1", yL(CH.level[r0])); guide.setAttribute("y2", yL(CH.level[r0])); guide.setAttribute("opacity", gl > 0 ? 0.9 : 0);
+      guide.setAttribute("x1", xOf(rl)); guide.setAttribute("x2", lerp(xOf(rl), xOf(NY - 1), gl)); guide.setAttribute("y1", yL(CH.level[rl])); guide.setAttribute("y2", yL(CH.level[rl])); guide.setAttribute("opacity", gl > 0 ? 0.9 : 0);
       show(tick0, 1); show(tick1, Math.max(1 - seg(t, C.late - 0.25, C.late), shIn)); show(tickLow, shIn); show(tickHigh, shIn);
     }
 
