@@ -1,0 +1,90 @@
+/* «آبِ خزر کجا رفت؟»: one 1080 x 1920 stage, the satellite picture as the whole frame, drawn for a time t by film.js
+   (no CSS animation). Headlines stay inside x 96-984 and everything below y 1000 inside x 96-924 (Instagram's own
+   buttons stand right of that); nothing that must be read lies below y 1540 (Instagram's caption).
+   Written for this film: every selector here is used by film.js. */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+@font-face { font-family: "Lalezar"; font-weight: 400; src: url("/fonts/lalezar/Lalezar-Regular.ttf"); }
+
+:root { --gold: #F6C445; --ink: #1d140c; --paper: #FBF7F0; --river: #49c0ff; --wet: #1c5cab; --dry: #B5763A; --pin: #FF8A1F;
+  --left: 96px; --width: 888px; --low: 828px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #17110b; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: #fff; direction: rtl;
+  font-family: "Vazirmatn", sans-serif; font-weight: 700; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
+
+/* the two soft shades that carry the words: the top and the bottom of the picture only */
+#shade-top { position: absolute; left: 0; top: 0; width: 1080px; height: 660px;
+  background: linear-gradient(180deg, rgba(16, 11, 6, 0.7) 0%, rgba(16, 11, 6, 0.54) 42%, rgba(16, 11, 6, 0.22) 78%, rgba(16, 11, 6, 0) 100%); }
+#shade-bot { position: absolute; left: 0; top: 1100px; width: 1080px; height: 820px;
+  background: linear-gradient(0deg, rgba(16, 11, 6, 0.78) 0%, rgba(16, 11, 6, 0.6) 44%, rgba(16, 11, 6, 0.24) 78%, rgba(16, 11, 6, 0) 100%); }
+
+/* the headline and its small line */
+.head { position: absolute; left: var(--left); top: 210px; width: var(--width); text-align: right; }
+.head .line { display: block; font-weight: 900; font-size: 84px; line-height: 120px; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.38), 0 0 26px rgba(0, 0, 0, 0.62); }
+.head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
+  text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.head .small { display: block; font-weight: 700; font-size: 50px; line-height: 70px; margin-top: 12px; white-space: nowrap;
+  color: #fdf6e6; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(0, 0, 0, 0.7); }
+
+/* the tag: the summer on screen and, in the run of the years, the sea's level against the first summer */
+#tag { position: absolute; left: var(--left); top: 1270px; width: var(--low); height: 190px; }
+#tag .yr { position: absolute; right: 0; top: 0; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400;
+  font-size: 104px; line-height: 150px; white-space: nowrap; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
+#tag .val { position: absolute; left: 0; top: 4px; text-align: left; white-space: nowrap; }
+#tag .n { display: block; direction: rtl; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 104px; line-height: 108px;
+  color: var(--gold); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
+#tag .n .num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+#tag .n .m { font-family: "Vazirmatn", sans-serif; font-weight: 900; font-size: 54px; margin-right: 14px; color: #fff; }
+#tag .u { display: block; font-weight: 800; font-size: 42px; line-height: 54px; color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 0, 0, 0.75); }
+
+/* names on the pictures: a chip (a place or a note), bare words (a country, a province), a gold chip (the old shore) */
+.chip { position: absolute; font-weight: 800; font-size: 44px; line-height: 56px; white-space: nowrap; color: #fff;
+  background: rgba(16, 11, 6, 0.78); border-radius: 14px; padding: 2px 18px 8px; transform: translate(-50%, -50%); }
+.chip.gold { background: var(--gold); color: var(--ink); }
+.chip.water { background: rgba(8, 26, 52, 0.86); color: #d9f1ff; font-weight: 900; font-size: 48px; line-height: 62px; text-align: center; }
+.chip.water span { display: block; }
+.chip.year { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 54px; line-height: 62px; padding: 0 16px 2px;
+  background: var(--paper); color: var(--ink); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
+.land { position: absolute; font-weight: 900; font-size: 60px; line-height: 76px; white-space: nowrap; color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.55), 0 0 22px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.8); transform: translate(-50%, -50%); }
+.land.sea { color: #cfeaff; font-size: 52px; }
+.mark { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 4px solid #fff;
+  box-shadow: 0 0 0 3px rgba(29, 20, 12, 0.85), 0 2px 10px rgba(0, 0, 0, 0.6); transform: translate(-50%, -50%); }
+
+/* the corner locator: where the frame lies on the whole sea, with Iran's border and name */
+#locator { position: absolute; left: 96px; top: 690px; width: 252px; height: 448px; border-radius: 22px; overflow: hidden;
+  border: 4px solid #fff; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5); }
+#locator img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+#locator .here { position: absolute; border: 5px solid var(--gold); border-radius: 6px; box-shadow: 0 0 0 2px rgba(29, 20, 12, 0.7); }
+#locator .iran { position: absolute; font-weight: 900; font-size: 44px; line-height: 54px; color: #fff; transform: translate(-50%, -50%);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 0, 0, 0.95); }
+
+/* the card: the river's years (columns against their average) and, under them, the sea's level (a line) */
+#card { position: absolute; left: var(--left); top: 1046px; width: var(--low); height: 410px; border-radius: 26px;
+  background: rgba(251, 247, 240, 0.95); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42); overflow: hidden; }
+#card svg { position: absolute; left: 0; top: 0; }
+#card .legend { position: absolute; right: 22px; left: 22px; top: 8px; height: 50px; display: flex; flex-direction: row;
+  justify-content: space-between; align-items: center; direction: rtl; font-weight: 800; font-size: 36px; line-height: 50px; white-space: nowrap; }
+#card .legend i { display: inline-block; width: 22px; height: 26px; border-radius: 5px; margin-left: 10px; vertical-align: -3px; background: var(--wet); }
+#card .legend b { display: inline-block; width: 44px; height: 0; border-top: 5px dashed var(--ink); margin-left: 10px; vertical-align: 9px; }
+#card .legend u { display: inline-block; width: 44px; height: 0; border-top: 7px solid #0d6b6b; margin-left: 10px; vertical-align: 9px; text-decoration: none; }
+#card .tick { position: absolute; top: 356px; font-weight: 800; font-size: 38px; line-height: 44px; white-space: nowrap; color: var(--ink); }
+#card .tick.late { font-weight: 900; color: #8b2a1e; }
+
+#follow { position: absolute; left: var(--left); top: 1290px; width: var(--low); text-align: center; white-space: nowrap; }
+#follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
+  font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+.sources { position: absolute; left: var(--left); bottom: 380px; width: var(--low); text-align: right; font-weight: 500;
+  font-size: 28px; line-height: 38px; white-space: nowrap; color: #f3ead8; opacity: 0.94;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
+.sources span { display: block; }
+#wipe { position: absolute; top: 0; width: 6px; height: 1920px; background: #fff;
+  box-shadow: 0 0 22px 6px rgba(255, 255, 255, 0.75), 0 0 60px 14px rgba(120, 190, 255, 0.5); }
