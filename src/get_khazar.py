@@ -21,7 +21,8 @@ median of them per pixel and band (true colour, and the infrared composite that 
                                    (CASPCOM, http://www.caspcom.com): the sea's level per gauge and the rivers' runoff,
                                    monthly; level_<GAUGE>.csv, flow_<river>.csv and the annual tables
 
-    python -I src/get_khazar.py --caspcom       # the catalogues (the .xls gauge files need xlrd: any Python with it)
+    python -I src/get_khazar.py --caspcom       # the catalogues (the .xls gauge files need xlrd, which the reel's Python
+                                                # lacks: run this one step with any Python that has numpy, pandas, openpyxl, xlrd)
     python -I src/get_khazar.py --probe         # score every day (about 10 minutes)
     python -I src/get_khazar.py                 # the clearest days, the yearly pictures, the map, the lines
 """
@@ -43,7 +44,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PIL import Image
+
+try:
+    from PIL import Image
+except ImportError:                                      # the catalogues alone (--caspcom) need no pictures: any Python with pandas and xlrd
+    Image = None
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "khazar"

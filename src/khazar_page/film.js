@@ -106,7 +106,7 @@ async function main() {
     heads[name] = { box, sm };
   });
   const tag = el("div", null, stage); tag.id = "tag";
-  const tagYr = el("div", "yr", tag), tagVal = el("div", "val", tag), tagN = el("span", "n", tagVal), tagNum = el("span", "num", tagN), tagU = el("span", "u", tagVal, Wd.unit_b);
+  const tagYr = el("div", "yr", tag), tagVal = el("div", "val", tag), tagN = el("span", "n", tagVal), tagNum = el("span", "num", tagN), tagU = el("span", "u", tagVal, Wd.lvl_down);
   el("span", "m", tagN, Wd.metre);
 
   // the names: [scene, element, place, dx, dy]
@@ -154,7 +154,10 @@ async function main() {
     if (x < 1080) { ctx.save(); ctx.beginPath(); ctx.rect(x, 0, 1080 - x, 1920); ctx.clip(); pic(second, m, a); ctx.restore(); }
   }
   // scene a: the last summer on the left of x; x runs to 0 (back to the first summer) and out again to 1080
-  const xA = t => t < C.a_back[0] ? 1080 : t < C.a_fwd[0] ? 1080 * (1 - ease(seg(t, C.a_back[0], C.a_back[1]))) : 1080 * ease(seg(t, C.a_fwd[0], C.a_fwd[1]));
+  // (the line creeps in from frame 0, so the first frames already move, and sweeps after about half a second)
+  const sig = (p, n) => { const a = Math.pow(p, n), b = Math.pow(1 - p, n); return a / (a + b); };
+  const creep = u => 0.1 * u + 0.9 * sig(u, 2.6);
+  const xA = t => t < C.a_fwd[0] ? 1080 * (1 - creep(seg(t, 0, C.a_back[1]))) : 1080 * ease(seg(t, C.a_fwd[0], C.a_fwd[1]));
   const yearAt = t => { let k = 0; for (let i = 0; i < YT.length; i++) if (t >= YT[i]) k = i; return k; };
   function ground(name, t, a) {                          // one scene's picture at time t with opacity a; returns the wipe's x (or -1)
     const m = push(name, t);
@@ -200,7 +203,7 @@ async function main() {
     // the tag: scene a: the summer whose picture holds most of the frame; scene b: the year and the sea's level against 2001
     const xa = back ? 1080 : xA(t);
     if (cur === "a" || back) { tagYr.textContent = xa >= 540 ? Wd.tag_now : Wd.tag_then; show(tagVal, 0); show(tag, back ? on.a : on.a); }
-    else if (cur === "b") { const k = t < YT[0] ? 0 : yearAt(t); tagYr.textContent = RUN[k].label; tagNum.textContent = RUN[k].level; show(tagVal, 1);
+    else if (cur === "b") { const k = t < YT[0] ? 0 : yearAt(t); tagYr.textContent = RUN[k].label; tagNum.textContent = RUN[k].level; tagU.textContent = Wd["lvl_" + RUN[k].rel]; show(tagVal, 1);
       show(tag, on.b * seg(t, YT[0] - 0.35, YT[0] - 0.05)); }
     else show(tag, 0);
 

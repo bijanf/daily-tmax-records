@@ -123,9 +123,10 @@ def numbers() -> dict:
     assert 0.875 < n["volga_ratio"] < 0.885, n               # «۱۲٪ کمتر» than the 84-year average
     assert 0.77 < n["volga_ratio_rise"] < 0.80, n            # 78 % of 1978-1995 (caption)
     assert 1.10 < rise_years / mean < 1.16, n                # «ولگا پرآب»: 1978-1995 carried about 13 % more than the 84-year average
-    assert 2.40 <= n["rise_makh"] <= 2.60, n                 # «حدودِ ۲ متر و نیم»: Makhachkala, the gauge the card's line shows
+    assert 2.40 <= n["rise_makh"] <= 2.60, n                 # Makhachkala, the gauge the card's line shows (first comment: 2.52)
     assert all(200 < x < 215 for x in n["volga_late_years"]), n     # four low years, each still above 200 km3: not shut
     assert 2.35 < n["rise_four"] < 2.50 and 2.35 < n["rise_anzali"] < 2.45, n     # the four-gauge mean and Anzali (caption, first comment)
+    assert min(n["rise_four"], n["rise_makh"], n["rise_anzali"]) > 2.0, n          # «بیش از ۲ متر بالا آمد»: at every gauge
     assert abs(n["back_makh"]) < 0.2 and abs(n["back_anzali"]) < 0.2, n           # «تا ۱۴۰۳: برگشت به حدودِ سطحِ ۱۳۵۶»
     assert abs(n["alt_fall_2024"] - n["fall_makh_2024"]) < 0.12, n                # the altimetry and the gauge agree on the fall
     assert -2.25 < level[LAST] < -1.85, level[LAST]          # «حدودِ ۲ متر»
@@ -279,7 +280,7 @@ def clock_of() -> dict:
     b = (a[1], a[1] + 7.4)                           # every late summer 2001-2026, the level running; the rectangle
     c = (b[1], b[1] + 7.0)                           # the Volga on the map; its dams in the order they were built
     e = (c[1], c[1] + 7.0)                           # the river's 84 years
-    f = (e[1], e[1] + 8.4)                           # Iran's coast: the rise of 1357-1374
+    f = (e[1], e[1] + 8.0)                           # Iran's coast: the rise of 1357-1374
     g = (f[1], f[1] + 6.8)                           # why it falls
     h = (g[1], g[1] + 5.0)                           # the north-east again: the question
     out = (h[1], h[1] + 0.8)
@@ -302,7 +303,7 @@ def reading(Wd: dict, C: dict) -> None:
     import onebit_reading as rd
     wt = lambda xs: sum(rd.weight(x) for x in xs)    # noqa: E731
     plan = [("hook", C["a"], [max((Wd["hook_a"], Wd["hook_b"]), key=rd.weight)], [Wd["tag_now"], Wd["tag_then"], Wd["shore"], Wd["ruler"], Wd["loc_iran"]], C["ruler"]),
-            ("run", C["b"], [Wd["head_b"]], [Wd["unit_b"], Wd["rect"], "۱۴۰۵", "۲٫۱"], C["rect"]),
+            ("run", C["b"], [Wd["head_b"]], [Wd["lvl_down"], Wd["metre"], Wd["rect"], "۱۴۰۵", "۲٫۱"], C["rect"]),
             ("volga", C["c"], [Wd["head_c"]], [Wd["chip_c"], Wd["russia"], Wd["kazakhstan"], Wd["sea"], "۱۳۵۹"], C["chip_c"]),
             ("flow", C["e"], [Wd["head_e"]], [Wd["leg_up"], Wd["leg_down"], Wd["leg_unit"], Wd["leg_mean"], Wd["late"], Wd["tick0"]], C["late"]),
             ("rise", C["f"], [Wd["head_f"], Wd["small_f"]], [Wd["leg_line"], Wd["gilan"], Wd["mazandaran"], Wd["y_low"], Wd["y_high"]], C["small_f"]),   # the colour key was read in the scene before
@@ -331,13 +332,14 @@ def words_of(n: dict, m: dict) -> dict:
         tag_now=f"تابستانِ {fa(persian(LAST))}", tag_then=f"تابستانِ {fa(persian(FIRST))}",
         shore=f"ساحلِ {fa(persian(FIRST))}", ruler="۵۰ کیلومتر", loc_iran="ایران",
         head_b=f"{{{fa(round(lev))} متر}} افتِ سطحِ دریا: // {{حدودِ نیمی}} از پهنه‌ی آبِ این کادر رفت",
-        unit_b=f"سطحِ دریا نسبت به {fa(persian(FIRST))}", metre="متر", rect="این کادر",
+        lvl_down=f"پایین‌تر از {fa(persian(FIRST))}", lvl_up=f"بالاتر از {fa(persian(FIRST))}", lvl_same=f"نسبت به {fa(persian(FIRST))}",
+        metre="متر", rect="این کادر",
         head_c=f"می‌گویند ولگا را بسته‌اند. // آخرین سدِ بزرگش: {{{fa(persian(2026) - persian(1980))} سال پیش}}",
         chip_c="ولگا: حدودِ ۸۰٪ // آبِ رودهای خزر", russia="روسیه", kazakhstan="قزاقستان", sea="دریای خزر",
         head_e=f"ولگا هنوز آب می‌آورد؛ // {fa(persian(2021))} تا {fa(persian(2024))}: {{{fa(less)}٪ کمتر}} از میانگین",
         leg_up="بالای میانگین", leg_down="زیرِ میانگین", leg_unit="کیلومترمکعب در سال", leg_mean=f"میانگین: {fa(round(n['volga_mean']))}",
         late=f"{fa(persian(2021))} تا {fa(persian(2024))}: {fa(round(late))}", tick0=fa(persian(1938)), tick1=fa(persian(2024)),
-        head_f=f"{fa(persian(1978))} تا {fa(persian(1995))}: ولگا پرآب، // دریا {{حدودِ ۲ متر و نیم}} بالا آمد",
+        head_f=f"{fa(persian(1978))} تا {fa(persian(1995))}: ولگا پرآب، // دریا {{بیش از ۲ متر}} بالا آمد",
         small_f="خانه‌های ساحلی آسیبِ شدید دیدند",
         leg_line="سطحِ دریا", y_low=fa(persian(1978)), y_high=fa(persian(1995)),
         gilan="گیلان", mazandaran="مازندران",
@@ -365,8 +367,9 @@ def main() -> None:
     clock = clock_of()
     reading(words, clock)
     lev = n["level"]
-    run = [dict(year=y, label=fa(persian(y)), pic=f"p{y}.jpg",
-                level=("−" if lev[y] < -0.05 else "+" if lev[y] > 0.05 else "") + fa(f"{abs(lev[y]):.1f}")) for y in range(FIRST, LAST + 1)]
+    run = [dict(year=y, label=fa(persian(y)), pic=f"p{y}.jpg", level=fa(f"{abs(lev[y]):.1f}"),      # no sign: the line under the number says lower or higher
+                rel="down" if lev[y] <= -0.05 else "up" if lev[y] >= 0.05 else "same") for y in range(FIRST, LAST + 1)]
+    assert run[-1]["rel"] == "down" and all(r["rel"] != "up" for r in run if r["year"] >= 2010), [r["rel"] for r in run]
     b = gk.FRAMES["ne"]["box"]
     km_lon = 111.32 * math.cos(math.radians(45.42))                     # the ruler lies along 45.42 N, on the bed of the emptied bay
     ruler = [[52.28, 45.42], [52.28 + 50.0 / km_lon, 45.42]]
