@@ -21,6 +21,7 @@ up, so a cell holds the area-weighted mean of every pixel that covered it. Per c
     python -I src/hormuz.py fields 2026-j01 2025-j01    # single parts (or calendar months: 2026-04)
     python -I src/hormuz.py fields 2025 2026            # the calendar months March to November of these years
     python -I src/hormuz.py film                        # the film's numbers, pictures and words: outputs/onebit/hormuz/
+    python -I src/hormuz.py film ember                  # the same with another look of the map (PALETTES)
     python -I src/hormuz.py draft                       # the same without the checks that need the winter and 2023-24
 """
 
@@ -261,13 +262,25 @@ def region(name: str) -> dict:
     return _CACHE[key]
 
 
-# ── the pictures: NO2 as a glow over NASA Blue Marble, Web Mercator ──
+# ── the pictures: NO2 as a veil of colour over NASA Blue Marble, Web Mercator ──
 
-V0, V1 = 1.0, 3.0                                 # 1e15 molecules per cm2: the glow starts at V0 and is full at V1
-                                                  # (set for the sea, where the film's numbers are: the cities stand above it)
-RAMP = ((0.0, (150, 30, 10)), (0.35, (235, 95, 15)), (0.7, (255, 190, 60)), (1.0, (255, 250, 225)))   # ember to white
-BASE_DIM = 0.55                                   # the base map is darkened under the glow
+V0, V1 = 1.0, 10.0                                # 1e15 molecules per cm2: the colour starts at V0 and reaches its last step at V1,
+                                                  # on a logarithmic scale: the sea (1 to 2) and the cities (5 to 15) both show
+SCALE_TICKS = (1, 3, 10)                          # the values written under the colour bar
 GRAIN_CELLS = 1.4                                 # the field is smoothed over this many cells (3.5 km) before it is drawn
+# The look of the map, one name for the whole film.
+#   day:   the map by day, its land half neutral so that the palest step shows on the desert; the gas from pale yellow
+#          through orange and red to purple: the more gas, the darker (the lightness falls all the way).
+#   ember: the darkened map and the gas as a glow from ember to gold: the more gas, the lighter (the first cut's look
+#          without its white top; that cut ran from 1 to 3 on a linear scale and most of the coast stood at its top).
+# ramp: (place on the scale, RGB). land, sea: (saturation kept, lift towards white) of the base map; dim: its brightness.
+# The colour's opacity at the place t of the scale is top * (1 - exp(-t / k)): none at V0, nearly full from a third up.
+PALETTES = dict(
+    day=dict(ramp=((0.0, (255, 226, 110)), (0.28, (250, 160, 50)), (0.52, (230, 78, 40)), (0.74, (170, 28, 62)), (1.0, (88, 12, 78))),
+             land=(0.55, 0.22), sea=(1.0, 0.0), dim=0.97, k=0.16, top=0.93, darker=True),
+    ember=dict(ramp=((0.0, (120, 22, 12)), (0.3, (208, 62, 18)), (0.58, (245, 135, 28)), (0.82, (255, 205, 80)), (1.0, (255, 238, 170))),
+               land=(0.7, 0.0), sea=(0.7, 0.0), dim=0.5, k=0.22, top=0.94, darker=False))
+PALETTE = "day"
 
 
 def filled(F: np.ndarray) -> np.ndarray:
@@ -294,20 +307,66 @@ def sample(F: np.ndarray, box: tuple, px: tuple) -> np.ndarray:
     return ndimage.map_coordinates(F, [RR, CC], order=1, mode="nearest")
 
 
-def ramp(t: np.ndarray) -> np.ndarray:
-    pos = np.array([q[0] for q in RAMP])
-    return np.stack([np.interp(t, pos, np.array([q[1][k] for q in RAMP], float)) for k in range(3)], -1)
+def place(v) -> np.ndarray:
+    """Where a value stands on the colour scale: 0 at V0 and below, 1 at V1 and above, logarithmic between."""
+    return np.clip(np.log(np.maximum(v, 1e-9) / V0) / np.log(V1 / V0), 0.0, 1.0)
 
 
-def picture(F: np.ndarray, name: str, px: tuple):
-    """The glow of a field over the darkened base map of a frame ("east" or "gulf"): a PIL image."""
+def ramp(t: np.ndarray, pal: dict) -> np.ndarray:
+    pos = np.array([q[0] for q in pal["ramp"]])
+    return np.stack([np.interp(t, pos, np.array([q[1][k] for q in pal["ramp"]], float)) for k in range(3)], -1)
+
+
+def veil(t, pal: dict) -> np.ndarray:
+    """The colour's opacity at the place t of the scale."""
+    return pal["top"] * (1.0 - np.exp(-np.asarray(t, float) / pal["k"]))
+
+
+def lightness(rgb) -> float:
+    """The OKLab lightness (0 to 1) of an sRGB colour (0 to 255)."""
+    c = np.asarray(rgb, float) / 255.0
+    c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    l = 0.4122214708 * c[0] + 0.5363325363 * c[1] + 0.0514459929 * c[2]
+    m = 0.2119034982 * c[0] + 0.6806995451 * c[1] + 0.1073969566 * c[2]
+    s = 0.0883024619 * c[0] + 0.2817188376 * c[1] + 0.6299787005 * c[2]
+    return float(0.2104542553 * l ** (1 / 3) + 0.7936177850 * m ** (1 / 3) - 0.0040720468 * s ** (1 / 3))
+
+
+def base_of(b: np.ndarray, pal: dict) -> np.ndarray:
+    """The base map under the colour: the land and the sea each with their own saturation and lift, then dimmed. The
+    sea is told from the land by the pixel's own colour (blue over red), so the coast is the picture's own coast."""
+    w = np.clip((b[..., 2] - b[..., 0]) / 40.0 + 0.5, 0.0, 1.0)[..., None]
+    g = b.mean(-1, keepdims=True)
+    tone = lambda sat, lift: (g + (b - g) * sat) * (1 - lift) + 255.0 * lift      # noqa: E731
+    return (w * tone(*pal["sea"]) + (1 - w) * tone(*pal["land"])) * pal["dim"]
+
+
+def picture(F: np.ndarray, px: tuple, palette: str = None):
+    """The colour of a field over the base map of the film's wide frame: a PIL image."""
     from PIL import Image
-    box = get_hormuz.EAST if name == "east" else get_hormuz.GULF
-    base = Image.open(DATA / f"base_{name}.jpg").convert("RGB").resize(px, Image.LANCZOS)
-    t = np.clip((sample(filled(F), box, px) - V0) / (V1 - V0), 0, 1)
-    alpha = (np.clip(t * 1.6, 0, 1) ** 0.8 * 0.92)[..., None]
-    im = np.asarray(base, float) * BASE_DIM * (1 - alpha) + ramp(t) * alpha
+    pal = PALETTES[palette or PALETTE]
+    base = np.asarray(Image.open(DATA / "base_wide.jpg").convert("RGB").resize(px, Image.LANCZOS), float)
+    t = place(sample(filled(F), get_hormuz.WIDE, px))
+    a = veil(t, pal)[..., None]
+    im = base_of(base, pal) * (1 - a) + ramp(t, pal) * a
     return Image.fromarray(np.clip(im, 0, 255).astype(np.uint8))
+
+
+def scale_of(palette: str = None) -> dict:
+    """The colour scale as the page's colour bar needs it: its ends, the ticks (value, place) and the colour with its
+    opacity at 21 places. Asserted: the ramp's lightness runs one way from end to end (more gas is always darker, or
+    always lighter), so the scale also reads without colour vision."""
+    name = palette or PALETTE
+    pal = PALETTES[name]
+    L = [lightness(c) for _, c in pal["ramp"]]
+    d = np.diff(L)
+    assert (d < -0.05).all() if pal["darker"] else (d > 0.05).all(), L
+    assert SCALE_TICKS[0] == V0 and SCALE_TICKS[-1] == V1, SCALE_TICKS
+    ps = np.linspace(0.0, 1.0, 21)
+    return dict(v0=V0, v1=V1, log=True, palette=name, lightness=[round(x, 3) for x in L],
+                ticks=[[v, round(float(place(v)), 4)] for v in SCALE_TICKS],
+                stops=[[round(float(q), 3), [int(round(x)) for x in c], round(float(al), 3)]
+                       for q, c, al in zip(ps, ramp(ps, pal), veil(ps, pal))])
 
 
 def lane_path() -> list:
@@ -352,11 +411,15 @@ SITES = dict(asaluyeh=(52.61, 27.48), ras_laffan=(51.55, 25.92), jubail=(49.62, 
              bandar=(56.27, 27.19), kuwait=(47.98, 29.37), fujairah=(56.35, 25.13), sohar=(56.63, 24.47),
              muscat=(58.40, 23.60))
 INSIDE = ("asaluyeh", "ras_laffan", "jubail", "dubai", "bandar", "kuwait")
-# where each name stands from its dot on the panel (pixels): above it, unless a neighbour's name is there
-SITE_AT = dict(asaluyeh=(70, -62), ras_laffan=(-165, -44), jubail=(0, -62), dubai=(0, -62), bandar=(0, 62), kuwait=(0, -62))
 OUTSIDE = ("fujairah", "sohar", "muscat")
-PLACES = dict(SITES, strait=(56.47, 26.62), e_iran=(59.3, 26.95), lane=(57.9, 26.08),      # the lane's name: beside its bend, above the card
-              g_iran=(53.6, 29.25), g_saudi=(48.9, 25.75), g_uae=(54.6, 24.5), g_gulf=(51.35, 27.05), g_strait=(56.45, 26.6))
+# where each place's name stands from its dot on the wide panel (pixels): beside it, clear of the neighbours' names
+SITE_AT = dict(asaluyeh=(66, -85), ras_laffan=(-16, 92), jubail=(46, -88), dubai=(-65, -90), bandar=(62, -88), kuwait=(182, -48),
+               fujairah=(101, -40), sohar=(90, 6), muscat=(-95, 42))
+# names on the wide panel (lon, lat of the name's centre): the countries, the two seas, the strait (its name stands on
+# the land east of it, a line leads to the strait itself), the lane's name
+PLACES = dict(SITES, strait=(56.45, 26.6), lane=(54.6, 26.85),
+              g_iran=(54.2, 28.9), g_saudi=(50.4, 24.3), g_uae=(53.2, 24.1), g_oman=(57.6, 22.7),
+              g_gulf=(50.6, 28.0), g_strait=(58.1, 27.0), g_sea=(57.3, 24.3))
 
 
 def ships() -> dict:
@@ -526,16 +589,15 @@ def report(m: dict) -> None:
         print("against the mean of the three earlier years: inside", pc(m["three"]["inside"]), "outside", pc(m["three"]["outside"]), "ratio", pc(m["three"]["ratio"]))
 
 
-def pictures() -> dict:
-    """The film's pictures: the strait and the Gulf of Oman (a 9:16 frame) and the whole Gulf (a wide panel), each as
-    the mean of the closure window (1 March to 17 June) of the earlier and of the later year."""
+def pictures(palette: str = None) -> dict:
+    """The film's map (the Persian Gulf, the Strait of Hormuz and the Gulf of Oman, a wide panel) as the mean of the
+    closure window (1 March to 17 June) of the earlier and of the later year."""
     BUILD.mkdir(parents=True, exist_ok=True)
+    for old in ("g_then.jpg", "g_now.jpg", "e_then.jpg", "e_now.jpg", "locator.jpg"):         # an earlier cut's pictures
+        (BUILD / old).unlink(missing_ok=True)
     for tag, year in (("then", THEN), ("now", NOW)):
-        F = mean_field(closure(year))
-        picture(F, "east", (1620, 2880)).save(BUILD / f"e_{tag}.jpg", quality=92, subsampling=0)
-        picture(F, "gulf", (1620, 1440)).save(BUILD / f"g_{tag}.jpg", quality=92, subsampling=0)
-    return dict(east=dict(box=list(get_hormuz.EAST), then="e_then.jpg", now="e_now.jpg"),
-                gulf=dict(box=list(get_hormuz.GULF), then="g_then.jpg", now="g_now.jpg"))
+        picture(mean_field(closure(year)), (2160, 1748), palette).save(BUILD / f"w_{tag}.jpg", quality=92, subsampling=0)
+    return dict(wide=dict(box=list(get_hormuz.WIDE), then="w_then.jpg", now="w_now.jpg"))
 
 
 def pct(x: float) -> str:
@@ -560,52 +622,66 @@ def words_of(sh: dict, m: dict) -> dict:
     assert air.jalali(EVENT) == (1404, 12, 10) and air.jalali(f"{NOW}-{PARTS['j03'][1]}") == (1405, 3, 27)   # «۱۰ اسفند تا ۲۷ خرداد»
     span_fa = f"{fa(10)} اسفند تا {fa(27)} خرداد"
     ch = m["change"]
-    fa_name = dict(asaluyeh="عسلویه", ras_laffan="رأس لفان", jubail="جبیل", dubai="دبی", bandar="بندرعباس", kuwait="کویت")
+    fa_name = dict(asaluyeh="عسلویه", ras_laffan="رأس لفان", jubail="جبیل", dubai="دبی", bandar="بندرعباس", kuwait="کویت",
+                   fujairah="فجیره", sohar="صحار", muscat="مسقط")
     W = dict(
         hook=f"آلاینده‌ی هوا روی خلیجِ فارس: // {{حدودِ {about(ch['inside'])} کمتر}} از پارسال",
-        tag_then="پارسال", tag_now="امسال",
-        bar_title="دی‌اکسیدِ نیتروژن در هوا", bar_low=f"کم: {fa(f'{V0:g}')}", bar_high=f"زیاد: {fa(f'{V1:g}')}",
-        bar_unit="×۱۰¹⁵ مولکول بر سانتی‌مترمربع",
+        tag_then="پارسال", tag_now="امسال", tag_days=span_fa,             # the same days under both years: the season is the same
+        bar_title="دی‌اکسیدِ نیتروژن در هوا", bar_low="کم", bar_high="زیاد",
+        bar_unit="میلیون‌میلیارد مولکول بر سانتی‌مترمربع",                 # 1e15 molecules per cm2, in words (no exponent on screen)
         head_b="این رنگ: دی‌اکسیدِ نیتروژن، // از {کشتی‌ها، نفت و گاز و شهرها}",
-        g_iran="ایران", g_saudi="عربستان", g_uae="امارات", g_gulf="خلیجِ فارس", g_strait="تنگه‌ی هرمز",
+        g_iran="ایران", g_saudi="عربستان", g_uae="امارات", g_oman="عمان", g_gulf="خلیجِ فارس", g_strait="تنگه‌ی هرمز",
+        g_sea="دریای عمان",
         head_c=f"از {span_fa} // کشتی‌های شمرده‌شده در هرمز: {{{pct(sh['fewer'])} کمتر}}",
-        lane="مسیرِ کشتی‌ها", bandar="بندرعباس", strait="تنگه‌ی هرمز", e_iran="ایران",
-        c_unit="کشتی در روز", c_then=f"پارسال: {fa(round(sh['then']))}", c_now=f"امسال: {fa(round(sh['now']))}",
-        c_note="کشتی‌های بی‌فرستنده شمرده نمی‌شوند", c_from=f"{fa(10)} اسفند", c_to=f"{fa(27)} خرداد",
+        lane="مسیرِ کشتی‌ها",
+        c_unit="عبورِ کشتی در روز", c_then=f"پارسال: {fa(round(sh['then']))}", c_now=f"امسال: {fa(round(sh['now']))}",
+        c_note="کشتی‌های بی‌فرستنده شمرده نمی‌شوند",
+        c_share="این کاهش فقط از کشتی‌ها نیست",                          # beside the ships' count, as the map is wiped: not the ships alone
         head_e="در خلیجِ فارس: کمتر؛ // در دریای عمان: {تقریباً همان}",
         head_f=f"بعد از {fa(27)} خرداد؟ // {{اختلاف با پارسال کمتر شد}}",
         f_title="شش جای خلیجِ فارس، نسبت به پارسال", f_key=span_fa,
         head_h="جنوبی‌ها: هوای این بهار // {چطور بود؟}", follow="برای یک جنوبی بفرستید",
-        src_a=f"Sentinel-5P، ESA؛ {span_fa}، هر دو سال // عدد: میانگینِ شش جای ساحلیِ خلیجِ فارس",
-        src_b="نقشه: Blue Marble، ناسا // رنگ: ستونِ دی‌اکسیدِ نیتروژن در پایینِ جو",
-        src_c="شمارش با فرستنده‌ی AIS: IMF PortWatch // مسیرِ تقریبیِ کشتی‌ها: فهرستِ انتشارِ EDGAR، ۲۰۲۲",
-        src_e="میانگینِ کادرِ ۴۰ کیلومتریِ هر جا، همان روزهای پارسال // دریای عمان: فجیره، صحار، مسقط",
-        src_f="سنجش روی همین داده‌ی ماهواره // تیر و مرداد: فقط روزهایی که هر دو سال داده دارند",
+        src_a=("Sentinel-5P، ESA؛ میانگینِ شش جای ساحلی، همان روزها // "
+               + (f"نسبت به میانگینِ سه سالِ پیش: {pct(m['three']['inside'])} کمتر" if m.get("three") else "هر دو سال")),
+        src_b=f"نقشه: Blue Marble، ناسا // رنگ: ستونِ دی‌اکسیدِ نیتروژن در پایینِ جو؛ بی‌رنگ: کمتر از {fa(f'{V0:g}')}",
+        src_c="شمارِ کشتی‌ها: PortWatch، صندوقِ بین‌المللیِ پول // مسیرِ تقریبیِ کشتی‌ها: از فهرستِ انتشارِ EDGAR، ۲۰۲۲",
+        src_e=("میانگینِ کادرِ ۴۰ کیلومتریِ هر جا، همان روزهای پارسال // "
+               f"سه جای دریای عمان روی‌هم: {pct(ch['outside'])} {'بیشتر' if ch['outside'] > 0 else 'کمتر'}"),
+        src_f="سنجش روی همین داده‌ی ماهواره // تیر، مرداد و آبان: فقط روزهایی که هر دو سال داده دارند",
         src_h="منابع و روش در کامنتِ اول")
+    for k, v in enumerate(SCALE_TICKS):
+        W[f"bar_t{k}"] = fa(f"{v:g}")
     for k in INSIDE:
-        W[f"s_{k}"] = f"{fa_name[k]}: {pct(ch['sites'][k])} کمتر"          # in words: a minus sign beside Persian digits reads badly
+        W[f"s_{k}"] = f"{fa_name[k]} // {pct(ch['sites'][k])} کمتر"       # the name over its change, in words: a minus sign beside Persian digits reads badly
+    for k in OUTSIDE:
+        W[f"o_{k}"] = fa_name[k]                                           # the name alone: the headline says what the three did together
     for k in TICKS:
         W[f"t_{k}"] = FA_PART[k]
     low = min((q for q in m["parts"] if q["when"] == "closure"), key=lambda q: q["inside"])
-    W["f_low"] = f"بیشترین کاهش: {pct(low['inside'])}"                       # the deepest column of the closure, named as that
+    W["f_low"] = f"بیشترین کاهش: {FA_PART[low['key']]}، {pct(low['inside'])}"     # the deepest column of the closure, named with its month
     return W
 
 
 def clock_of() -> dict:
-    a = (0.0, 7.4)
-    b = (a[1], a[1] + 7.0)
-    c = (b[1], b[1] + 9.4)
-    e = (c[1], c[1] + 7.8)
-    f = (e[1], e[1] + 8.0)
+    a = (0.0, 8.2)
+    b = (a[1], a[1] + 7.4)
+    c = (b[1], b[1] + 10.9)
+    e = (c[1], c[1] + 8.6)
+    f = (e[1], e[1] + 8.2)
     h = (f[1], f[1] + 5.0)
     out = (h[1], h[1] + 0.8)
+    sites = [round(e[0] + 0.8 + 0.5 * j, 2) for j in range(len(INSIDE))]
     return dict(a=a, b=b, c=c, e=e, f=f, h=h, out=out,
-                a_go=(0.0, 1.7), a_back=(3.0, 4.2), bar_a=1.9, names_b=b[0] + 0.6,
-                lane=(c[0] + 0.3, c[0] + 1.7), names_c=c[0] + 0.5, lane_chip=c[0] + 1.5,
-                card_c=(c[0] + 1.2, c[1] - 0.15), weeks=(c[0] + 1.6, c[0] + 3.8), c_wipe=(c[0] + 3.0, c[0] + 4.4),
-                c_vals=c[0] + 4.1, c_note=c[0] + 4.8,
-                sites=[round(e[0] + 0.8 + 0.5 * j, 2) for j in range(len(INSIDE))],
-                card_f=(f[0] + 0.3, f[1] - 0.15), parts=(f[0] + 0.8, f[0] + 3.4), f_key=f[0] + 3.6, follow=h[0] + 1.2)
+                a_go=(0.0, 1.7), a_back=(3.0, 4.2), bar_a=1.9, names_b=b[0] + 0.6, names_gap=0.25,
+                lane=(c[0] + 0.3, c[0] + 1.7), lane_chip=c[0] + 1.5,
+                strip=(c[0] + 1.2, c[1] - 0.15), c_then=c[0] + 1.8, c_wipe=(c[0] + 3.0, c[0] + 4.4), c_now=c[0] + 4.1, c_note=c[0] + 4.8,
+                c_share=c[0] + 6.2,
+                sites=sites, outs=[round(sites[-1] + 0.6 + 0.3 * j, 2) for j in range(len(OUTSIDE))],
+                card_f=(f[0] + 0.3, f[1] - 0.15), parts=(f[0] + 0.8, f[0] + 3.4), f_key=f[0] + 1.6, f_low=f[0] + 3.8,     # the key comes with the closure's columns
+                follow=h[0] + 1.2)
+
+
+B_NAMES = ("g_iran", "g_saudi", "g_uae", "g_oman", "g_gulf", "g_strait", "g_sea")      # scene b's names, in the order they come
 
 
 def reading(Wd: dict, C: dict) -> None:
@@ -613,11 +689,12 @@ def reading(Wd: dict, C: dict) -> None:
     words at 2.5 a second (headline, small line and sentences in full, labels at half) and 3 s after its last string."""
     import onebit_reading as rd
     wt = lambda xs: sum(rd.weight(x) for x in xs)    # noqa: E731
-    plan = [("hook", C["a"], [Wd["hook"]], [Wd["tag_then"], Wd["tag_now"], Wd["bar_title"], Wd["bar_low"], Wd["bar_high"], Wd["bar_unit"]], C["bar_a"]),
-            ("what", C["b"], [Wd["head_b"]], [Wd["g_iran"], Wd["g_saudi"], Wd["g_uae"], Wd["g_gulf"], Wd["g_strait"]], C["names_b"] + 1.2),
-            ("ships", C["c"], [Wd["head_c"], Wd["c_note"]], [Wd["lane"], Wd["bandar"], Wd["strait"], Wd["c_unit"], Wd["c_then"], Wd["c_now"], Wd["c_from"], Wd["c_to"]], C["c_note"]),
-            ("sites", C["e"], [Wd["head_e"]], [Wd[f"s_{k}"] for k in INSIDE], C["sites"][-1] + 0.3),
-            ("after", C["f"], [Wd["head_f"]], [Wd["f_title"], Wd["f_key"], Wd["f_low"]] + [Wd[f"t_{k}"] for k in TICKS], C["f_key"]),
+    bar = [Wd["bar_title"], Wd["bar_low"], Wd["bar_high"], Wd["bar_unit"]] + [Wd[f"bar_t{k}"] for k in range(len(SCALE_TICKS))]
+    plan = [("hook", C["a"], [Wd["hook"]], [Wd["tag_then"], Wd["tag_now"], Wd["tag_days"]] + bar, C["bar_a"]),
+            ("what", C["b"], [Wd["head_b"]], [Wd[k] for k in B_NAMES], C["names_b"] + C["names_gap"] * (len(B_NAMES) - 1) + 0.3),
+            ("ships", C["c"], [Wd["head_c"], Wd["c_note"], Wd["c_share"]], [Wd["lane"], Wd["c_unit"], Wd["c_then"], Wd["c_now"]], C["c_share"]),   # the seas' names stay from scene b
+            ("sites", C["e"], [Wd["head_e"]], [Wd[f"s_{k}"] for k in INSIDE] + [Wd[f"o_{k}"] for k in OUTSIDE], C["outs"][-1] + 0.3),
+            ("after", C["f"], [Wd["head_f"]], [Wd["f_title"], Wd["f_key"], Wd["f_low"]] + [Wd[f"t_{k}"] for k in TICKS], C["f_low"]),
             ("close", C["h"], [Wd["head_h"], Wd["follow"]], [], C["follow"])]
     print("\nreading (seconds the rule needs, seconds given):")
     short, total = [], 0.0
@@ -632,7 +709,7 @@ def reading(Wd: dict, C: dict) -> None:
     assert not short, short
 
 
-def film(final: bool = True) -> dict:
+def film(final: bool = True, palette: str = None) -> dict:
     """Write outputs/onebit/hormuz/film.json and the pictures. final: the winter before the event and two earlier
     springs must be there, and every sentence of the film is asserted against them."""
     sh, m = ships(), measures()
@@ -644,6 +721,11 @@ def film(final: bool = True) -> dict:
     assert all(parts[k]["gulf"] < -0.15 and parts[k]["inside"] < -0.15 for k in CLOSURE), parts
     assert abs(ch["outside"]) < 0.1, ch                                            # «در دریای عمان: تقریباً همان»
     assert about(ch["inside"]) == about(0.30), ch["inside"]                        # «حدودِ ۳۰٪ کمتر»
+    assert about(ch["seas"]["gulf"]) == about(0.30), ch["seas"]                    # ... «روی خلیجِ فارس»: the Gulf's sea says the same
+    # «این کاهش فقط از کشتی‌ها نیست»: ships are a small part of the inventory's NOx in the box, far less than the fall
+    z = np.load(DATA / "edgar_nox_2022.npz")
+    m["ship_share"] = float(np.nansum(z["ship"]) / np.nansum(z["total"]))            # EDGAR v8.1, 2022, the whole box
+    assert 0.1 < m["ship_share"] < 0.2 < abs(ch["inside"]), m["ship_share"]
     if final:
         assert set(BEFORE + CLOSURE + AFTER) == set(parts), sorted(parts)
         assert len(m["years"]) == 4 and "before" in m, m["years"]
@@ -668,15 +750,19 @@ def film(final: bool = True) -> dict:
         assert m["below_all"] == ["asaluyeh", "ras_laffan", "jubail", "kuwait"], m["below_all"]
     Wd, C = words_of(sh, m), clock_of()
     reading(Wd, C)
-    pics = pictures()
+    pics = pictures(palette)
     chart = [dict(key=q["key"], when=q["when"], value=round(100 * q["inside"], 1)) for q in m["parts"]]
+    # the dots that move along the lane: one for this year's ships a day, and as many for last year's as its count is larger
+    beads = dict(then=round(sh["then"] / sh["now"]), now=1)
+    assert 18 <= beads["then"] <= 24, beads
     F = dict(fps=FPS, size=[1080, 1920], cover_t=2.6, end=C["out"][1], clock=C, words=Wd,      # the cover: this year's map, whole
-             places={k: list(v) for k, v in PLACES.items()}, inside=list(INSIDE), site_at={k: list(SITE_AT[k]) for k in INSIDE},
+             places={k: list(v) for k, v in PLACES.items()}, inside=list(INSIDE), outside=list(OUTSIDE), names_b=list(B_NAMES),
+             site_at={k: list(SITE_AT[k]) for k in INSIDE + OUTSIDE},
              colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", then="#F39C2B", now="#2C6FB7", rest="#9a948b"),
-             lane=lane_path(), ships=dict(then=sh["weeks_then"], now=sh["weeks_now"]),
+             lane=lane_path(), beads=beads,
              chart=dict(parts=chart, ticks=[[q["key"] for q in m["parts"]].index(k) for k in TICKS if k in parts], tick_keys=[k for k in TICKS if k in parts],
                         low=min((k for k, q in enumerate(chart) if q["when"] == "closure"), key=lambda k: chart[k]["value"])),
-             scale=dict(v0=V0, v1=V1, ramp=[[q[0], list(q[1])] for q in RAMP]),
+             scale=scale_of(palette),
              numbers=dict(ships=sh, **{k: v for k, v in m.items()}), **pics)
     (BUILD / "film.json").write_text(json.dumps(F, ensure_ascii=False, indent=1))
     print(f"\nships a day {sh['then']:.1f} -> {sh['now']:.1f} ({100 * sh['fewer']:.1f} % fewer; three earlier years {sh['three']:.1f}); "
@@ -687,7 +773,7 @@ def film(final: bool = True) -> dict:
 
 def main() -> None:
     if len(sys.argv) >= 2 and sys.argv[1] in ("film", "draft"):
-        film(final=sys.argv[1] == "film")
+        film(final=sys.argv[1] == "film", palette=sys.argv[2] if len(sys.argv) > 2 else None)      # a second word: another look
         return
     if len(sys.argv) >= 3 and sys.argv[1] in ("fields", "partial"):
         yms = [ym for a in sys.argv[2:] for ym in (window(int(a)) if len(a) == 4 else [a])]

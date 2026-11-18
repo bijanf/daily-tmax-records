@@ -59,8 +59,7 @@ EDGAR = ("https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v81_FT
          "v8.1_FT2022_AP_NOx_2022_{0}_emi_nc.zip")
 NE_URL = "https://naciscdn.org/naturalearth/10m/{}/{}.zip"
 NE_LAYERS = (("physical", "ne_10m_land"), ("cultural", "ne_10m_admin_0_boundary_lines_land"))
-# the film's pictures: the strait and the Gulf of Oman as one 9:16 frame; the whole Gulf as a wide panel (two are stacked)
-EAST = get_khazar.frame(55.2, 60.8, 21.6)                       # W, S, E, N
+# the film's map: the two seas with the strait between them, as a wide panel
 
 
 def panel(west: float, east: float, south: float, ratio: float) -> tuple:
@@ -69,8 +68,7 @@ def panel(west: float, east: float, south: float, ratio: float) -> tuple:
     return west, south, east, get_khazar.lat_of(my(south) + (mx(east) - mx(west)) / ratio)
 
 
-GULF = panel(47.5, 57.1, 23.2, 1080 / 960)                      # the whole Gulf, 1080 x 960
-LOCATOR = get_khazar.frame(42.5, 64.5, 10.5)                    # the corner map: Arabia, Iran and the seas between
+WIDE = panel(47.75, 60.75, 21.55, 1080 / 874)                   # the Persian Gulf, the Strait of Hormuz and the Gulf of Oman, 1080 x 874
 FILL = 1e30
 BLOCK = 2 * 1024 * 1024                          # bytes per range request
 _TOKEN = dict(value=None, at=0.0)
@@ -303,19 +301,18 @@ def natural_earth() -> None:
 
 
 def bases() -> None:
-    """NASA Blue Marble (shaded relief and bathymetry) for the two pictures of the film."""
+    """NASA Blue Marble (shaded relief and bathymetry) under the film's map."""
     import io
     from PIL import Image
     mx, my = get_khazar.mx, get_khazar.my
-    assert BOX[1] < GULF[1] and GULF[3] < BOX[3] and BOX[1] < EAST[1] and EAST[3] < BOX[3], (GULF, EAST)   # inside the data
-    for name, box, px in (("east", EAST, (1620, 2880)), ("gulf", GULF, (1620, 1440)), ("locator", LOCATOR, (504, 896))):
-        path = DATA / f"base_{name}.jpg"
-        if path.exists():
-            continue
-        w, s, e, n = box
-        url = get_khazar.GIBS_STATIC.format("BlueMarble_ShadedRelief_Bathymetry", mx(w), my(s), mx(e), my(n), px[0], px[1])
-        Image.open(io.BytesIO(get_khazar.fetch(url))).convert("RGB").save(path, quality=94, subsampling=0)
-        print("saved", path.name)
+    assert BOX[0] < WIDE[0] and WIDE[2] < BOX[2] and BOX[1] < WIDE[1] and WIDE[3] < BOX[3], WIDE      # inside the data
+    path = DATA / "base_wide.jpg"
+    if path.exists():
+        return
+    w, s, e, n = WIDE
+    url = get_khazar.GIBS_STATIC.format("BlueMarble_ShadedRelief_Bathymetry", mx(w), my(s), mx(e), my(n), 2160, 1748)
+    Image.open(io.BytesIO(get_khazar.fetch(url))).convert("RGB").save(path, quality=94, subsampling=0)
+    print("saved", path.name)
 
 
 def main() -> None:

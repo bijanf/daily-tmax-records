@@ -1,8 +1,8 @@
 """The light score of the Hormuz NO2 film (hormuz_fa; no narration): the light score's setar and checks
 (onebit_score_air_light.py, imported, not copied), on the clock that src/hormuz.py writes into film.json, on D with
 D, F and A only (every pair that rings together is consonant; the mode's other notes are not used). A soft D5 on the
-first picture; the wipe to this year's darker map falls to D4 and the wipe back rises to D5; a note with the names;
-in the strait a note as the lane is drawn, one where the columns of the ships fall and D4 where this year's picture
+first picture; the wipe to this year's map falls to D4 and the wipe back rises to D5; a note with the names; with
+the ships a note as the lane is drawn, one where the map is wiped to this year and D4 where this year's picture
 stands; a note on each of the six places as it is named; in the chart a D5 on the columns of the closure and a note
 on the line that names them; a note in each reading hold (no second of digital silence: check f); the ending, D4 and
 A4 struck together, rings out before the loop.
@@ -44,23 +44,25 @@ def score_notes(film: dict) -> tuple:
     b0, c0, e0, f0, h0 = c["b"][0], c["c"][0], c["e"][0], c["f"][0], c["h"][0]
     plan = (
         (0.00, D5, VEL_SOFT),                        # soft, the first sound: last year's map
-        (go[1], D4, VEL),                            # this year's darker map
+        (go[1], D4, VEL),                            # this year's map
         (bk[0], F4, VEL_MARK),                       # the wipe back starts ...
         (bk[1], D5, VEL),                            # ... last year again
-        (bk[1] + 1.6, A4, VEL_MARK),                 # (the next note is the scene's own, 1.6 s later)
-        (b0, D4, VEL),                               # what the glow is
+        (bk[1] + 1.6, A4, VEL_MARK),                 # the hold: the colour bar and the days are read
+        (bk[1] + 3.0, F4, VEL_MARK),
+        (b0, D4, VEL),                               # what the colour is
         (c["names_b"] + 0.5, A4, VEL_MARK),          # the names
         (c["names_b"] + 2.1, F4, VEL_MARK),
         (c["names_b"] + 3.7, A4, VEL_MARK),
         (c["names_b"] + 5.3, F4, VEL_MARK),
-        (c0, D4, VEL),                               # the strait
+        (c0, D4, VEL),                               # the ships
         (c["lane"][1], A4, VEL),                     # the lane is drawn
-        (c["c_wipe"][0] + 0.1, D5, VEL),             # the columns fall, the wipe starts
+        (c["c_wipe"][0] + 0.1, D5, VEL),             # the wipe to this year starts
         (c["c_wipe"][1], D4, VEL),                   # this year's picture stands
         (c["c_note"] + 0.2, A4, VEL_MARK),           # the note on the count
-        (c["c_note"] + 1.8, F4, VEL_MARK),
-        (c["c_note"] + 3.2, A4, VEL_MARK),
-        (e0, D4, VEL),                               # the whole Gulf, this year
+        (c["c_share"] + 0.2, F4, VEL_MARK),          # not the ships alone
+        (c["c_share"] + 1.8, A4, VEL_MARK),
+        (c["c_share"] + 3.3, F4, VEL_MARK),
+        (e0, D4, VEL),                               # the places, this year
         (st[0], D5, VEL),                            # the six places, one after another
         (st[1], A4, VEL_MARK),
         (st[2], F4, VEL_MARK),
@@ -70,11 +72,11 @@ def score_notes(film: dict) -> tuple:
         (st[5] + 1.5, A4, VEL_MARK),
         (st[5] + 3.0, F4, VEL_MARK),
         (f0, D4, VEL),                               # every part of the year
-        (c["parts"][0] + 0.5, A4, VEL_MARK),         # the columns come ...
-        (c["parts"][0] + 1.5, D5, VEL),              # ... the closure's hang below the line
-        (c["f_key"], F4, VEL),                       # the line that names them
-        (c["f_key"] + 1.6, A4, VEL_MARK),
-        (c["f_key"] + 3.0, F4, VEL_MARK),
+        (c["f_key"], A4, VEL_MARK),                  # the columns come, with the line that names the closure's
+        (c["parts"][0] + 1.9, D5, VEL),              # the closure's columns hang below the line
+        (c["f_low"] + 0.1, F4, VEL),                 # the deepest of them is named
+        (c["f_low"] + 1.7, A4, VEL_MARK),
+        (c["f_low"] + 3.1, F4, VEL_MARK),
         (h0, D5, VEL),                               # the question
         (c["follow"], A4, VEL),                      # the call
         (c["follow"] + 1.3, F4, VEL_MARK),

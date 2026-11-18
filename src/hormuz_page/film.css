@@ -1,6 +1,7 @@
-/* The Hormuz NO2 film: one 1080 x 1920 stage, the NO2 map as a wide panel or as the whole frame, drawn for a time t by film.js
+/* The Hormuz NO2 film: one 1080 x 1920 stage, the NO2 map as a wide panel in its middle, drawn for a time t by film.js
    (no CSS animation). Headlines stay inside x 96-984 and everything below y 1000 inside x 96-924 (Instagram's own
    buttons stand right of that); nothing that must be read lies below y 1540 (Instagram's caption).
+   The map is bright (the map by day), so every name on it stands on a plate.
    Written for this film: every selector here is used by film.js. */
 @font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
 @font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
@@ -17,12 +18,6 @@ html, body { width: 1080px; height: 1920px; overflow: hidden; background: #120d0
 canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
 svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
 
-/* the two soft shades that carry the words: the top and the bottom of the picture only */
-#shade-top { position: absolute; left: 0; top: 0; width: 1080px; height: 660px;
-  background: linear-gradient(180deg, rgba(12, 9, 6, 0.78) 0%, rgba(12, 9, 6, 0.62) 42%, rgba(12, 9, 6, 0.26) 78%, rgba(12, 9, 6, 0) 100%); }
-#shade-bot { position: absolute; left: 0; top: 1400px; width: 1080px; height: 520px;      /* low and light: the lane crosses the picture's lower half */
-  background: linear-gradient(0deg, rgba(12, 9, 6, 0.74) 0%, rgba(12, 9, 6, 0.5) 50%, rgba(12, 9, 6, 0.2) 82%, rgba(12, 9, 6, 0) 100%); }
-
 /* the headline */
 .head { position: absolute; left: var(--left); top: 240px; width: var(--width); text-align: right; }   /* from y 240: whole in the profile grid's 3:4 crop */
 .head .line { display: block; font-weight: 900; font-size: 84px; line-height: 120px; white-space: nowrap;
@@ -30,29 +25,43 @@ svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
 .head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
   text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
-/* the tag: whose year the picture is (the right column, under the headline) */
-#tag { position: absolute; right: 96px; top: 524px; text-align: right; white-space: nowrap; font-family: "Lalezar", "Vazirmatn", sans-serif;
-  font-weight: 400; font-size: 96px; line-height: 132px; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 26px rgba(0, 0, 0, 0.8); }
+/* the tag: whose year the picture is and which days of it (a plate in the picture's upper right corner) */
+#tag { position: absolute; right: 96px; top: 516px; white-space: nowrap; text-align: center; padding: 2px 24px 10px; border-radius: 22px;
+  background: rgba(12, 9, 6, 0.8); }
+#tag .year { display: block; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 84px; line-height: 100px; }
+#tag .days { display: block; font-weight: 700; font-size: 38px; line-height: 44px; color: #f3ead8; }
 
-/* names on the pictures: a chip (a place or a note), bare words (a country, a sea), a gold chip (the lane) */
+/* names on the map: a dark plate (a country, a place), a blue plate (a sea, the strait), a paper plate (the lane) */
 .chip { position: absolute; font-weight: 800; font-size: 44px; line-height: 56px; white-space: nowrap; color: #fff;
   background: rgba(12, 9, 6, 0.8); border-radius: 14px; padding: 2px 18px 8px; transform: translate(-50%, -50%); }
-.chip.gold { background: var(--gold); color: var(--ink); font-weight: 900; }
-.land { position: absolute; font-weight: 900; font-size: 60px; line-height: 76px; white-space: nowrap; color: #fff;
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6), 0 0 22px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.85); transform: translate(-50%, -50%); }
-.land.sea { color: #cfeaff; font-size: 52px; }
+.chip.sea { background: rgba(13, 47, 92, 0.88); color: #e4f1ff; }
+.chip.paper { background: rgba(251, 247, 240, 0.97); color: var(--ink); font-weight: 900; }
+.chip.out { font-size: 40px; line-height: 52px; padding: 0 16px 6px; }
+/* a place inside the Gulf: its name over its change */
+.chip.site { text-align: center; padding: 4px 16px 8px; }
+.chip.site .n { display: block; font-weight: 700; font-size: 38px; line-height: 46px; color: #f3ead8; }
+.chip.site .v { display: block; font-weight: 900; font-size: 44px; line-height: 50px; color: var(--gold); }
 
-/* the colour bar: what the glow is, from little to much (the ends carry the numbers and the unit) */
-#bar { position: absolute; left: var(--left); top: 1238px; width: 560px; text-align: right; }
-#bar .title { font-weight: 800; font-size: 40px; line-height: 52px; white-space: nowrap; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 14px rgba(0, 0, 0, 0.9); }
-#bar .strip { position: relative; height: 24px; margin-top: 6px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.85); }
-#bar .ends { display: flex; flex-direction: row; justify-content: space-between; direction: rtl; margin-top: 2px; font-weight: 700;
-  font-size: 36px; line-height: 44px; white-space: nowrap; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 14px rgba(0, 0, 0, 0.9); }
-#bar .unit { font-weight: 500; font-size: 34px; line-height: 42px; white-space: nowrap; color: #f3ead8;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
+/* the colour bar, a paper card on the map's lower left (the desert): the gas from little (right) to much (left),
+   three values of the scale under it, the unit in words */
+#bar { position: absolute; left: var(--left); top: 1180px; width: 560px; height: 184px; padding: 6px 20px 0; border-radius: 20px;
+  background: rgba(251, 247, 240, 0.97); color: var(--ink); text-align: right; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35); }
+#bar .title { font-weight: 800; font-size: 40px; line-height: 50px; white-space: nowrap; }
+#bar .row { display: flex; flex-direction: row; align-items: flex-start; gap: 14px; height: 76px; padding-top: 6px; }
+#bar .end { font-weight: 800; font-size: 36px; line-height: 30px; white-space: nowrap; }
+#bar .strip { position: relative; flex: 1; height: 28px; }
+#bar .fill { position: absolute; left: 0; top: 0; width: 100%; height: 28px; border-radius: 8px; border: 2px solid rgba(29, 20, 12, 0.7); }
+#bar .tick { position: absolute; top: 32px; transform: translateX(50%); font-style: normal; font-weight: 700; font-size: 36px;
+  line-height: 40px; white-space: nowrap; }
+#bar .notch { position: absolute; top: 20px; width: 3px; height: 12px; margin-right: -1.5px; background: var(--ink); }
+#bar .unit { font-weight: 500; font-size: 34px; line-height: 42px; white-space: nowrap; }
+/* the ember look (more gas, lighter): the bar's card is dark, so that its light end reads as much */
+body.ember #bar { background: rgba(18, 13, 9, 0.9); color: #fff; }
+body.ember #bar .fill { border-color: rgba(255, 255, 255, 0.8); }
+body.ember #bar .notch { background: #fff; }
 
-/* the cards: the ships of every week (columns); the lanes of the three seas (pairs of bars) */
-.card { position: absolute; left: var(--left); top: 1034px; width: var(--low); height: 410px; border-radius: 26px;
+/* the cards: the ships a day (a strip on the panel's foot); the places' change through the year (columns) */
+.card { position: absolute; left: var(--left); top: 954px; width: var(--low); height: 410px; border-radius: 26px;
   background: rgba(251, 247, 240, 0.985); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); overflow: hidden; }
 .card svg { position: absolute; left: 0; top: 0; }
 .card .t { position: absolute; font-weight: 800; font-size: 38px; line-height: 48px; white-space: nowrap; color: var(--ink); }
@@ -62,13 +71,21 @@ svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
 .card .t i { display: inline-block; width: 22px; height: 26px; border-radius: 5px; margin-left: 9px; vertical-align: -3px; }
 .card .t i.then { background: var(--then); }
 .card .t i.now { background: var(--now); }
+.card.count { top: 1204px; height: 160px; padding: 4px 26px 0; border-radius: 22px; }
+.card.count .row { display: flex; flex-direction: row; justify-content: space-between; align-items: baseline; white-space: nowrap; }
+.card.count .unit { font-weight: 800; font-size: 40px; line-height: 58px; }
+.card.count .big { font-weight: 900; font-size: 48px; line-height: 58px; }
+.card.count .then { color: #a85f08; }
+.card.count .now { color: #1d4f8a; }
+.card.count .note { font-weight: 700; font-size: 36px; line-height: 46px; white-space: nowrap; text-align: right; }
 
-#follow { position: absolute; left: var(--left); top: 1290px; width: var(--low); text-align: center; white-space: nowrap; }
+#follow { position: absolute; left: var(--left); top: 1272px; width: var(--low); text-align: center; white-space: nowrap; }
 #follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
   font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
 .sources { position: absolute; left: var(--left); bottom: 380px; width: var(--low); text-align: right; font-weight: 500;
   font-size: 34px; line-height: 44px; white-space: nowrap; color: #f3ead8; opacity: 0.94;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
 .sources span { display: block; }
-#wipe { position: absolute; top: 0; width: 6px; height: 1920px; background: #fff;
-  box-shadow: 0 0 22px 6px rgba(255, 255, 255, 0.75), 0 0 60px 14px rgba(255, 190, 110, 0.5); }
+/* the line between last year's picture and this year's: white with a dark edge (the map under it is bright) */
+#wipe { position: absolute; top: 0; width: 8px; height: 1920px; background: #fff; border-left: 2px solid rgba(12, 9, 6, 0.75);
+  border-right: 2px solid rgba(12, 9, 6, 0.75); box-shadow: 0 0 18px 4px rgba(12, 9, 6, 0.45); }

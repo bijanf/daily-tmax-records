@@ -5,8 +5,8 @@ frames alone do not show what slides through a transition) and two things are as
        buttons stand right of that), and nothing below y 1540 (Instagram's caption);
     2. no two pieces of text lie on each other (the parts of one block, such as the card or one headline, apart).
 
-A text box is measured by its ink (a font's line box is taller than its letters); the card, chips and the locator by
-their own box. Run it after every change of words, clock or layout, before rendering:
+A text box is measured by its ink (a font's line box is taller than its letters); the cards, the chips, the year's
+tag and the colour bar by their own box. Run it after every change of words, clock or layout, before rendering:
 
     python -I src/onebit_hormuz_sweep.py          # exit code 1 if anything is found
     python -I src/onebit_hormuz_sweep.py 0.1      # a finer step (transitions shorter than 0.25 s)
@@ -25,11 +25,11 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 base = film.base
 STEP = float(sys.argv[1]) if len(sys.argv) > 1 else 0.25        # seconds between the frames looked at
 JS = """(t) => { window.renderAt(t); const out = [];
- const sel = '.head .line, .head .small, #tag, .chip, .land, #locator, .card, #bar .title, #bar .ends span, #follow span, .sources span';
+ const sel = '.head .line, .head .small, #tag, #tag .year, #tag .days, .chip, .card, #bar, #bar .title, #bar .end, #bar .tick, #bar .unit, #follow span, .sources span';
  document.querySelectorAll(sel).forEach(e => { let o = 1, v = true;
    for (let n = e; n && n.id !== 'stage'; n = n.parentElement) { const cs = getComputedStyle(n); o *= parseFloat(cs.opacity); if (cs.visibility === 'hidden' || cs.display === 'none') v = false; }
    if (!v || o < 0.5) return; const r = e.getBoundingClientRect();
-   const isBox = e.classList.contains('card') || e.id === 'locator' || e.classList.contains('chip') || e.parentElement.id === 'follow';
+   const isBox = e.classList.contains('card') || e.id === 'bar' || e.id === 'tag' || e.classList.contains('chip') || e.parentElement.id === 'follow';
    if (r.width < 1 || !e.textContent.trim() && !isBox) return;
    const rg = document.createRange(); rg.selectNodeContents(e); const q = rg.getBoundingClientRect();
    const fs0 = parseFloat(getComputedStyle(e).fontSize), trim = isBox ? 0 : Math.max(0, (q.height - 1.05 * fs0) / 2);   // the ink, not the font's tall line box
