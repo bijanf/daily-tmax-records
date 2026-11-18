@@ -210,7 +210,7 @@ async function main() {
     put(nBandar, pE(P.bandar[0], P.bandar[1]), nOn, 150, -74);
     put(nStrait, pE(P.strait[0], P.strait[1]), nOn * seg(t, C.names_c + 0.25, C.names_c + 0.55), 236, 6);
     put(nIran, pE(P.e_iran[0], P.e_iran[1]), nOn * seg(t, C.names_c + 0.5, C.names_c + 0.8));
-    put(nLane, pE(P.lane[0], P.lane[1]), (back ? 0 : on.c) * seg(t, C.lane_chip, C.lane_chip + 0.3) * (1 - seg(t, C.card_c[0] - 0.1, C.card_c[0] + 0.2)));
+    put(nLane, pE(P.lane[0], P.lane[1]), (back ? 0 : on.c) * seg(t, C.lane_chip, C.lane_chip + 0.3));       // beside the lane's bend, above the card
 
     // scene e: the places, one after another: a dot on the place, its name and its change above it
     F.inside.forEach((k, j) => { const q = projG(P[k][0], P[k][1]), o = (back ? 0 : on.e) * seg(t, C.sites[j], C.sites[j] + 0.3);

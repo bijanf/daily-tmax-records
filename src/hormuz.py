@@ -355,7 +355,7 @@ INSIDE = ("asaluyeh", "ras_laffan", "jubail", "dubai", "bandar", "kuwait")
 # where each name stands from its dot on the panel (pixels): above it, unless a neighbour's name is there
 SITE_AT = dict(asaluyeh=(70, -62), ras_laffan=(-165, -44), jubail=(0, -62), dubai=(0, -62), bandar=(0, 62), kuwait=(0, -62))
 OUTSIDE = ("fujairah", "sohar", "muscat")
-PLACES = dict(SITES, strait=(56.47, 26.62), e_iran=(59.3, 26.95), lane=(58.55, 25.38),
+PLACES = dict(SITES, strait=(56.47, 26.62), e_iran=(59.3, 26.95), lane=(57.9, 26.08),      # the lane's name: beside its bend, above the card
               g_iran=(53.6, 29.25), g_saudi=(48.9, 25.75), g_uae=(54.6, 24.5), g_gulf=(51.35, 27.05), g_strait=(56.45, 26.6))
 
 
@@ -509,15 +509,15 @@ def words_of(sh: dict, m: dict) -> dict:
         bar_unit="×۱۰¹⁵ مولکول بر سانتی‌مترمربع",
         head_b="این رنگ: دی‌اکسیدِ نیتروژن، // از {کشتی‌ها، نفت و گاز و شهرها}",
         g_iran="ایران", g_saudi="عربستان", g_uae="امارات", g_gulf="خلیجِ فارس", g_strait="تنگه‌ی هرمز",
-        head_c=f"از {span_fa} // کشتی‌های ثبت‌شده در هرمز: {{{pct(sh['fewer'])} کمتر}}",
+        head_c=f"از {span_fa} // کشتی‌های شمرده‌شده در هرمز: {{{pct(sh['fewer'])} کمتر}}",
         lane="مسیرِ کشتی‌ها", bandar="بندرعباس", strait="تنگه‌ی هرمز", e_iran="ایران",
         c_unit="کشتی در روز", c_then=f"پارسال: {fa(round(sh['then']))}", c_now=f"امسال: {fa(round(sh['now']))}",
         c_note="کشتی‌های بی‌فرستنده شمرده نمی‌شوند", c_from=f"{fa(10)} اسفند", c_to=f"{fa(27)} خرداد",
         head_e="در خلیجِ فارس: کمتر؛ // در دریای عمان: {تقریباً همان}",
         head_f=f"بعد از {fa(27)} خرداد؟ // {{اختلاف با پارسال کمتر شد}}",
         f_title="شش جای خلیجِ فارس، نسبت به پارسال", f_key=span_fa,
-        head_h="جنوبی‌ها: بهارِ امسال // {هوا پاک‌تر بود؟}", follow="برای یک جنوبی بفرستید",
-        src_a=f"Sentinel-5P، ESA؛ {span_fa}، هر دو سال // عدد: میانگینِ شش بندر و مرکزِ صنعتی",
+        head_h="جنوبی‌ها: هوای این بهار // {چطور بود؟}", follow="برای یک جنوبی بفرستید",
+        src_a=f"Sentinel-5P، ESA؛ {span_fa}، هر دو سال // عدد: میانگینِ شش جای ساحلیِ خلیجِ فارس",
         src_b="نقشه: Blue Marble، ناسا // رنگ: ستونِ دی‌اکسیدِ نیتروژن در پایینِ جو",
         src_c="شمارش با فرستنده‌ی AIS: IMF PortWatch // مسیرِ تقریبیِ کشتی‌ها: فهرستِ انتشارِ EDGAR، ۲۰۲۲",
         src_e="میانگینِ کادرِ ۴۰ کیلومتریِ هر جا، همان روزهای پارسال // دریای عمان: فجیره، صحار، مسقط",
@@ -603,7 +603,7 @@ def film(final: bool = True) -> dict:
     reading(Wd, C)
     pics = pictures()
     chart = [dict(key=q["key"], when=q["when"], value=round(100 * q["inside"], 1)) for q in m["parts"]]
-    F = dict(fps=FPS, size=[1080, 1920], cover_t=0.85, end=C["out"][1], clock=C, words=Wd,
+    F = dict(fps=FPS, size=[1080, 1920], cover_t=2.6, end=C["out"][1], clock=C, words=Wd,      # the cover: this year's map, whole
              places={k: list(v) for k, v in PLACES.items()}, inside=list(INSIDE), site_at={k: list(SITE_AT[k]) for k in INSIDE},
              colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", then="#F39C2B", now="#2C6FB7", rest="#9a948b"),
              lane=lane_path(), ships=dict(then=sh["weeks_then"], now=sh["weeks_now"]),

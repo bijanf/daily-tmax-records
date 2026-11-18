@@ -57,7 +57,7 @@ def main() -> None:
     if args.stills or args.at is not None:
         from playwright.sync_api import sync_playwright
         c = film["clock"]
-        times = args.at or sorted({0.0, 1.1, 2.1, 3.0} | {round(c[k][0] + f * (c[k][1] - c[k][0]), 1) for k in "abcdeh" for f in (0.45, 0.9)} | {round(film["end"] - 0.04, 2)})
+        times = args.at or sorted({0.0, 1.1, 2.1, 3.0} | {round(c[k][0] + f * (c[k][1] - c[k][0]), 1) for k in "abcefh" for f in (0.45, 0.9)} | {round(film["end"] - 0.04, 2)})
         folder = args.out or base.SOCIAL
         folder.mkdir(parents=True, exist_ok=True)
         with sync_playwright() as pw:
