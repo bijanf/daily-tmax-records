@@ -445,6 +445,65 @@ def measures() -> dict:
     return out
 
 
+def day_sums(year: int) -> dict:
+    """Per day of the closure window of a year and per place: the sum of NO2 over the valid pixels whose centre lies in
+    the place's box, their number, and the number of all pixels in the box (valid or not). Straight from the cached
+    orbits, without the grid: an estimate that is independent of the oversampling. Cached per year."""
+    path = DATA / f"day_sums_{year}.json"
+    if path.exists():
+        return json.loads(path.read_text())
+    first, last = f"{year}-{PARTS[CLOSURE[0]][0]}", f"{year}-{PARTS[CLOSURE[-1]][1]}"
+    rows = [r for m in sorted({f"{year}-{mm:02d}" for mm in range(int(first[5:7]), int(last[5:7]) + 1)})
+            for r in get_hormuz.month_items(m) if first <= r["datetime"][:10] <= last]
+    keys = list(SITES)
+    out = {}
+    for r in rows:
+        f = get_hormuz.GRANULES / f"{r['id']}.npz"
+        if not f.exists():
+            assert (get_hormuz.GRANULES / f"{r['id']}.json").exists(), r["id"]      # an orbit without pixels in the box
+            continue
+        z = np.load(f)
+        lat, lon, no2 = z["lat"], z["lon"], z["no2"]
+        day = out.setdefault(r["datetime"][:10], [[0.0, 0, 0] for _ in keys])
+        for j, k in enumerate(keys):
+            x, y = SITES[k]
+            box = (np.abs(lat - y) < SITE_DEG) & (np.abs(lon - x) < SITE_DEG)
+            ok = box & np.isfinite(no2)
+            day[j][0] += float(no2[ok].sum()) * K
+            day[j][1] += int(ok.sum())
+            day[j][2] += int(box.sum())
+    path.write_text(json.dumps(dict(sites=keys, days=out)))
+    return dict(sites=keys, days=out)
+
+
+def ranges(draws: int = 5000, seed: int = 1) -> dict:
+    """The 90 % range of the two groups' change from THEN to NOW when the days of each year's window are drawn again
+    with replacement (pooled pixels of each place's box, then the mean of the places), and the share of the boxes'
+    pixels that passed the quality filter in each year."""
+    rng = np.random.default_rng(seed)
+    d = {y: day_sums(y) for y in (THEN, NOW)}
+    keys = d[THEN]["sites"]
+    arr = {y: np.array([d[y]["days"][k] for k in sorted(d[y]["days"])], float) for y in (THEN, NOW)}     # days x places x 3
+    idx = dict(inside=[keys.index(k) for k in INSIDE], outside=[keys.index(k) for k in OUTSIDE])
+
+    def group(a: np.ndarray, which: str) -> float:
+        tot = a.sum(axis=0)
+        return float(np.mean([tot[j, 0] / tot[j, 1] for j in idx[which]]))
+
+    point = {w: group(arr[NOW], w) / group(arr[THEN], w) - 1 for w in idx}
+    sims = {w: [] for w in idx}
+    for _ in range(draws):
+        a = arr[THEN][rng.integers(0, len(arr[THEN]), len(arr[THEN]))]
+        b = arr[NOW][rng.integers(0, len(arr[NOW]), len(arr[NOW]))]
+        for w in idx:
+            sims[w].append(group(b, w) / group(a, w) - 1)
+    out = dict(point=point, days={str(y): len(arr[y]) for y in (THEN, NOW)},
+               valid={str(y): float(arr[y][:, :, 1].sum() / arr[y][:, :, 2].sum()) for y in (THEN, NOW)})
+    for w in idx:
+        out[w] = [float(np.percentile(sims[w], 5)), float(np.percentile(sims[w], 95))]
+    return out
+
+
 def report(m: dict) -> None:
     pc = lambda x: f"{100 * x:+4.0f} %"                                               # noqa: E731
     print(f"\nclosure window ({PARTS[CLOSURE[0]][0]} to {PARTS[CLOSURE[-1]][1]}), years {m['years']}, {THEN} -> {NOW}:")
@@ -599,6 +658,14 @@ def film(final: bool = True) -> dict:
         assert -0.30 < m["three"]["inside"] < -0.20 and -0.36 < m["three"]["ratio"] < -0.28, m["three"]   # the first comment's numbers
         # after the memorandum the six places differ less from last year than in any part of the closure («اختلاف کمتر شد»)
         assert max(abs(parts[k]["inside"]) for k in AFTER) < min(abs(parts[k]["inside"]) for k in CLOSURE), parts
+    if final:
+        m["ranges"] = ranges()
+        assert abs(m["ranges"]["point"]["inside"] - ch["inside"]) < 0.01, m["ranges"]["point"]    # the pooled pixels agree with the grid
+        assert m["ranges"]["inside"][1] < -0.2 and m["ranges"]["outside"][0] < 0 < m["ranges"]["outside"][1], m["ranges"]
+        st = m["closure"]["sites"]
+        # each place against its three earlier years: which stand below all of them, and which only below last year
+        m["below_all"] = [k for k in INSIDE if st[k][NOW] < min(st[k][y] for y in m["years"] if y < NOW)]
+        assert m["below_all"] == ["asaluyeh", "ras_laffan", "jubail", "kuwait"], m["below_all"]
     Wd, C = words_of(sh, m), clock_of()
     reading(Wd, C)
     pics = pictures()
