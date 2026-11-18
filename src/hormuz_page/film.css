@@ -1,0 +1,74 @@
+/* The Hormuz NO2 film: one 1080 x 1920 stage, the NO2 map as a wide panel or as the whole frame, drawn for a time t by film.js
+   (no CSS animation). Headlines stay inside x 96-984 and everything below y 1000 inside x 96-924 (Instagram's own
+   buttons stand right of that); nothing that must be read lies below y 1540 (Instagram's caption).
+   Written for this film: every selector here is used by film.js. */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+@font-face { font-family: "Lalezar"; font-weight: 400; src: url("/fonts/lalezar/Lalezar-Regular.ttf"); }
+
+:root { --gold: #F6C445; --ink: #1d140c; --paper: #FBF7F0; --then: #F39C2B; --now: #2C6FB7;
+  --left: 96px; --width: 888px; --low: 828px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #120d09; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: #fff; direction: rtl;
+  font-family: "Vazirmatn", sans-serif; font-weight: 700; }
+canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+svg.lay { position: absolute; left: 0; top: 0; overflow: visible; }
+
+/* the two soft shades that carry the words: the top and the bottom of the picture only */
+#shade-top { position: absolute; left: 0; top: 0; width: 1080px; height: 660px;
+  background: linear-gradient(180deg, rgba(12, 9, 6, 0.78) 0%, rgba(12, 9, 6, 0.62) 42%, rgba(12, 9, 6, 0.26) 78%, rgba(12, 9, 6, 0) 100%); }
+#shade-bot { position: absolute; left: 0; top: 1400px; width: 1080px; height: 520px;      /* low and light: the lane crosses the picture's lower half */
+  background: linear-gradient(0deg, rgba(12, 9, 6, 0.74) 0%, rgba(12, 9, 6, 0.5) 50%, rgba(12, 9, 6, 0.2) 82%, rgba(12, 9, 6, 0) 100%); }
+
+/* the headline */
+.head { position: absolute; left: var(--left); top: 240px; width: var(--width); text-align: right; }   /* from y 240: whole in the profile grid's 3:4 crop */
+.head .line { display: block; font-weight: 900; font-size: 84px; line-height: 120px; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(0, 0, 0, 0.7); }
+.head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
+  text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+/* the tag: whose year the picture is (the right column, under the headline) */
+#tag { position: absolute; right: 96px; top: 524px; text-align: right; white-space: nowrap; font-family: "Lalezar", "Vazirmatn", sans-serif;
+  font-weight: 400; font-size: 96px; line-height: 132px; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 26px rgba(0, 0, 0, 0.8); }
+
+/* names on the pictures: a chip (a place or a note), bare words (a country, a sea), a gold chip (the lane) */
+.chip { position: absolute; font-weight: 800; font-size: 44px; line-height: 56px; white-space: nowrap; color: #fff;
+  background: rgba(12, 9, 6, 0.8); border-radius: 14px; padding: 2px 18px 8px; transform: translate(-50%, -50%); }
+.chip.gold { background: var(--gold); color: var(--ink); font-weight: 900; }
+.land { position: absolute; font-weight: 900; font-size: 60px; line-height: 76px; white-space: nowrap; color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6), 0 0 22px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.85); transform: translate(-50%, -50%); }
+.land.sea { color: #cfeaff; font-size: 52px; }
+
+/* the colour bar: what the glow is, from little to much (the ends carry the numbers and the unit) */
+#bar { position: absolute; left: var(--left); top: 1238px; width: 560px; text-align: right; }
+#bar .title { font-weight: 800; font-size: 40px; line-height: 52px; white-space: nowrap; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 14px rgba(0, 0, 0, 0.9); }
+#bar .strip { position: relative; height: 24px; margin-top: 6px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.85); }
+#bar .ends { display: flex; flex-direction: row; justify-content: space-between; direction: rtl; margin-top: 2px; font-weight: 700;
+  font-size: 36px; line-height: 44px; white-space: nowrap; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 14px rgba(0, 0, 0, 0.9); }
+#bar .unit { font-weight: 500; font-size: 34px; line-height: 42px; white-space: nowrap; color: #f3ead8;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
+
+/* the cards: the ships of every week (columns); the lanes of the three seas (pairs of bars) */
+.card { position: absolute; left: var(--left); top: 1034px; width: var(--low); height: 410px; border-radius: 26px;
+  background: rgba(251, 247, 240, 0.985); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); overflow: hidden; }
+.card svg { position: absolute; left: 0; top: 0; }
+.card .t { position: absolute; font-weight: 800; font-size: 38px; line-height: 48px; white-space: nowrap; color: var(--ink); }
+.card .t.big { font-weight: 900; font-size: 46px; line-height: 56px; }
+.card .t.then { color: #a85f08; }
+.card .t.now { color: #1d4f8a; }
+.card .t i { display: inline-block; width: 22px; height: 26px; border-radius: 5px; margin-left: 9px; vertical-align: -3px; }
+.card .t i.then { background: var(--then); }
+.card .t i.now { background: var(--now); }
+
+#follow { position: absolute; left: var(--left); top: 1290px; width: var(--low); text-align: center; white-space: nowrap; }
+#follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
+  font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+.sources { position: absolute; left: var(--left); bottom: 380px; width: var(--low); text-align: right; font-weight: 500;
+  font-size: 34px; line-height: 44px; white-space: nowrap; color: #f3ead8; opacity: 0.94;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 0, 0, 0.9); }
+.sources span { display: block; }
+#wipe { position: absolute; top: 0; width: 6px; height: 1920px; background: #fff;
+  box-shadow: 0 0 22px 6px rgba(255, 255, 255, 0.75), 0 0 60px 14px rgba(255, 190, 110, 0.5); }
