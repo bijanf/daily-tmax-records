@@ -58,7 +58,8 @@ canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920
 #follow { position: absolute; left: var(--left); top: 1272px; width: var(--low); text-align: center; white-space: nowrap; }
 #follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
   font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
-.sources { position: absolute; left: var(--left); bottom: 380px; width: var(--low); text-align: right; font-weight: 500;
-  font-size: 34px; line-height: 44px; white-space: nowrap; color: #f3ead8;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.95), 0 0 4px rgba(0, 0, 0, 0.9); }
+/* the small source lines stand on their own dark plate (the pictures are bright), its right edge on the column's */
+.sources { position: absolute; right: 156px; bottom: 380px; max-width: var(--low); text-align: right; font-weight: 500;
+  font-size: 34px; line-height: 44px; white-space: nowrap; color: #f3ead8; background: rgba(12, 9, 6, 0.6);
+  border-radius: 14px; padding: 4px 14px 6px; }
 .sources span { display: block; }

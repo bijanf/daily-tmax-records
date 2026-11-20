@@ -111,7 +111,7 @@ async function main() {
   const sums = [Wd.b_then, Wd.b_now].map((text, n) => { const e = css(el("div", "t sum", card), { right: 26, top: 782 + 54 * n }); el("i", null, e); e.appendChild(document.createTextNode(text)); return e; });
 
   const follow = el("div", null, stage); follow.id = "follow"; el("span", null, follow, Wd.follow);
-  const src = {}; ORDER.forEach(k => { src[k] = el("div", "sources", stage); const ls = Wd["src_" + k].split(" // ").map(s => el("span", null, src[k], s)); fit(ls, LOW, 34, 1.36); });
+  const src = {}; ORDER.forEach(k => { src[k] = el("div", "sources", stage); const ls = Wd["src_" + k].split(" // ").map(s => el("span", null, src[k], s)); fit(ls, LOW - 28, 34, 1.36); });
 
   window.renderAt = function (t0) { draw(clamp(t0, 0, END)); };
 
@@ -149,8 +149,9 @@ async function main() {
     // scene b: the card of the years
     show(card, back ? 0 : win(t, C.b[0] + 0.25, C.b[1], 0.35, 0.3));
     if (cur === "b" && !back) {
-      const upTo = NY * seg(t, C.bars[0], C.bars[1]);    // the columns rise one after another from the right
-      B.counts.forEach((v, k) => bar(k, (PY1 - yOf(v)) * easeOut(clamp((upTo - k) / 6))));
+      const RISE = 6;                                    // a column rises while the next six begin
+      const upTo = (NY + RISE) * seg(t, C.bars[0], C.bars[1]);   // the columns rise one after another from the right; the last is whole at the end
+      B.counts.forEach((v, k) => bar(k, (PY1 - yOf(v)) * easeOut(clamp((upTo - k) / RISE))));
       const mk = seg(t, C.b_marks, C.b_marks + 0.3);
       means.forEach(pair => pair.forEach(l => l.setAttribute("opacity", mk.toFixed(3)))); sums.forEach(e => show(e, mk));
     }

@@ -139,6 +139,8 @@ def measures() -> dict:
     return dict(then=stat(then), now=stat(now), ahvaz_before=stat(a0), ahvaz_now=stat(a1), outside=outside,
                 ahvaz_all_top=float(maxima("ahvaz").max()), abadan_full=[int(y) for y in ab.index[ab.n >= FULL]],
                 plain_now=float(np.mean(plain("abadan", *NOW))), isd_last=str(isd("abadan")["utc"].max().date()),
+                plain_ahvaz=[float(np.mean(plain("ahvaz", *AHVAZ_BEFORE))), float(np.mean(plain("ahvaz", *NOW)))],
+                ahvaz_top_hourly=float(isd("ahvaz").loc[(isd("ahvaz")["utc"] + LOCAL).dt.normalize() == pd.Timestamp(str(top.top_day)), "t"].max()),
                 ahvaz_top=dict(value=float(top.top), day=str(top.top_day)),
                 era=dict(years=[int(y) for y in count.index], counts=[int(v) for v in count.values], wall=wall,
                          then=float(count[(count.index >= ERA_THEN[0]) & (count.index <= ERA_THEN[1])].mean()),
@@ -170,15 +172,15 @@ def words_of(m: dict) -> dict:
         tag_then=then_span, tag_now=now_span, dots="هر نقطه: یک روز",
         n_then=f"{fa(n_then)} روز", n_now=f"{fa(n_now)} روز", station="ایستگاهِ هواشناسی",
         src_a=(f"میانگینِ سالانه؛ از دوره‌ی اول {fa(len(m['then']['years']))} سالِ کامل در بایگانی هست // "
-               "داده: گزارش‌های ایستگاهِ هواشناسیِ آبادان در بایگانیِ NOAA"),
+               "داده: ایستگاهِ هواشناسیِ آبادان، بایگانیِ NOAA"),
         head_b="برآوردِ مدل، سال به سال // {روزهای بالای ۴۸ درجه بیشتر شده}",
         b_legend="هر ستون: یک سال", b_first=y(1950), b_last=y(2026), tick="{n} روز",
-        b_then=f"میانگینِ {y(ERA_THEN[0])} تا {y(ERA_THEN[1])}: {fa(half_up(m['era']['then']))} روز",
-        b_now=f"میانگینِ {now_span}: {fa(half_up(m['era']['now']))} روز",
+        b_then=f"میانگینِ مدل، {y(ERA_THEN[0])} تا {y(ERA_THEN[1])}: {fa(f'{m['era']['then']:.1f}'.replace('.', '٫'))} روز",
+        b_now=f"میانگینِ مدل، {now_span}: {fa(half_up(m['era']['now']))} روز",
         src_b="مدل: ERA5-Land، نه اندازه‌گیریِ ایستگاه // تصویرِ ماهواره: Sentinel-2، کوپرنیک",
         head_c=(f"اهواز: از {fa(half_up(m['ahvaz_before']['mean']))} به {fa(half_up(m['ahvaz_now']['mean']))} روز در سال // "
                 "{بالای ۴۸ درجه}"),
-        c_top=f"داغ‌ترین روزِ این داده‌ها: {top} درجه", c_day=f"{fa(top_day[2])} {months[top_day[1] - 1]} {fa(top_day[0])}",
+        c_top=f"بالاترین بیشینه‌ی گزارش‌شده: {top} درجه", c_day=f"{fa(top_day[2])} {months[top_day[1] - 1]} {fa(top_day[0])}",
         tag_c0=f"{y(AHVAZ_BEFORE[0])} تا {y(AHVAZ_BEFORE[1])}", tag_c1=now_span,
         n_c0=f"{fa(half_up(m['ahvaz_before']['mean']))} روز", n_c1=f"{fa(half_up(m['ahvaz_now']['mean']))} روز",
         src_c="میانگینِ سالانه‌ی دو دهه // داده: ایستگاهِ هواشناسیِ اهواز، بایگانیِ NOAA",
@@ -188,8 +190,8 @@ def words_of(m: dict) -> dict:
 
 def clock_of() -> dict:
     a = (0.0, 7.8)
-    b = (a[1], a[1] + 8.4)
-    c = (b[1], b[1] + 8.2)
+    b = (a[1], a[1] + 8.8)
+    c = (b[1], b[1] + 7.8)
     d = (c[1], c[1] + 4.6)
     out = (d[1], d[1] + 0.8)
     return dict(a=a, b=b, c=c, d=d, out=out,
@@ -259,13 +261,14 @@ def film() -> dict:
     assert n["low"] > t["high"], (n["low"], t["high"])          # the mildest of the last ten years is above the hottest early year
     # «روزهای ۴۸ درجه بیشتر شده»: the other estimate agrees in direction and roughly in size, and rises decade after decade from the 1970s
     dec = [e["decades"][str(a)] for a in range(1970, 2020, 10)]
-    assert 3 <= e["then"] <= 5 and e["now"] > 25 and e["now"] > 6 * e["then"], (e["then"], e["now"])
+    assert round(e["then"], 2) == 3.5 and half_up(e["now"]) == 31 and e["now"] > 6 * e["then"], (e["then"], e["now"])       # «۳٫۵» and «۳۱»
     assert all(b > a for a, b in zip(dec, dec[1:])), dec
     assert e["years"] == list(range(1950, 2027)) and max(e["counts"]) < 50, (e["years"][0], e["years"][-1], max(e["counts"]))
     # Ahvaz: both decades complete; the hottest day of its data
     assert len(m["ahvaz_before"]["years"]) == 10 and len(m["ahvaz_now"]["years"]) == 10
     assert m["ahvaz_now"]["mean"] > 2 * m["ahvaz_before"]["mean"] and m["ahvaz_top"]["day"] == "2017-06-29", m["ahvaz_top"]
-    assert m["ahvaz_top"]["value"] == m["ahvaz_all_top"], (m["ahvaz_top"], m["ahvaz_all_top"])       # «داغ‌ترین روزِ این داده‌ها»: of every year, not only the complete ones
+    assert m["ahvaz_top"]["value"] == m["ahvaz_all_top"], (m["ahvaz_top"], m["ahvaz_all_top"])       # «بالاترین بیشینه‌ی گزارش‌شده»: of every year, not only the complete ones
+    assert m["ahvaz_top_hourly"] == 54.0, m["ahvaz_top_hourly"]                                      # the comment: that day's hourly readings reach 54
     Wd, C = words_of(m), clock_of()
     reading(Wd, C)
     pics = pictures()
