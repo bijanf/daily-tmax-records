@@ -21,6 +21,9 @@ canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920
 .head { position: absolute; left: var(--left); top: 240px; width: var(--width); text-align: right; }   /* from y 240: whole in the profile grid's 3:4 crop */
 .head .line { display: block; font-weight: 900; font-size: 84px; line-height: 120px; white-space: nowrap;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 26px rgba(0, 0, 0, 0.8); }
+.head .line.pair { margin-top: 20px; }             /* the pair's two plates stand apart */
+.head .key.less { background: var(--less); }       /* a pair of lines: the smaller, earlier count ... */
+.head .key.more { background: var(--more); }       /* ... and the larger, later one */
 .head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
   text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
@@ -39,6 +42,9 @@ canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920
 .plate .tag { position: absolute; top: 18px; font-weight: 800; font-size: 40px; line-height: 50px; white-space: nowrap; color: var(--gold); }
 .plate .legend { position: absolute; left: 0; bottom: 10px; width: 100%; text-align: center; font-weight: 700; font-size: 36px;
   line-height: 44px; white-space: nowrap; color: var(--cool); }
+.plate .tag.less { color: var(--less); }
+.plate .tag.more { color: var(--more); }
+.plate.twin .legend i { background: var(--cool); }
 .plate .legend i { display: inline-block; width: 24px; height: 24px; border-radius: 12px; background: var(--hot); margin-left: 10px; vertical-align: -2px; }
 .plate svg { position: absolute; left: 0; top: 0; }
 

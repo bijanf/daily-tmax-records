@@ -65,6 +65,9 @@ async function main() {
   const heads = {};
   [["a", Wd.hook], ["b", Wd.head_b], ["c", Wd.head_c], ["d", Wd.head_d]].forEach(([name, text]) => {
     const box = el("div", "head", stage), lines = text.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
+    // a headline's lines may be a pair: the earlier, smaller count on the "less" colour and the later, larger on the "more" colour
+    const kinds = (F.pair && F.pair[name]) || [];
+    lines.forEach((l, i) => { if (kinds[i]) { l.classList.add("pair"); l.querySelectorAll(".key").forEach(k => k.classList.add(kinds[i])); } });
     lines.forEach(l => fit([l], WIDE, 50, 1.42));
     heads[name] = box;
   });
@@ -77,10 +80,13 @@ async function main() {
   function plate(nThen, nNow, tagThen, tagNow, withLegend) {       // the counts themselves stand in the headline
     const box = el("div", "plate", stage), g = svg("svg", { width: 828, height: 340, viewBox: "0 0 828 340" }, box);
     svg("line", { x1: 560, x2: 560, y1: 24, y2: 262, stroke: "rgba(243,234,216,0.35)", "stroke-width": 3 }, g);
-    css(el("div", "tag", box, tagThen), { right: 26 }); css(el("div", "tag", box, tagNow), { right: 294 });
+    const tA = css(el("div", "tag", box, tagThen), { right: 26 }), tB = css(el("div", "tag", box, tagNow), { right: 294 });
+    const twin = F.pair && F.pair.dots;                  // the dots and the years in the headline's two colours
+    if (twin) { tA.classList.add("less"); tB.classList.add("more"); }
     // the dots fill their column from the right, row after row; the earlier years in one row
-    const grid = (n, x0, perRow) => Array.from({ length: n }, (_, k) => svg("circle", { cx: x0 - (k % perRow) * PITCH, cy: 112 + Math.floor(k / perRow) * PITCH, r: R, fill: col.hot, stroke: "rgba(255,255,255,0.9)", "stroke-width": 2.5, opacity: 0 }, g));
-    const then = grid(nThen, 828 - 26 - R, 6), now = grid(nNow, 828 - 294 - R, 12);
+    const grid = (n, x0, perRow, fill) => Array.from({ length: n }, (_, k) => svg("circle", { cx: x0 - (k % perRow) * PITCH, cy: 112 + Math.floor(k / perRow) * PITCH, r: R, fill, stroke: "rgba(255,255,255,0.9)", "stroke-width": 2.5, opacity: 0 }, g));
+    const then = grid(nThen, 828 - 26 - R, 6, twin ? col.less : col.hot), now = grid(nNow, 828 - 294 - R, 12, twin ? col.more : col.hot);
+    if (twin) box.classList.add("twin");
     if (withLegend) { const lg = el("div", "legend", box); el("i", null, lg); lg.appendChild(document.createTextNode(Wd.dots)); }
     return { box, then, now };
   }

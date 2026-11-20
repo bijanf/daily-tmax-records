@@ -169,7 +169,7 @@ def words_of(m: dict) -> dict:
     return dict(
         # the headline says which years are compared, in its own big type (the owner, 20 November 2026: "you say 4 to 38
         # but never say from which year to which year in the title and big font")
-        hook=(f"آبادان: روزهای بالای ۴۸ درجه // {then_span}: {fa(n_then)} روز در سال // "
+        hook=(f"آبادان: روزهای بالای ۴۸ درجه // {{{then_span}: {fa(n_then)} روز در سال}} // "
               f"{{{now_span}: {fa(n_now)} روز در سال}}"),
         tag_then=then_span, tag_now=now_span, dots="هر نقطه: یک روز",
         station_a="ایستگاهِ هواشناسیِ آبادان", code_a=f"کدِ WMO: {fa(code('abadan'))}",
@@ -181,7 +181,7 @@ def words_of(m: dict) -> dict:
         b_then=f"میانگینِ مدل، {y(ERA_THEN[0])} تا {y(ERA_THEN[1])}: {fa(f'{m['era']['then']:.1f}'.replace('.', '٫'))} روز",
         b_now=f"میانگینِ مدل، {now_span}: {fa(half_up(m['era']['now']))} روز",
         src_b="مدل: ERA5-Land، نه اندازه‌گیریِ ایستگاه // تصویرِ ماهواره: Sentinel-2، کوپرنیک",
-        head_c=(f"اهواز: روزهای بالای ۴۸ درجه // {y(AHVAZ_BEFORE[0])} تا {y(AHVAZ_BEFORE[1])}: {fa(half_up(m['ahvaz_before']['mean']))} روز در سال // "
+        head_c=(f"اهواز: روزهای بالای ۴۸ درجه // {{{y(AHVAZ_BEFORE[0])} تا {y(AHVAZ_BEFORE[1])}: {fa(half_up(m['ahvaz_before']['mean']))} روز در سال}} // "
                 f"{{{now_span}: {fa(half_up(m['ahvaz_now']['mean']))} روز در سال}}"),
         tag_c0=f"{y(AHVAZ_BEFORE[0])} تا {y(AHVAZ_BEFORE[1])}", tag_c1=now_span,
         src_c="میانگینِ سالانه‌ی دو دهه // داده: ایستگاهِ هواشناسیِ اهواز، بایگانیِ NOAA",
@@ -223,6 +223,7 @@ def reading(Wd: dict, C: dict) -> None:
 
 
 TICKS = (20, 40)                                  # the chart's lines (days a year)
+LESS, MORE = "#BDE7B0", "#FA8072"                 # the pair's colours: light green for the earlier, smaller count; salmon for the later, larger one
 GAIN, COLOUR = 3.0, 1.3                           # the pictures' tone: the gain before the shoulder, the colour's strength
 
 
@@ -275,7 +276,10 @@ def film() -> dict:
     pics = pictures()
     k_of = lambda year: e["years"].index(year)                                                    # noqa: E731
     F = dict(fps=FPS, size=[1080, 1920], cover_t=3.2, end=C["out"][1], clock=C, words=Wd,
-             colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", hot="#E4472B", cool="#f3ead8"),
+             colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", hot="#E4472B", cool="#f3ead8", less=LESS, more=MORE),
+             # the two periods as a pair of colours (the owner, 20 November 2026: the second line light green, the third salmon,
+             # "like less vs more"): the headline's lines 2 and 3 in both city scenes, and their dots and years on the plate
+             pair=dict(a=[None, "less", "more"], c=[None, "less", "more"], dots=True),
              dots=dict(then=half_up(t["mean"]), now=half_up(n["mean"]), c0=half_up(m["ahvaz_before"]["mean"]), c1=half_up(m["ahvaz_now"]["mean"])),
              bars=dict(years=e["years"], counts=e["counts"], top=50, ticks=list(TICKS),
                        means=[dict(k0=k_of(ERA_THEN[0]), k1=k_of(ERA_THEN[1]), value=e["then"]), dict(k0=k_of(NOW[0]), k1=k_of(NOW[1]), value=e["now"])]),
