@@ -191,7 +191,7 @@ def words_of(m: dict) -> dict:
 def clock_of() -> dict:
     a = (0.0, 7.8)
     b = (a[1], a[1] + 8.8)
-    c = (b[1], b[1] + 7.8)
+    c = (b[1], b[1] + 8.9)
     d = (c[1], c[1] + 4.6)
     out = (d[1], d[1] + 0.8)
     return dict(a=a, b=b, c=c, d=d, out=out,
@@ -208,7 +208,8 @@ def reading(Wd: dict, C: dict) -> None:
     ticks = [Wd["tick"].format(n=n) for n in TICKS]
     plan = [("hook", C["a"], [Wd["hook"]], [Wd["tag_then"], Wd["tag_now"], Wd["n_then"], Wd["n_now"], Wd["dots"], Wd["station"]], C["dots_now"][1]),
             ("years", C["b"], [Wd["head_b"]], [Wd["b_legend"], Wd["b_then"], Wd["b_now"], Wd["b_first"], Wd["b_last"]] + ticks, C["b_marks"]),
-            ("ahvaz", C["c"], [Wd["head_c"]], [Wd["c_top"], Wd["c_day"], Wd["station"], Wd["tag_c0"], Wd["tag_c1"], Wd["n_c0"], Wd["n_c1"]], C["c_top"]),
+            ("ahvaz", C["c"], [Wd["head_c"], Wd["c_top"], Wd["c_day"]],            # the gold line is a sentence on the picture: in full
+             [Wd["station"], Wd["tag_c0"], Wd["tag_c1"], Wd["n_c0"], Wd["n_c1"]], C["c_top"]),
             ("close", C["d"], [Wd["head_d"], Wd["follow"]], [], C["follow"])]
     print("\nreading (seconds the rule needs, seconds given):")
     short = []
