@@ -1,0 +1,64 @@
+/* The Khuzestan heat film: one 1080 x 1920 stage, a city from space as the whole frame, drawn for a time t by film.js
+   (no CSS animation). Headlines stay inside x 96-984 and everything below y 1000 inside x 96-924 (Instagram's own
+   buttons stand right of that); nothing that must be read lies below y 1540 (Instagram's caption).
+   The picture is bright, so every word on it stands on a plate or under the top shade.
+   Written for this film: every selector here is used by film.js. */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+@font-face { font-family: "Lalezar"; font-weight: 400; src: url("/fonts/lalezar/Lalezar-Regular.ttf"); }
+
+:root { --gold: #F6C445; --ink: #1d140c; --paper: #FBF7F0; --hot: #E4472B; --cool: #f3ead8;
+  --left: 96px; --width: 888px; --low: 828px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #120d09; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: #fff; direction: rtl;
+  font-family: "Vazirmatn", sans-serif; font-weight: 700; }
+canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+
+/* the headline */
+.head { position: absolute; left: var(--left); top: 240px; width: var(--width); text-align: right; }   /* from y 240: whole in the profile grid's 3:4 crop */
+.head .line { display: block; font-weight: 900; font-size: 84px; line-height: 120px; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 26px rgba(0, 0, 0, 0.8); }
+.head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
+  text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+/* on the picture: the station (a ring on its place, its name on a dark plate beside it) and the hottest day (gold) */
+.pin { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 17px; background: var(--hot);
+  border: 5px solid #fff; box-shadow: 0 0 0 3px rgba(12, 9, 6, 0.7), 0 4px 12px rgba(0, 0, 0, 0.6); }
+.chip { position: absolute; font-weight: 800; font-size: 42px; line-height: 54px; white-space: nowrap; color: #fff;
+  background: rgba(12, 9, 6, 0.84); border-radius: 14px; padding: 2px 18px 8px; }
+.chip.east { transform: translate(30px, -50%); }
+.chip.west { transform: translate(calc(-100% - 30px), -50%); }
+.chip.top { background: var(--gold); color: var(--ink); font-weight: 900; text-align: center; padding: 4px 22px 8px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+.chip.top .day { display: block; font-weight: 700; font-size: 38px; line-height: 44px; }
+
+/* the plate of the days: two groups of dots, the earlier years on the right, the last ten on the left */
+.plate { position: absolute; left: var(--left); top: 1010px; width: var(--low); height: 420px; border-radius: 26px;
+  background: rgba(12, 9, 6, 0.84); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4); }
+.plate .tag { position: absolute; top: 14px; font-weight: 800; font-size: 40px; line-height: 50px; white-space: nowrap; color: var(--cool); }
+.plate .num { position: absolute; top: 62px; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 76px;
+  line-height: 92px; white-space: nowrap; color: var(--gold); }
+.plate .legend { position: absolute; left: 0; bottom: 10px; width: 100%; text-align: center; font-weight: 700; font-size: 36px;
+  line-height: 44px; white-space: nowrap; color: var(--cool); }
+.plate .legend i { display: inline-block; width: 24px; height: 24px; border-radius: 12px; background: var(--hot); margin-left: 10px; vertical-align: -2px; }
+.plate svg { position: absolute; left: 0; top: 0; }
+
+/* the card of the years: one column a year */
+.card { position: absolute; left: var(--left); top: 530px; width: var(--low); height: 900px; border-radius: 26px;
+  background: rgba(251, 247, 240, 0.985); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); overflow: hidden; }
+.card svg { position: absolute; left: 0; top: 0; }
+.card .t { position: absolute; font-weight: 800; font-size: 38px; line-height: 48px; white-space: nowrap; color: var(--ink); }
+.card .t.m { font-weight: 700; font-size: 36px; line-height: 44px; color: #5a4a3c; transform: translateY(-50%); }
+.card .t.sum { font-weight: 800; font-size: 40px; line-height: 50px; }
+.card .t.sum i { display: inline-block; width: 44px; height: 6px; border-radius: 3px; background: var(--ink); margin-left: 12px; vertical-align: 8px; }
+
+#follow { position: absolute; left: var(--left); top: 1272px; width: var(--low); text-align: center; white-space: nowrap; }
+#follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
+  font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+.sources { position: absolute; left: var(--left); bottom: 380px; width: var(--low); text-align: right; font-weight: 500;
+  font-size: 34px; line-height: 44px; white-space: nowrap; color: #f3ead8;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.95), 0 0 4px rgba(0, 0, 0, 0.9); }
+.sources span { display: block; }
