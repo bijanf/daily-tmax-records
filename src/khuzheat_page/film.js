@@ -3,10 +3,11 @@
    this file are pixels of the layout. Every frame is a pure function of t (the frames are rendered out of order by
    several workers).
    The picture: a city from space fills the frame (Abadan in scenes a and b, Ahvaz in c and d), with a slow push.
-   The scenes: a the days of 48 C in a year as dots, the years around 1950 on the right and the last ten years on the
-   left, the last ten coming one dot after another, and the station marked on the picture; b every year as a column
-   (the other estimate, a model's), the columns rising from the right, with the mean of the first and of the last
-   ten years; c Ahvaz, its two decades as dots and the hottest day of its data; d the question; then frame 0 again. */
+   The scenes: a the headline with both periods and their counts, the days as dots (the years around 1950 on the
+   right, the last ten years on the left, the last ten coming one dot after another) and the station marked and named
+   on the picture; b every year as a column (the other estimate, a model's), the columns rising from the right, with
+   the mean of the first and of the last ten years; c Ahvaz, its two decades in the same form; d the question; then
+   frame 0 again. */
 "use strict";
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const seg = (t, a, b) => clamp((t - a) / (b - a));
@@ -68,25 +69,23 @@ async function main() {
     heads[name] = box;
   });
   // the station on each picture: a ring on its place and its name beside it (on the side that has room)
-  const mark = side => ({ pin: el("div", "pin", stage), name: el("div", "chip " + side, stage, Wd.station) });
-  const stA = mark("east"), stH = mark("west");
+  const mark = (side, name, code) => { const chip = el("div", "chip " + side, stage, name); el("span", "code", chip, code); return { pin: el("div", "pin", stage), name: chip }; };
+  const stA = mark("east", Wd.station_a, Wd.code_a), stH = mark("west", Wd.station_c, Wd.code_c);
 
   // a plate of dots: the earlier years on the right, the later on the left; each dot one day
   const R = 15, PITCH = 40;                             // a dot's radius and the grid's pitch
-  function plate(nThen, nNow, tagThen, tagNow, numThen, numNow, withLegend) {
-    const box = el("div", "plate", stage), g = svg("svg", { width: 828, height: 420, viewBox: "0 0 828 420" }, box);
-    svg("line", { x1: 560, x2: 560, y1: 24, y2: 330, stroke: "rgba(243,234,216,0.35)", "stroke-width": 3 }, g);
+  function plate(nThen, nNow, tagThen, tagNow, withLegend) {       // the counts themselves stand in the headline
+    const box = el("div", "plate", stage), g = svg("svg", { width: 828, height: 340, viewBox: "0 0 828 340" }, box);
+    svg("line", { x1: 560, x2: 560, y1: 24, y2: 262, stroke: "rgba(243,234,216,0.35)", "stroke-width": 3 }, g);
     css(el("div", "tag", box, tagThen), { right: 26 }); css(el("div", "tag", box, tagNow), { right: 294 });
-    const nt = css(el("div", "num", box, numThen), { right: 26 }), nn = css(el("div", "num", box, numNow), { right: 294 });
     // the dots fill their column from the right, row after row; the earlier years in one row
-    const grid = (n, x0, perRow) => Array.from({ length: n }, (_, k) => svg("circle", { cx: x0 - (k % perRow) * PITCH, cy: 190 + Math.floor(k / perRow) * PITCH, r: R, fill: col.hot, stroke: "rgba(255,255,255,0.9)", "stroke-width": 2.5, opacity: 0 }, g));
+    const grid = (n, x0, perRow) => Array.from({ length: n }, (_, k) => svg("circle", { cx: x0 - (k % perRow) * PITCH, cy: 112 + Math.floor(k / perRow) * PITCH, r: R, fill: col.hot, stroke: "rgba(255,255,255,0.9)", "stroke-width": 2.5, opacity: 0 }, g));
     const then = grid(nThen, 828 - 26 - R, 6), now = grid(nNow, 828 - 294 - R, 12);
     if (withLegend) { const lg = el("div", "legend", box); el("i", null, lg); lg.appendChild(document.createTextNode(Wd.dots)); }
-    return { box, then, now, nt, nn };
+    return { box, then, now };
   }
-  const plA = plate(F.dots.then, F.dots.now, Wd.tag_then, Wd.tag_now, Wd.n_then, Wd.n_now, true);
-  const plC = plate(F.dots.c0, F.dots.c1, Wd.tag_c0, Wd.tag_c1, Wd.n_c0, Wd.n_c1, false);
-  const cTop = el("div", "chip top", stage); cTop.appendChild(document.createTextNode(Wd.c_top)); el("span", "day", cTop, Wd.c_day);
+  const plA = plate(F.dots.then, F.dots.now, Wd.tag_then, Wd.tag_now, true);
+  const plC = plate(F.dots.c0, F.dots.c1, Wd.tag_c0, Wd.tag_c1, false);
 
   // the card of the years (scene b): one column a year, the years from the right to the left as the words run; the
   // column's height is the year's days of 48 C; the mean of the first ten and of the last ten complete years as lines
@@ -144,7 +143,6 @@ async function main() {
     show(plA.box, on.a);
     plA.then.forEach(d => { d.setAttribute("opacity", 1); d.setAttribute("r", R); });
     dots(plA.now, back ? 0 : t, C.dots_now[0], C.dots_now[1], 1);
-    show(plA.nt, 1); show(plA.nn, back ? 0 : seg(t, C.dots_now[1] - 0.2, C.dots_now[1] + 0.2));
 
     // scene b: the card of the years
     show(card, back ? 0 : win(t, C.b[0] + 0.25, C.b[1], 0.35, 0.3));
@@ -156,11 +154,9 @@ async function main() {
       means.forEach(pair => pair.forEach(l => l.setAttribute("opacity", mk.toFixed(3)))); sums.forEach(e => show(e, mk));
     }
 
-    // scene c: Ahvaz, its two decades and the highest reading of its station
+    // scene c: Ahvaz, its two decades
     show(plC.box, back ? 0 : on.c);
     dots(plC.then, t, C.dots_c[0], C.dots_c[0] + 0.5, 1); dots(plC.now, t, C.dots_c[0] + 0.6, C.dots_c[1], 1);
-    show(plC.nt, seg(t, C.dots_c[0] + 0.3, C.dots_c[0] + 0.6)); show(plC.nn, seg(t, C.dots_c[1] - 0.2, C.dots_c[1] + 0.2));
-    css(cTop, { left: 96, top: 600 }); show(cTop, (back ? 0 : on.c) * seg(t, C.c_top, C.c_top + 0.3));
 
     ORDER.forEach(k => show(src[k], on[k]));
   }

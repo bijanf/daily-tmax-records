@@ -43,7 +43,7 @@ TUNES = dict(
     waltz=dict(
         steps=6,                                         # the bar in eighths (three beats)
         comp=((2, 0, 0.21), (3, 1, 0.19), (4, 2, 0.24)),  # the santur: (eighth of the bar, which chord note, level)
-        pace=(1.15, 1.55),                               # a bar lasts between these (s)
+        pace=(1.15, 1.65),                               # a bar lasts between these (s)
         scenes=(
             ("a", ("Am", "Am", "F", "F", "C", "G"),
              ((0, 0, 69), (0, 4, 72), (1, 0, 76), (1, 4, 74), (2, 0, 72), (2, 3, 69), (2, 4, 72), (3, 0, 77), (3, 4, 76),
@@ -60,7 +60,7 @@ TUNES = dict(
     ride=dict(
         steps=8,                                         # the bar in eighths, grouped three, three and two
         comp=((1, 0, 0.19), (2, 1, 0.19), (3, 2, 0.25), (4, 1, 0.19), (5, 0, 0.19), (6, 2, 0.25), (7, 1, 0.19)),
-        pace=(1.8, 2.3),
+        pace=(1.8, 2.45),
         scenes=(
             ("a", ("G", "F", "C", "G"),
              ((0, 0, 74), (0, 3, 71), (0, 6, 74), (1, 0, 72), (1, 3, 69), (1, 6, 72), (2, 0, 76), (2, 3, 72), (2, 6, 67),

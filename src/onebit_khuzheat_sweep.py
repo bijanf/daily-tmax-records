@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 base = film.base
 STEP = float(sys.argv[1]) if len(sys.argv) > 1 else 0.25        # seconds between the frames looked at
 JS = """(t) => { window.renderAt(t); const out = [];
- const sel = '.head .line, .chip, .plate, .plate .tag, .plate .num, .plate .legend, .card, .card .t, #follow span, .sources span';
+ const sel = '.head .line, .chip, .plate, .plate .tag, .plate .legend, .card, .card .t, #follow span, .sources span';
  document.querySelectorAll(sel).forEach(e => { let o = 1, v = true;
    for (let n = e; n && n.id !== 'stage'; n = n.parentElement) { const cs = getComputedStyle(n); o *= parseFloat(cs.opacity); if (cs.visibility === 'hidden' || cs.display === 'none') v = false; }
    if (!v || o < 0.5) return; const r = e.getBoundingClientRect();
