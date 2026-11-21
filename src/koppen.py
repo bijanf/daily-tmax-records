@@ -50,7 +50,7 @@ GROUPS = (("bwh", (4,), "#C9472D", "بیابانیِ گرم"),
           ("cs", (8, 9, 10), "#9CC25A", "معتدل، تابستانِ خشک"),
           ("cf", (11, 12, 13, 14, 15, 16), "#3D9962", "معتدل و مرطوب"),
           ("d", tuple(range(17, 29)), "#6C9AD6", "زمستانِ یخ‌بندان"),
-          ("e", (29, 30), "#EEF2F7", "قله‌های سرد"))
+          ("e", (29, 30), "#EEF2F7", "توندرا (قله‌های سرد)"))
 HOT_DRY, FREEZING, DESERT = (4, 6), tuple(range(17, 29)), (4, 5)
 OTHER = "#C9C4BA"                                          # the winter scene: every class but the freezing-winter ones, faded to this grey
 # the frames: the whole country, and Tehran with the Alborz (lon, lat at frame point (xc, yc); sx px per degree of longitude)
@@ -58,6 +58,7 @@ FRAMES = dict(iran=dict(lon=53.7, lat=32.4, sx=38.5, xc=540, yc=944), tehran=dic
 SS = 2                                                     # the pictures are drawn at twice the frame's size, then reduced
 # the places on the close map: name, lon, lat, the side of its pin the name stands on (e east, w west)
 PLACES = (("تهران", 51.39, 35.69, "e"), ("کرج", 50.94, 35.84, "w"), ("قم", 50.88, 34.64, "e"), ("ساری", 53.06, 36.56, "e"), ("دماوند", 52.11, 35.95, "e"))
+TEHRAN_BOX = (51.20, 35.58, 51.60, 35.85)                 # west, south, east, north: the city as a whole (approximate)
 CITIES = {"تهران": (51.39, 35.69), "اصفهان": (51.67, 32.65), "کرمان": (57.08, 30.28), "همدان": (48.51, 34.80),
           "شیراز": (52.53, 29.59), "تبریز": (46.29, 38.08), "مشهد": (59.61, 36.30), "اهواز": (48.67, 31.32)}
 _CACHE: dict = {}
@@ -141,6 +142,11 @@ def measures() -> dict:
             vals, cnt = np.unique(c[j - 2:j + 3, i - 2:i + 3], return_counts=True)
             row[tag] = dict(cls=sym.get(int(vals[np.argmax(cnt)]), int(vals[np.argmax(cnt)])), of25=int(cnt.max()), conf=int(k[j, i]))
         out["cities"][name] = row
+    out["tehran_city"] = {}
+    for tag in (NOW, *RANGE):
+        c, _, lo, la = read(tag, box=TEHRAN_BOX)
+        wt = np.repeat(np.cos(np.radians(la))[:, None], len(lo), axis=1)
+        out["tehran_city"][tag] = {sym.get(int(v), str(int(v))): float(100 * wt[c == v].sum() / wt[c > 0].sum()) for v in np.unique(c[c > 0])}
     out["era5"] = era5_check() if ERA5.exists() else None
     return out
 
@@ -185,35 +191,39 @@ def words_of(m: dict) -> dict:
     now_span, later_span = f"{y(1991)} تا {y(2020)}", f"{y(2071)} تا {y(2099)}"
     p = lambda v: f"{fa(half_up(v))}٪"                                                           # noqa: E731
     return dict(
-        hook=(f"اقلیمِ ایران: مناطقِ خشکِ گرم // {{{now_span}: {p(M[NOW]['hot_dry'])} ایران}} // "
-              f"{{{later_span}: {p(M[LATER]['hot_dry'])} ایران}}"),
-        note_a="گرم: میانگینِ دمای سال ۱۸ درجه یا بیشتر",
-        head_b=(f"زمستان‌های یخ‌بندان // {{{now_span}: {p(M[NOW]['freezing'])} ایران}} // "
-                f"{{{later_span}: {p(M[LATER]['freezing'])} ایران}}"),
-        note_b="یخ‌بندان: میانگینِ سردترین ماه صفر درجه یا کمتر",
-        head_c=f"شهرِ تهران // {{{now_span}: نیمه‌خشکِ سرد}} // {{{later_span}: نیمه‌خشکِ گرم}}",
+        hook=(f"اقلیمِ ایران: مناطقِ خشکِ گرم // {{{now_span}: {p(M[NOW]['hot_dry'])} از ایران}} // "
+              f"{{{later_span}: {p(M[LATER]['hot_dry'])} از ایران}}"),
+        note_a="گرم: میانگینِ سالانه ۱۸ درجه یا بیشتر؛ آینده: انتشارِ میانه",
+        head_b=(f"مناطقِ زمستانِ یخ‌بندان // {{{now_span}: {p(M[NOW]['freezing'])} از ایران}} // "
+                f"{{{later_span}: {p(M[LATER]['freezing'])} از ایران}}"),
+        note_b="یخ‌بندان: میانگینِ سردترین ماه صفر یا کمتر؛ آینده: انتشارِ میانه",
+        head_c=f"بیشترِ شهرِ تهران // {{{now_span}: نیمه‌خشکِ سرد}} // {{{later_span}: نیمه‌خشکِ گرم}}",
+        note_c="آینده: انتشارِ میانه",
         head_d="پایانِ قرن، بسته به انتشارِ گازهای گلخانه‌ای // {سهمِ مناطقِ خشکِ گرم از ایران}",
         d_now=now_span, d_low="کم", d_mid="میانه", d_high="زیاد", d_later=f"{later_span}، سه سناریوی انتشار",
         v_now=p(M[NOW]["hot_dry"]), v_low=p(M[RANGE[0]]["hot_dry"]), v_mid=p(M[RANGE[1]]["hot_dry"]), v_high=p(M[RANGE[2]]["hot_dry"]),
         head_e="شهرِ شما // {چه رنگی است؟}", follow="برای یک دوست بفرستید",
-        legend=[name for _, _, _, name in GROUPS], legend_d=["زمستانِ یخ‌بندان", "بقیه‌ی اقلیم‌ها"],
+        legend=[name for _, _, _, name in GROUPS], legend_d=["زمستانِ یخ‌بندان", "اقلیم‌های دیگر"],
         places=[name for name, _, _, _ in PLACES],
-        src_a="داده: نقشه‌های ۱ کیلومتریِ کوپن، Beck و همکاران ۲۰۲۳ // آینده: برآوردِ مدل‌ها با انتشارِ میانه",
-        src_b="همان نقشه‌ها؛ آینده: برآوردِ مدل‌ها با انتشارِ میانه",
-        src_c="همان نقشه‌ها؛ پستی‌وبلندی: Copernicus DEM",
-        src_d="همان نقشه‌ها؛ سه سناریوی انتشار",
-        src_e="منابع و روش در کامنتِ اول")
+        src_a=CREDIT, src_b=CREDIT, src_c=CREDIT,
+        src_d="همان نقشه‌ها؛ آینده: برآوردِ مدل‌های اقلیمی در سه سناریوی انتشار",
+        src_e="منابع و روش در کامنتِ اول // " + CREDIT.split(" // ")[0])
+
+
+# the credit on every map: the maps (CC BY 4.0), the relief (Copernicus DEM; the full notice is in the first comment)
+# and the background outside Iran (NASA Blue Marble)
+CREDIT = "داده: نقشه‌های ۱ کیلومتریِ کوپن، Beck و همکاران ۲۰۲۳ // پستی‌وبلندی: Copernicus DEM؛ تصویرِ زمینه: NASA"
 
 
 def clock_of() -> dict:
-    a = (0.0, 12.4)
-    b = (a[1], a[1] + 9.2)
-    c = (b[1], b[1] + 9.5)
+    a = (0.0, 14.0)
+    b = (a[1], a[1] + 10.5)
+    c = (b[1], b[1] + 11.3)
     d = (c[1], c[1] + 8.6)
     e = (d[1], d[1] + 4.8)
     out = (e[1], e[1] + 0.8)
     return dict(a=a, b=b, c=c, d=d, e=e, out=out,
-                wipe_a=(0.6, 5.6), wipe_b=(b[0] + 1.4, b[0] + 5.4), wipe_c=(c[0] + 1.4, c[0] + 5.0),
+                wipe_a=(0.6, 6.0), wipe_b=(b[0] + 1.4, b[0] + 5.8), wipe_c=(c[0] + 1.4, c[0] + 5.8),
                 bars=(d[0] + 0.6, d[0] + 3.0), follow=e[0] + 1.2)
 
 
@@ -224,7 +234,7 @@ def reading(Wd: dict, C: dict) -> None:
     wt = lambda xs: sum(rd.weight(x) for x in xs)    # noqa: E731
     plan = [("hook", C["a"], [Wd["hook"], Wd["note_a"]], Wd["legend"], C["wipe_a"][1]),
             ("winter", C["b"], [Wd["head_b"], Wd["note_b"]], Wd["legend_d"], C["wipe_b"][1]),
-            ("tehran", C["c"], [Wd["head_c"]], Wd["legend"] + Wd["places"], C["wipe_c"][1]),
+            ("tehran", C["c"], [Wd["head_c"], Wd["note_c"]], Wd["legend"] + Wd["places"], C["wipe_c"][1]),
             ("range", C["d"], [Wd["head_d"]], [Wd[k] for k in ("d_now", "d_low", "d_mid", "d_high", "d_later", "v_now", "v_low", "v_mid", "v_high")], C["bars"][1]),
             ("close", C["e"], [Wd["head_e"], Wd["follow"]], [], C["follow"])]
     print("\nreading (seconds the rule needs, seconds given):")
@@ -303,6 +313,9 @@ def pictures() -> dict:
                 im.save(BUILD / name)
                 layers[f"{tag}_{kind}"] = name
         out[fname] = dict(frame=f, ground=f"ground_{fname}.jpg", layers=layers)
+        if fname == "iran":
+            inside_ = sample(iran_mask(*read(NOW)[2:]).astype(np.uint8), dict(lon0=float(read(NOW)[2][0]) - 0.5 / 120, lat0=float(read(NOW)[3][0]) + 0.5 / 120, step=1 / 120), lon2, lat2, 0) > 0
+            out["other_swatch"] = "#" + "".join(f"{int(round(v)):02X}" for v in np.clip(grey * float(np.median(shade[..., 0][inside_])), 0, 255))
     return out
 
 
@@ -330,6 +343,8 @@ def film() -> dict:
     # Tehran: cold semi-arid now, hot semi-arid later in every scenario, the models agreeing
     T = m["cities"]["تهران"]
     assert T[NOW]["cls"] == "BSk" and all(T[t]["cls"] == "BSh" for t in RANGE) and T[LATER]["conf"] >= 75, T
+    TC = m["tehran_city"]                                        # «بیشترِ شهر»: more than half the city, now and later (middle)
+    assert TC[NOW]["BSk"] > 50 and TC[LATER]["BSh"] > 50 and max(TC[NOW], key=TC[NOW].get) == "BSk" and max(TC[LATER], key=TC[LATER].get) == "BSh", TC
     if m["era5"]:
         e = m["era5"]
         assert e[NOW]["era5"] > e["1961_1990"]["era5"] and e[NOW]["maps"] > e["1961_1990"]["maps"]      # the same direction
@@ -339,7 +354,7 @@ def film() -> dict:
     pics = pictures()
     F = dict(fps=FPS, size=[1080, 1920], cover_t=4.0, end=C["out"][1], clock=C, words=Wd,
              colours=dict(gold="#F6C445", ink="#1d140c", paper="#FBF7F0", cool="#f3ead8", less="#BDE7B0", more="#FA8072",
-                          groups=[colour for _, _, colour, _ in GROUPS], other=OTHER, freezing=GROUPS[6][2]),
+                          groups=[colour for _, _, colour, _ in GROUPS], other=pics.pop("other_swatch"), freezing=GROUPS[6][2]),
              pair=dict(a=[None, "less", "more"], b=[None, "less", "more"], c=[None, "less", "more"]),
              bars=dict(values=[now["hot_dry"], M[RANGE[0]]["hot_dry"], M[RANGE[1]]["hot_dry"], M[RANGE[2]]["hot_dry"]], top=80),
              places=[dict(name=n, lon=x, lat=y, side=side) for n, x, y, side in PLACES],

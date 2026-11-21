@@ -68,7 +68,7 @@ async function main() {
 
   // ── the words ──
   const heads = {};
-  [["a", Wd.hook, Wd.note_a], ["b", Wd.head_b, Wd.note_b], ["c", Wd.head_c], ["d", Wd.head_d], ["e", Wd.head_e]].forEach(([name, text, note]) => {
+  [["a", Wd.hook, Wd.note_a], ["b", Wd.head_b, Wd.note_b], ["c", Wd.head_c, Wd.note_c], ["d", Wd.head_d], ["e", Wd.head_e]].forEach(([name, text, note]) => {
     const box = el("div", "head", stage), lines = text.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
     const kinds = (F.pair && F.pair[name]) || [];
     lines.forEach((l, i) => { if (kinds[i]) { l.classList.add("pair"); l.querySelectorAll(".key").forEach(k => k.classList.add(kinds[i])); } });
@@ -123,7 +123,7 @@ async function main() {
     map(FRAME[cur], KIND[cur], wipe[cur], m, fresh);
     // the edge of the wipe (scenes a, b, c while it crosses): salmon on its left (later), green on its right (recent)
     const wk = ["a", "b", "c"].includes(cur) && !back ? cur : null, p = wk ? wipe[wk] : 0;
-    if (wk && p > 0 && p < 1) { const ex = edgeX(p), top = wk === "c" ? 560 : 590, bot = wk === "c" ? 1920 : 1300;
+    if (wk && p > 0 && p < 1) { const ex = edgeX(p), top = 650, bot = 1260;      // only over the map: below the note, above the legend
       ctx.save(); ctx.globalAlpha = on0(wk, t); ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 12;
       ctx.fillStyle = col.more; ctx.fillRect(ex - 7, top, 7, bot - top); ctx.fillStyle = col.less; ctx.fillRect(ex, top, 7, bot - top); ctx.restore(); }
     if (cur === "d") { ctx.fillStyle = "rgba(14,12,10,0.45)"; ctx.fillRect(0, 0, 1080, 1920); }
