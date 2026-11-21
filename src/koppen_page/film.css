@@ -1,0 +1,59 @@
+/* The Köppen film: one 1080 x 1920 stage, a map of Iran's climate classes on the terrain, drawn for a time t by
+   film.js (no CSS animation). Headlines stay inside x 96-984 and everything below y 1000 inside x 96-924 (Instagram's
+   own buttons stand right of that); nothing that must be read lies below y 1540 (Instagram's caption).
+   Written for this film: every selector here is used by film.js. */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+
+:root { --gold: #F6C445; --ink: #1d140c; --paper: #FBF7F0; --cool: #f3ead8; --less: #BDE7B0; --more: #FA8072;
+  --left: 96px; --width: 888px; --low: 828px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0e0c0a; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: #fff; direction: rtl;
+  font-family: "Vazirmatn", sans-serif; font-weight: 700; }
+canvas#ground { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+
+/* the headline: a first line, then a pair of lines (the recent period on the "less" colour, the later on the "more") */
+.head { position: absolute; left: var(--left); top: 240px; width: var(--width); text-align: right; }
+.head .line { display: block; font-weight: 900; font-size: 66px; line-height: 92px; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 26px rgba(0, 0, 0, 0.8); }
+.head .line.pair { margin-top: 12px; }
+.head .key { background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 18px 6px; margin: 0 2px;
+  text-shadow: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.head .key.less { background: var(--less); }
+.head .key.more { background: var(--more); }
+.head .note { display: block; margin-top: 8px; font-weight: 700; font-size: 38px; line-height: 48px; white-space: nowrap; color: var(--cool);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 0, 0, 0.95); }
+
+
+/* places on the close map: a ring and the name */
+.pin { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 13px; background: #fff;
+  border: 5px solid var(--ink); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+.place { position: absolute; font-weight: 800; font-size: 42px; line-height: 54px; white-space: nowrap; color: #fff;
+  background: rgba(14, 12, 10, 0.82); border-radius: 14px; padding: 2px 16px 8px; transform: translate(22px, -50%); }
+.place.w { transform: translate(calc(-100% - 22px), -50%); }
+
+/* the legend and the source line on one plate below the map */
+.plate { position: absolute; left: var(--left); bottom: 384px; width: var(--low); border-radius: 22px; padding: 14px 20px 12px;
+  background: rgba(14, 12, 10, 0.82); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); }
+.plate .grid { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 16px; }
+.plate .item { font-weight: 700; font-size: 34px; line-height: 44px; white-space: nowrap; color: var(--cool); }
+.plate .item i { display: inline-block; width: 30px; height: 30px; border-radius: 8px; margin-left: 10px; vertical-align: -5px;
+  border: 2px solid rgba(255, 255, 255, 0.55); }
+.plate .src { margin-top: 8px; padding-top: 6px; border-top: 2px solid rgba(243, 234, 216, 0.25); font-weight: 500; font-size: 34px;
+  line-height: 42px; white-space: nowrap; color: #e9dfcc; }
+.plate .src span { display: block; }
+
+/* the card of the scenarios: one column for the recent period, three for the end of the century */
+.card { position: absolute; left: var(--left); top: 640px; width: var(--low); height: 760px; border-radius: 26px;
+  background: rgba(251, 247, 240, 0.97); color: var(--ink); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); overflow: hidden; }
+.card svg { position: absolute; left: 0; top: 0; }
+.card .t { position: absolute; font-weight: 800; font-size: 38px; line-height: 48px; white-space: nowrap; color: var(--ink); text-align: center; transform: translateX(-50%); }
+.card .v { position: absolute; font-weight: 900; font-size: 58px; line-height: 70px; white-space: nowrap; color: var(--ink); transform: translateX(-50%); }
+.card .t.span { font-weight: 700; color: #5a4a3c; }
+
+#follow { position: absolute; left: var(--left); top: 470px; width: var(--low); text-align: center; white-space: nowrap; }
+#follow span { display: inline-block; background: var(--gold); color: var(--ink); border-radius: 18px; padding: 0 26px 6px;
+  font-weight: 900; font-size: 58px; line-height: 80px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
