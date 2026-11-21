@@ -72,7 +72,9 @@ async function main() {
     const box = el("div", "head", stage), lines = text.split(" // ").map(s => { const l = el("span", "line", box); marked(l, s); return l; });
     const kinds = (F.pair && F.pair[name]) || [];
     lines.forEach((l, i) => { if (kinds[i]) { l.classList.add("pair"); l.querySelectorAll(".key").forEach(k => k.classList.add(kinds[i])); } });
-    lines.forEach(l => fit([l], WIDE, 46, 1.38));
+    const pairs = lines.filter((l, i) => kinds[i]), single = lines.filter((l, i) => !kinds[i]);
+    single.forEach(l => fit([l], WIDE, 46, 1.38));
+    if (pairs.length) fit(pairs, WIDE, 46, 1.38);           // the two lines of a pair at one size
     if (note) { const n = el("span", "note", box, note); fit([n], WIDE, 34, 1.3); }
     heads[name] = box;
   });
@@ -100,9 +102,10 @@ async function main() {
   const fills = [col.less, col.more, col.more, col.more];
   const cols = B.values.map((v, k) => svg("rect", { x: BX[k] - BW / 2, width: BW, rx: 8, fill: fills[k], stroke: "rgba(29,20,12,0.35)", "stroke-width": 2 }, g));
   const vals = [Wd.v_now, Wd.v_low, Wd.v_mid, Wd.v_high].map((s, k) => css(el("div", "v", card, s), { left: BX[k], top: yOf(B.values[k]) - 76 }));
-  [Wd.d_now, Wd.d_low, Wd.d_mid, Wd.d_high].forEach((s, k) => css(el("div", "t", card, s), { left: BX[k], top: BY0 + 14 }));
-  css(el("div", "t span", card, Wd.d_later), { left: (BX[1] + BX[3]) / 2, top: BY0 + 70 });
-  svg("line", { x1: BX[3] - BW / 2, x2: BX[1] + BW / 2, y1: BY0 + 66, y2: BY0 + 66, stroke: "rgba(29,20,12,0.4)", "stroke-width": 3 }, g);
+  [Wd.d_now, Wd.d_low, Wd.d_mid, Wd.d_high].forEach((s, k) => { const e = css(el("div", "t", card), { left: BX[k], top: BY0 + 14 });
+    s.split(" // ").forEach(x => el("div", null, e, x)); });
+  css(el("div", "t span", card, Wd.d_later), { left: (BX[1] + BX[3]) / 2 - 10, top: BY0 + 104 });
+  svg("line", { x1: BX[3] - BW / 2, x2: BX[1] + BW / 2, y1: BY0 + 98, y2: BY0 + 98, stroke: "rgba(29,20,12,0.4)", "stroke-width": 3 }, g);
 
   const follow = el("div", null, stage); follow.id = "follow"; el("span", null, follow, Wd.follow);
 

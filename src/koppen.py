@@ -60,7 +60,8 @@ SS = 2                                                     # the pictures are dr
 PLACES = (("تهران", 51.39, 35.69, "e"), ("کرج", 50.94, 35.84, "w"), ("قم", 50.88, 34.64, "e"), ("ساری", 53.06, 36.56, "e"), ("دماوند", 52.11, 35.95, "e"))
 TEHRAN_BOX = (51.20, 35.58, 51.60, 35.85)                 # west, south, east, north: the city as a whole (approximate)
 CITIES = {"تهران": (51.39, 35.69), "اصفهان": (51.67, 32.65), "کرمان": (57.08, 30.28), "همدان": (48.51, 34.80),
-          "شیراز": (52.53, 29.59), "تبریز": (46.29, 38.08), "مشهد": (59.61, 36.30), "اهواز": (48.67, 31.32)}
+          "شیراز": (52.53, 29.59), "تبریز": (46.29, 38.08), "مشهد": (59.61, 36.30), "اهواز": (48.67, 31.32),
+          "رشت": (49.59, 37.28), "ساری": (53.06, 36.56)}
 _CACHE: dict = {}
 
 
@@ -142,6 +143,18 @@ def measures() -> dict:
             vals, cnt = np.unique(c[j - 2:j + 3, i - 2:i + 3], return_counts=True)
             row[tag] = dict(cls=sym.get(int(vals[np.argmax(cnt)]), int(vals[np.argmax(cnt)])), of25=int(cnt.max()), conf=int(k[j, i]))
         out["cities"][name] = row
+    # the shares among the cells whose class the members agree on (confidence >= 50 % in this map and in 1991-2020)
+    out["confident"] = {}
+    for tag in (NOW, *RANGE):
+        c, k, _, _ = read(tag, confidence=True)
+        ok = mask & (k >= 50) & (k0 >= 50)
+        out["confident"][tag] = float(100 * w[ok & np.isin(c, HOT_DRY)].sum() / w[ok].sum())
+    # where today's freezing winters are: the share of their area at 1,500 m or higher (the relief's heights)
+    rel = np.load(RELIEF)
+    LO, LA = np.meshgrid(lon, lat)
+    elev = sample(rel["elev"], REL, LO, LA, np.float32(np.nan))
+    fz = mask & np.isin(c0, FREEZING)
+    out["freezing_high"] = float(100 * w[fz & (elev >= 1500)].sum() / w[fz].sum())
     out["tehran_city"] = {}
     for tag in (NOW, *RANGE):
         c, _, lo, la = read(tag, box=TEHRAN_BOX)
@@ -189,18 +202,21 @@ def words_of(m: dict) -> dict:
     M = m["maps"]
     y = lambda g: fa(fa_year(g))                                                                # noqa: E731
     now_span, later_span = f"{y(1991)} تا {y(2020)}", f"{y(2071)} تا {y(2099)}"
+    # the owner, 21 November 2026: "also tell now and far future alongside the years"
+    NOW_W, LATER_W = "امروز", "آینده‌ی دور"
+    now_t, later_t = f"{NOW_W}، {now_span}", f"{LATER_W}، {later_span}"
     p = lambda v: f"{fa(half_up(v))}٪"                                                           # noqa: E731
     return dict(
-        hook=(f"اقلیمِ ایران: مناطقِ خشکِ گرم // {{{now_span}: {p(M[NOW]['hot_dry'])} از ایران}} // "
-              f"{{{later_span}: {p(M[LATER]['hot_dry'])} از ایران}}"),
+        hook=(f"اقلیمِ ایران: مناطقِ خشکِ گرم // {{{now_t}: {p(M[NOW]['hot_dry'])} از ایران}} // "
+              f"{{{later_t}: {p(M[LATER]['hot_dry'])} از ایران}}"),
         note_a="گرم: میانگینِ سالانه ۱۸ درجه یا بیشتر؛ آینده: انتشارِ میانه",
-        head_b=(f"مناطقِ زمستانِ یخ‌بندان // {{{now_span}: {p(M[NOW]['freezing'])} از ایران}} // "
-                f"{{{later_span}: {p(M[LATER]['freezing'])} از ایران}}"),
+        head_b=(f"مناطقِ زمستانِ یخ‌بندان // {{{now_t}: {p(M[NOW]['freezing'])} از ایران}} // "
+                f"{{{later_t}: {p(M[LATER]['freezing'])} از ایران}}"),
         note_b="یخ‌بندان: میانگینِ سردترین ماه صفر یا کمتر؛ آینده: انتشارِ میانه",
-        head_c=f"بیشترِ شهرِ تهران // {{{now_span}: نیمه‌خشکِ سرد}} // {{{later_span}: نیمه‌خشکِ گرم}}",
+        head_c=f"بیشترِ شهرِ تهران // {{{now_t}: نیمه‌خشکِ سرد}} // {{{later_t}: نیمه‌خشکِ گرم}}",
         note_c="آینده: انتشارِ میانه",
         head_d="پایانِ قرن، بسته به انتشارِ گازهای گلخانه‌ای // {سهمِ مناطقِ خشکِ گرم از ایران}",
-        d_now=now_span, d_low="کم", d_mid="میانه", d_high="زیاد", d_later=f"{later_span}، سه سناریوی انتشار",
+        d_now=f"{NOW_W} // {now_span}", d_low="کم", d_mid="میانه", d_high="زیاد", d_later=later_t,
         v_now=p(M[NOW]["hot_dry"]), v_low=p(M[RANGE[0]]["hot_dry"]), v_mid=p(M[RANGE[1]]["hot_dry"]), v_high=p(M[RANGE[2]]["hot_dry"]),
         head_e="شهرِ شما // {چه رنگی است؟}", follow="برای یک دوست بفرستید",
         legend=[name for _, _, _, name in GROUPS], legend_d=["زمستانِ یخ‌بندان", "اقلیم‌های دیگر"],
@@ -216,10 +232,10 @@ CREDIT = "داده: نقشه‌های ۱ کیلومتریِ کوپن، Beck و �
 
 
 def clock_of() -> dict:
-    a = (0.0, 14.0)
-    b = (a[1], a[1] + 10.5)
-    c = (b[1], b[1] + 11.3)
-    d = (c[1], c[1] + 8.6)
+    a = (0.0, 15.2)
+    b = (a[1], a[1] + 11.7)
+    c = (b[1], b[1] + 12.5)
+    d = (c[1], c[1] + 9.3)
     e = (d[1], d[1] + 4.8)
     out = (e[1], e[1] + 0.8)
     return dict(a=a, b=b, c=c, d=d, e=e, out=out,
