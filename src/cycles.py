@@ -283,8 +283,12 @@ def words(n: dict) -> dict:
             thaw=("گرم شدنِ طبیعی: // {حدودِ %s درجه، در ۱۰ هزار سال}" % fa(melt), "آدم‌ها هنوز شکارچی و گردآورنده بودند"),
             life=("همه‌ی تمدن // {در همین دالان ساخته شد}", ""),
             exit=("۱۵۰ سالِ اخیر: // {بیرون از دالان}",
-                  "حدودِ ۱۰ برابر تندتر (ناسا) // علت: دی‌اکسیدِ کربن. ۸۰۰ هزار سال زیرِ ۳۰۰؛ امروز %s" % fa(round(n["mlo"]))),
-            send=("برای کسی بفرستید که می‌گوید: // {«زمین همیشه گرم و سرد شده»}", "اگر می‌خواهید ادامه بدهم، // با بازنشر انگیزه بدهید")),
+                  "حدودِ ۱۰ برابر تندتر (ناسا) // علت: دی‌اکسیدِ کربن // ۸۰۰ هزار سال زیرِ ۳۰۰؛ امروز %s" % fa(round(n["mlo"]))),
+            # the call, without the words "send" or "repost" on the picture: Instagram's @creators account (June 2024, as
+            # quoted by Social Media Today) says content that "explicitly asks for engagement through shares, comments,
+            # tags, or other actions" is not recommended, while open-ended calls are "fair game". The owner's own line
+            # («اگر می‌خواهید ادامه بدهم، با بازنشر انگیزه بدهید», 23 Nov 2026) stays in his caption if he wants it there.
+            send=("دفعه‌ی بعد که کسی گفت: // {«زمین همیشه گرم و سرد شده»}", "جوابش همین ویدیوست")),
         sources=dict(
             hook="ICE-6G_C (Peltier et al. 2015) · ETOPO1 · NASA Blue Marble",
             melt="ICE-6G_C · Osman et al. 2021 (Nature)",
@@ -388,8 +392,8 @@ CUES = dict(
     thaw=dict(age=[0.4, 5.0, 20.0, 10.0], small=3.2),         # 20,000 to 10,000 years ago: the ten thousand years of its headline
     life=dict(zoom=[0.2, 1.8], head=4.6, run=[[0.0, 10000], [4.9, 10000], [8.0, 5200], [11.1, 2500], [16.6, 150]], marks=[4.9, 8.0, 11.1],
               fade=[1.2, 0.4], last=13.5),
-    exit=dict(spike=[0.8, 2.2], tag=2.4, small=[3.4, 5.8]),      # its two small lines, one after the other
-    send=dict(icon=1.0, small=2.6))
+    exit=dict(spike=[0.8, 2.2], tag=2.4, small=[3.2, 5.0, 5.8]),  # its small lines, one after the other
+    send=dict(icon=4.4, small=3.2))                           # the answer line, then the two icons, wordless
 PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["human"], "hum"), sun="nat",
             co2=("nat", CUES["co2"]["spike"][0], "hum"), who="hum", accel="hum", call="both",
             gulf="both", thaw="nat", life="nat", exit="hum", send="both")
@@ -398,7 +402,7 @@ LAST = dict(hook=CUES["hook"]["gulf"] + 0.5, melt=CUES["melt"]["age"][1], speed=
 
 
 LAST.update(gulf=CUES["gulf"]["turn"] + 0.5, thaw=CUES["thaw"]["age"][1], life=CUES["life"]["last"] + 0.5,
-            exit=CUES["exit"]["small"][-1] + 0.5, send=CUES["send"]["small"] + 0.6)
+            exit=CUES["exit"]["small"][-1] + 0.5, send=CUES["send"]["icon"] + 0.6)
 
 
 def seconds(w: dict, scenes: tuple = SCENES) -> list[float]:

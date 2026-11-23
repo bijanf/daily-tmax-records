@@ -40,7 +40,10 @@ FILM = ROOT / "outputs" / "onebit" / "cycles" / "film.json"
 BASE = "cycles_fa_doc"
 SR = kit.SR
 KINDS = ("deep", "pulse", "epic", "sfx")
-LUFS, MASTER_TP, TP_AAC = -20.0, -5.0, -4.0           # a little more present than the soft scores (-22): the ground is quiet by nature
+# the level: Meta publishes no target for Reels and evens loudness out at playback (its engineering blog, 11 Apr 2023);
+# the practice of mastering engineers for short video is about -14 LUFS with the true peak at or under -1 dBTP. The
+# owner found his earlier scores (-22) "boring"; this is 6 dB up from them and still 2 dB under that practice.
+LUFS, MASTER_TP, TP_AAC = -16.0, -1.5, -1.0
 MODE = "homayoun"                                     # D, E flat, F sharp, G, A, B flat, C
 TONIC = kit.note_hz("D4")
 ROOM, ROOM_T60 = 0.34, 3.2                            # a large room, well in
@@ -200,10 +203,10 @@ def groove(mx: Mix, c: dict, q: dict) -> None:
             hard = 1.25 if key == "exit" and tb >= out else 1.0
             j = lambda s=0.006: mx.rng.normal(0, s)                                        # noqa: E731
             if k % 2 == 0:
-                mx.put(kit.daf("bam", vel=0.34 * g * hard, pitch=92.0), tb + j())
+                mx.put(kit.daf("bam", vel=0.34 * g * hard, pitch=112.0), tb + j())     # high enough for a phone to play its body (250 to 700 Hz with its partials)
                 if g >= 0.7:
                     mx.put(kit.daf("tak", vel=0.15 * g * hard), tb + 0.75 * b + j())
-                    mx.put(kit.tombak("tom", vel=0.12 * g, pitch=120.0), tb + 0.5 * b + j())
+                    mx.put(kit.tombak("tom", vel=0.13 * g, pitch=165.0), tb + 0.5 * b + j())
             else:
                 if g >= 0.7:
                     mx.put(kit.daf("tak", vel=0.18 * g * hard), tb + 0.5 * b + j())

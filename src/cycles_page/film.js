@@ -134,6 +134,27 @@ async function main() {
     return t;
   }
   const TEX = { world: texture(imWorld), age: texture(imAge, true), relief: texture(imRelief) };
+  const SHOT = {};                                   // the documentary cut's photographs, each with its depth where there is one
+  if (CUT === "d") for (const [k, v] of Object.entries(F.photos || {})) {
+    const im = await image(v.file);
+    const dp = await image(v.file.replace("photo_", "depth_").replace(".jpg", ".png")).catch(() => null);   // src/cycles_depth.py writes it
+    SHOT[k] = { im, dp };
+  }
+  // a still that moves like a shot: the near things (white in the depth) slide against the far ones as the camera drifts
+  const DEPTH_FS = `
+    precision highp float;
+    uniform sampler2D tImg, tDepth;
+    uniform vec2 uShift;       // the camera's drift, as a share of the frame
+    uniform float uZoom;
+    out vec4 colour;
+    void main() {
+      vec2 uv = vec2(gl_FragCoord.x / 1080.0, 1.0 - gl_FragCoord.y / 1920.0), c = vec2(0.5, 0.44);
+      vec2 p = (uv - c) / uZoom + c;
+      float d = texture(tDepth, p).r;
+      vec2 q = p + uShift * (d - 0.45);
+      d = texture(tDepth, q).r; q = p + uShift * (d - 0.45);      // once more from where it landed: edges tear less
+      colour = vec4(texture(tImg, clamp(q, 0.002, 0.998)).rgb, 1.0);
+    }`;
   const hex3 = h => new THREE.Vector3(...[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
   const GLOBE_FS = `
     precision highp float;
@@ -578,16 +599,29 @@ async function main() {
     return [a, c];
   }
   function photo(b, key) {                           // a photograph to the edges of the frame; the camera moves in slowly
-    const P = (F.photos || {})[key];
-    if (!P) return { show() {}, credit: "", what: "" };
-    const im = el("img", "abs", b); im.src = "/build/" + P.file;
+    const P = (F.photos || {})[key], T = SHOT[key];
+    if (!P || !T) return { show() {}, credit: "", what: "" };
+    let im, cam = null;
+    if (T.dp) {                                      // with depth: drawn by the GPU, the camera drifting from left to right
+      const ren = new THREE.WebGLRenderer({ antialias: false, alpha: false, preserveDrawingBuffer: true });
+      ren.setPixelRatio(1); ren.setSize(1080, 1920); ren.outputColorSpace = THREE.LinearSRGBColorSpace;
+      const mat = new THREE.ShaderMaterial({ glslVersion: THREE.GLSL3, depthTest: false, fragmentShader: DEPTH_FS,
+        vertexShader: "void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }",
+        uniforms: { tImg: { value: texture(T.im) }, tDepth: { value: texture(T.dp) }, uShift: { value: new THREE.Vector2() }, uZoom: { value: 1 } } });
+      mat.uniforms.tImg.value.wrapS = mat.uniforms.tDepth.value.wrapS = THREE.ClampToEdgeWrapping;
+      const scene = new THREE.Scene(), eye = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+      im = ren.domElement; im.className = "abs"; b.appendChild(im);
+      cam = (z, u) => { mat.uniforms.uZoom.value = z + 0.035; mat.uniforms.uShift.value.set(0.030 * (2 * u - 1), -0.010 * (2 * u - 1)); ren.render(scene, eye); };
+    } else { im = el("img", "abs", b); im.src = "/build/" + P.file; }
     css(im, { left: 0, top: -(P.lift || 0), width: 1080, height: 1920, objectFit: "cover", transformOrigin: "50% 44%", opacity: "0", filter: P.tone || (THEME === "night" ? "brightness(.97) contrast(1.06) saturate(1.02)" : "none") });
     const lift = P.lift || 0, soft = lift > 0 ? "linear-gradient(0deg, transparent 0, #000 240px)" : lift < 0 ? "linear-gradient(180deg, transparent 0, #000 260px)" : "";
     if (soft) css(im, { maskImage: soft, webkitMaskImage: soft });          // a lifted picture ends in a fade, not an edge
     const veil = css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: 1920, background: THEME === "night" ? "rgba(8,18,48,.10)" : "transparent", opacity: "0" });
-    PENDING.push(im.decode().catch(() => {}));       // every photograph is in memory before the first frame is drawn
+    if (!cam) PENDING.push(im.decode().catch(() => {}));       // every photograph is in memory before the first frame is drawn
     return { credit: P.credit, what: P.what || "",
-             show(alpha, u) { const z = lerp(P.zoom[0], P.zoom[1], clamp(u)); im.style.opacity = veil.style.opacity = clamp(alpha).toFixed(3); im.style.transform = `scale(${z.toFixed(4)}) translateY(${(-10 * clamp(u)).toFixed(2)}px)`; } };
+             show(alpha, u) { const z = lerp(P.zoom[0], P.zoom[1], clamp(u)); im.style.opacity = veil.style.opacity = clamp(alpha).toFixed(3);
+               if (cam) { if (alpha > 0) cam(z, clamp(u)); } else im.style.transform = `scale(${z.toFixed(4)}) translateY(${(-10 * clamp(u)).toFixed(2)}px)`; } };
   }
   function motes(b) {                                // dust in the light over a photograph: a few soft specks that drift by the clock
     const cv = el("canvas", "abs", b); cv.width = 1080; cv.height = 1920; css(cv, { left: 0, top: 0 });
@@ -601,7 +635,9 @@ async function main() {
   }
   // the strip: the 20,000-year curve under the picture. z = 0 shows all of it, z = 1 the last 11,000 years, where the
   // corridor is: the band between the coldest and the warmest 200-year mean of the last 10,000 years (film.json "corridor")
-  const ST = { x0: 56, x1: 1004, y0: 1380, y1: 1010 };
+  // (today and the break-out stay left of x = 900: on a tall phone Instagram cuts about 57 px off each side of a reel and
+  // its buttons cover the right edge from the middle of the frame down; the corridor itself runs on to the edge)
+  const ST = { x0: 56, x1: 912, y0: 1380, y1: 1010 };
   const sx = (age, z) => { const a0 = lerp(20500, 11200, z), a1 = lerp(-900, -760, z); return ST.x1 - (age - a1) / (a0 - a1) * (ST.x1 - ST.x0); };
   const sy = (v, z) => { const v0 = lerp(-8.3, -1.75, z), v1 = lerp(2.4, 1.85, z); return ST.y0 - (v - v0) / (v1 - v0) * (ST.y0 - ST.y1); };
   function battlement(x0, x1, y, up) {               // the stepped merlons of Persepolis along an edge of the corridor, from x0 to x1
