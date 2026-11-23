@@ -571,7 +571,7 @@ async function main() {
   }
 
   // ══ the documentary cut: pictures to the edges of the frame, type on a dark fade, one curve that runs through it ══
-  const SCRIM = THEME === "night" ? "5,9,18" : "243,236,225", PENDING = [];
+  const SCRIM = THEME === "night" ? (CUT === "d" ? "5,9,30" : "5,9,18") : "243,236,225", PENDING = [];
   function scrims(b, top, bottom) {                  // the fades the type stands on: under the headline, under the curve
     const a = top ? css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: top, background: `linear-gradient(180deg, rgba(${SCRIM},.90) 0, rgba(${SCRIM},.66) 58%, rgba(${SCRIM},0) 100%)` }) : null;
     const c = bottom ? css(el("div", "abs", b), { left: 0, top: bottom, width: 1080, height: 1920 - bottom, background: `linear-gradient(180deg, rgba(${SCRIM},0) 0, rgba(${SCRIM},.84) ${Math.round(100 * 230 / (1920 - bottom))}%, rgba(${SCRIM},.96) 100%)` }) : null;
@@ -601,24 +601,30 @@ async function main() {
   }
   // the strip: the 20,000-year curve under the picture. z = 0 shows all of it, z = 1 the last 11,000 years, where the
   // corridor is: the band between the coldest and the warmest 200-year mean of the last 10,000 years (film.json "corridor")
-  const ST = { x0: L + 10, x1: R - 10, y0: 1370, y1: 1010 };
-  const sx = (age, z) => { const a0 = lerp(20500, 11200, z), a1 = lerp(-900, -700, z); return ST.x1 - (age - a1) / (a0 - a1) * (ST.x1 - ST.x0); };
-  const sy = (v, z) => { const v0 = lerp(-8.3, -2.3, z), v1 = lerp(2.4, 2.3, z); return ST.y0 - (v - v0) / (v1 - v0) * (ST.y0 - ST.y1); };
+  const ST = { x0: 56, x1: 1004, y0: 1380, y1: 1010 };
+  const sx = (age, z) => { const a0 = lerp(20500, 11200, z), a1 = lerp(-900, -760, z); return ST.x1 - (age - a1) / (a0 - a1) * (ST.x1 - ST.x0); };
+  const sy = (v, z) => { const v0 = lerp(-8.3, -1.75, z), v1 = lerp(2.4, 1.85, z); return ST.y0 - (v - v0) / (v1 - v0) * (ST.y0 - ST.y1); };
+  function battlement(x0, x1, y, up) {               // the stepped merlons of Persepolis along an edge of the corridor, from x0 to x1
+    const s = up ? -1 : 1, d = [`M${x0.toFixed(1)},${y.toFixed(1)}`];
+    for (let x = x0; x < x1; x += 52) d.push(`h9 v${7 * s} h6 v${7 * s} h6 v${7 * s} h10 v${-7 * s} h6 v${-7 * s} h6 v${-7 * s} h9`);
+    return d.join(" ");
+  }
   const TEMP = S.temp.filter(p => p[0] <= 20100).slice().reverse();          // oldest first
   const HAD = (() => { const h = S.hadcrut, out = []; for (let i = 9; i < h.length; i++) { let m = 0; for (let k = i - 9; k <= i; k++) m += h[k][1]; out.push([1950 - (h[i][0] - 4.5), m / 10]); } return out; })();   // ten-year means, as years before 1950
   function strip(b) {
     const sv = svg("svg", full(), b), K = Wd.strip, id = "c" + (UID++);
-    const clip = svg("clipPath", { id }, svg("defs", {}, sv)); svg("rect", { x: ST.x0 - 8, y: ST.y1 - 120, width: ST.x1 - ST.x0 + 60, height: ST.y0 - ST.y1 + 124 }, clip);
-    svg("line", { x1: ST.x0, x2: ST.x1 + 20, y1: ST.y0, y2: ST.y0, stroke: col.axis, "stroke-width": 3 }, sv);
-    const g = svg("g", { "clip-path": `url(#${id})` }, sv);
-    const band = svg("rect", { rx: 10, fill: col.gold, opacity: 0 }, g);
-    const edges = [0, 1].map(() => svg("line", { stroke: col.gold, "stroke-width": 3, "stroke-linecap": "round", opacity: 0 }, g));
+    const defs = svg("defs", {}, sv), clip = svg("clipPath", { id }, defs); svg("rect", { x: 0, y: ST.y1 - 140, width: 1080, height: ST.y0 - ST.y1 + 144 }, clip);
+    const wall = svg("clipPath", { id: id + "w" }, defs), wallR = svg("rect", { x: 0, y: 0, width: 0, height: 1920 }, wall);   // the corridor is laid from its left end
+    const base = svg("line", { x1: ST.x0, x2: ST.x1 + 20, y1: ST.y0, y2: ST.y0, stroke: col.axis, "stroke-width": 3 }, sv);
+    const g = svg("g", { "clip-path": `url(#${id})` }, sv), gw = svg("g", { "clip-path": `url(#${id}w)` }, g);
+    const band = svg("rect", { fill: grad(sv, col.gold, ST.y1, ST.y0, 0.30, 0.12), opacity: 0 }, gw);
+    const edges = [0, 1].map(() => glow(gw, { d: "", fill: "none", stroke: col.gold, "stroke-width": 3.5, "stroke-linejoin": "miter" }, 8, 0.5));
     const area = svg("path", { d: "", fill: grad(sv, col.nat, ST.y1, ST.y0, LOOK.area, 0.0) }, g);
     const line = glow(g, { d: "", fill: "none", stroke: col.nat, "stroke-width": 8, "stroke-linejoin": "round", "stroke-linecap": "round" });
     const red = glow(g, { d: "", fill: "none", stroke: col.mark, "stroke-width": 10, "stroke-linejoin": "round", "stroke-linecap": "round" }, 13, 0.85);
     const lead = svg("circle", { r: 11, fill: "#fff", stroke: col.nat, "stroke-width": 4, opacity: 0 }, g); lead.style.filter = `drop-shadow(0 0 12px ${col.nat})`;
     const tip = svg("circle", { r: 15, fill: col.mark, stroke: "#fff", "stroke-width": 5, opacity: 0 }, g); tip.style.filter = `drop-shadow(0 0 16px ${col.mark})`;
-    const dots = (Wd.life.markers || []).map(() => svg("circle", { r: 11, fill: col.gold, stroke: "#fff", "stroke-width": 4, opacity: 0 }, g));
+    const dots = (Wd.life.markers || []).map(() => svg("circle", { r: 13, fill: col.gold, stroke: "#fff", "stroke-width": 4, opacity: 0 }, g));
     const ticks = { wide: K.wide.map(([a, t]) => ({ a, e: text(b, "tick", t, { top: ST.y0 + 10 }) })), near: K.near.map(([a, t]) => ({ a, e: text(b, "tick", t, { top: ST.y0 + 10 }) })) };
     const axis = text(b, "tick", K.axis, { top: ST.y0 + 56, left: MID - 60 });
     void axis;
@@ -628,17 +634,18 @@ async function main() {
       line.setAttribute("d", pathOf(pts)); area.setAttribute("d", under(pts, ST.y0));
       const tipP = pts[pts.length - 1], bb = clamp(o.band || 0);
       lead.setAttribute("cx", tipP[0]); lead.setAttribute("cy", tipP[1]); lead.setAttribute("opacity", o.lead ? "1" : "0");
-      const xa = sx(10000, z), xb = sx(-200, z), yt = sy(F.corridor[1], z), yb = sy(F.corridor[0], z);
-      band.setAttribute("x", xa); band.setAttribute("y", yt); band.setAttribute("width", Math.max(0, (xb - xa) * bb)); band.setAttribute("height", yb - yt);
-      band.setAttribute("opacity", (0.16 * bb).toFixed(3));
-      edges.forEach((e, k) => { const y = k ? yb : yt; e.setAttribute("x1", xa); e.setAttribute("x2", xa + (xb - xa) * bb); e.setAttribute("y1", y); e.setAttribute("y2", y); e.setAttribute("opacity", (0.85 * bb * (k === 0 && o.broke ? 0.35 : 1)).toFixed(3)); });
+      const xa = sx(10000, z), xb = 1090, yt = sy(F.corridor[1], z), yb = sy(F.corridor[0], z);   // from 10,000 years ago to the edge of the frame
+      band.setAttribute("x", xa); band.setAttribute("y", yt); band.setAttribute("width", xb - xa); band.setAttribute("height", yb - yt);
+      band.setAttribute("opacity", bb.toFixed(3)); wallR.setAttribute("x", xa - 4); wallR.setAttribute("width", Math.max(0, (xb - xa + 8) * bb));
+      edges.forEach((e, k) => { e.setAttribute("d", battlement(xa, xb, k ? yb : yt, !k)); e.setAttribute("opacity", (0.95 * (bb > 0 ? 1 : 0)).toFixed(3)); });
+      base.setAttribute("opacity", (1 - z).toFixed(3));
       const r = clamp(o.red || 0), n = Math.max(2, Math.round(r * HAD.length)), rp = HAD.slice(0, n).map(q => [sx(q[0], z), sy(q[1], z)]);
       red.setAttribute("d", r > 0 ? pathOf(rp) : ""); const top = rp[rp.length - 1];
       tip.setAttribute("cx", top[0]); tip.setAttribute("cy", top[1]); tip.setAttribute("opacity", r > 0.02 ? "1" : "0");
       tip.setAttribute("r", (15 * (1 + 0.15 * Math.sin(2 * Math.PI * (o.now || 0) / 1.1))).toFixed(2));
       dots.forEach((d, k) => { const m = Wd.life.markers[k], on = k < (o.marks || 0), act = k === (o.marks || 0) - 1 && !o.red;
         d.setAttribute("cx", sx(m.age, z)); d.setAttribute("cy", sy(interp(S.temp, m.age), z)); d.setAttribute("opacity", on ? "1" : "0");
-        d.setAttribute("r", (11 * (act ? 1.15 + 0.2 * Math.sin(2 * Math.PI * (o.now || 0) / 1.1) : 1)).toFixed(2)); });
+        d.setAttribute("r", (13 * (act ? 1.15 + 0.2 * Math.sin(2 * Math.PI * (o.now || 0) / 1.1) : 1)).toFixed(2)); });
       const wide = clamp(1 - 5 * z), near = clamp(2.2 * z - 1.2);            // the far ticks are gone before the frame closes in past them
       ticks.wide.forEach(q => css(q.e, { left: sx(q.a, z) - q.e.offsetWidth / 2, opacity: wide.toFixed(3) }));
       ticks.near.forEach(q => css(q.e, { left: sx(q.a, z) - q.e.offsetWidth / 2, opacity: near.toFixed(3) }));
@@ -776,7 +783,7 @@ async function main() {
     s.heads.forEach((h, k) => { h.head.style.display = k === ph && !(ph && dt < from) ? "block" : "none"; });
     s.heads[0].head.style.opacity = !ph && sc.late !== undefined ? (1 - seg(dt, turn - 0.4, turn)).toFixed(3) : "1";
     const late = sc.small_at === undefined ? null : sc.small_at;           // a small line with its own moment comes in then, from nothing
-    s.heads[ph].smalls.forEach((ln, k) => { if (late === null) return; const p = easeOut(seg(dt, late + 0.12 * k, late + 0.4 + 0.12 * k)); css(ln, { opacity: p.toFixed(3), transform: `translateY(${(18 * (1 - p)).toFixed(2)}px)` }); });
+    s.heads[ph].smalls.forEach((ln, k) => { if (late === null) return; const at = Array.isArray(late) ? late[Math.min(k, late.length - 1)] : late + 0.12 * k, p = easeOut(seg(dt, at, at + 0.4)); css(ln, { opacity: p.toFixed(3), transform: `translateY(${(18 * (1 - p)).toFixed(2)}px)` }); });
     [...s.heads[ph].lines, ...(late === null ? s.heads[ph].smalls : [])].forEach((ln, k) => {   // the headline arrives line by line (the first scene stands from frame 0)
       const p = i === 0 && !ph ? 1 : easeOut(seg(lt, 0.08 * k, 0.30 + 0.08 * k));
       css(ln, { opacity: (0.15 + 0.85 * p).toFixed(3), transform: `translateY(${(22 * (1 - p)).toFixed(2)}px)` });

@@ -233,7 +233,7 @@ CALM = "۱۰ هزار سالِ آرام (هولوسِن): // {ایران در ه
 # the corridor of life (the curve zoomed on the last 11,000 years, a band between the coldest and the warmest 200-year
 # mean of the last 10,000, a photograph behind each marker); the last 150 years leaving the corridor; carbon dioxide; and
 # the call to send it on, over Persepolis. The cut "a" (the eight scenes above) stays as it was.
-DOC = ("gulf", "thaw", "life", "exit", "co2", "send")
+DOC = ("gulf", "thaw", "life", "exit", "send")           # one device from start to end: the carbon dioxide is a line of "exit", not a chart of its own
 # the photographs (data/paleo/photos, fetched by src/get_cycles.py, all from Wikimedia Commons under Creative Commons
 # Attribution licences, none share-alike): the file, the credit as its licence asks (the author as Commons names him, the
 # licence), the point of the photograph that stays in the middle of the frame (x, y as fractions), how far the camera
@@ -282,7 +282,8 @@ def words(n: dict) -> dict:
             gulf=("زمین همیشه گرم و سرد شده؟ // {آره. ولی تمدن، فقط در آرامش}", ""),
             thaw=("گرم شدنِ طبیعی: // {حدودِ %s درجه، در ۱۰ هزار سال}" % fa(melt), "آدم‌ها هنوز شکارچی و گردآورنده بودند"),
             life=("همه‌ی تمدن // {در همین دالان ساخته شد}", ""),
-            exit=("۱۵۰ سالِ اخیر: // {بیرون از دالان}", "حدودِ ۱۰ برابر تندتر (ناسا)"),
+            exit=("۱۵۰ سالِ اخیر: // {بیرون از دالان}",
+                  "حدودِ ۱۰ برابر تندتر (ناسا) // علت: دی‌اکسیدِ کربن. ۸۰۰ هزار سال زیرِ ۳۰۰؛ امروز %s" % fa(round(n["mlo"]))),
             send=("برای کسی بفرستید که می‌گوید: // {«زمین همیشه گرم و سرد شده»}", "اگر می‌خواهید ادامه بدهم، // با بازنشر انگیزه بدهید")),
         sources=dict(
             hook="ICE-6G_C (Peltier et al. 2015) · ETOPO1 · NASA Blue Marble",
@@ -294,7 +295,7 @@ def words(n: dict) -> dict:
             accel="HadCRUT5 · COP31: CNN, NPR, 22 Nov 2026",
             call="NASA Blue Marble",
             gulf="ICE-6G_C (Peltier et al. 2015) · ETOPO1 · NASA Blue Marble", thaw="ICE-6G_C · Osman et al. 2021 (Nature)",
-            life="Osman et al. 2021 (Nature) · IPCC AR6", exit="Osman et al. 2021 · HadCRUT5 · NASA · IPCC AR6", send=""),
+            life="Osman et al. 2021 (Nature) · IPCC AR6", exit="Osman 2021 · HadCRUT5 · NASA · IPCC · Bereiter 2015 · NOAA", send=""),
         hook=dict(then="۲۰ هزار سال پیش", now="امروز", gulf="خلیجِ فارس: خشکی", iran="ایران"),
         melt=dict(chip=lambda a: f"{thou(a)} سال پیش", gap=f"{fa(melt)} درجه", gulf="خلیجِ فارس پُر شد"),
         speed=dict(nat=f"طبیعی: {fa(melt)} درجه در ۱۰ هزار سال", hum=f"انسانی: {dec(now)} درجه در ۱۵۰ سال",
@@ -385,9 +386,9 @@ CUES = dict(
     # never put a headline, its sub-line and the labels on screen together)
     gulf=dict(age=[0.3, 2.9, 20.0, 7.0], turn=4.0),           # from 20,000 years ago, as its headline says
     thaw=dict(age=[0.4, 5.0, 20.0, 10.0], small=3.2),         # 20,000 to 10,000 years ago: the ten thousand years of its headline
-    life=dict(zoom=[0.2, 1.8], head=4.6, run=[[0.0, 10000], [4.9, 10000], [8.5, 5200], [12.1, 2500], [17.6, 150]], marks=[4.9, 8.5, 12.1],
-              fade=[1.2, 0.4], last=14.5),
-    exit=dict(spike=[0.8, 2.2], tag=2.4, small=3.4),
+    life=dict(zoom=[0.2, 1.8], head=4.6, run=[[0.0, 10000], [4.9, 10000], [8.0, 5200], [11.1, 2500], [16.6, 150]], marks=[4.9, 8.0, 11.1],
+              fade=[1.2, 0.4], last=13.5),
+    exit=dict(spike=[0.8, 2.2], tag=2.4, small=[3.4, 5.8]),      # its two small lines, one after the other
     send=dict(icon=1.0, small=2.6))
 PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["human"], "hum"), sun="nat",
             co2=("nat", CUES["co2"]["spike"][0], "hum"), who="hum", accel="hum", call="both",
@@ -397,7 +398,7 @@ LAST = dict(hook=CUES["hook"]["gulf"] + 0.5, melt=CUES["melt"]["age"][1], speed=
 
 
 LAST.update(gulf=CUES["gulf"]["turn"] + 0.5, thaw=CUES["thaw"]["age"][1], life=CUES["life"]["last"] + 0.5,
-            exit=CUES["exit"]["small"] + 0.5, send=CUES["send"]["small"] + 0.6)
+            exit=CUES["exit"]["small"][-1] + 0.5, send=CUES["send"]["small"] + 0.6)
 
 
 def seconds(w: dict, scenes: tuple = SCENES) -> list[float]:

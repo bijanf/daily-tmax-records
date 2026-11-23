@@ -98,3 +98,10 @@ svg { position: absolute; overflow: visible; }
 :root[data-cut="d"] .small + .small { margin-top: 0; }
 .what { right: calc(1080px - var(--left) - var(--width)); top: 962px; font-weight: 700; font-size: 26px; line-height: 36px; white-space: nowrap;
   color: #fff; opacity: 0.8; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95); }
+/* the documentary cut at night: lapis and gold, the colours of the manuscripts and the tiles; no progress bar (the
+   picture carries only its subject) */
+:root[data-cut="d"][data-theme="night"] { --page: #050A22;
+  --stage: radial-gradient(900px 800px at 50% 50%, rgba(46, 80, 190, 0.34), rgba(46, 80, 190, 0) 70%),
+           linear-gradient(180deg, #060C2C 0%, #0A1648 50%, #050A22 100%);
+  --natf: #1D62D8; --goldbg: #F0B544; }
+:root[data-cut="d"] #progress { display: none; }
