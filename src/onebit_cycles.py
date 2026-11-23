@@ -37,22 +37,24 @@ def main() -> None:
     ap.add_argument("--stills", action="store_true", help="cover and stills only, no video")
     ap.add_argument("--at", type=float, nargs="*", help="stills at these times only")
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--theme", choices=("light", "night"), default="light", help="the look of the page (film.html?theme=)")
     args = ap.parse_args()
     film = json.loads((BUILD / "film.json").read_text(encoding="utf-8"))
     cut = film["cuts"]["a"]
     n = round(cut["end"] * base.FPS)
     base.SOCIAL.mkdir(parents=True, exist_ok=True)
-    stem = base.SOCIAL / STEM
+    stem = base.SOCIAL / (STEM if args.theme == "light" else f"{STEM}_{args.theme}")
+    cut_q = f"a&theme={args.theme}"                  # open_page asks for film.html?cut=<this>
     srv = base.serve()
     port = srv.server_address[1]
     if args.stills or args.at:
         from playwright.sync_api import sync_playwright
         times = args.at or sorted({0.0} | {round(s["start"] + f * s["length"], 2) for s in cut["scenes"] for f in (0.5, 0.97)})
         with sync_playwright() as pw:
-            browser, page = base.open_page(pw, port, "a")
+            browser, page = base.open_page(pw, port, cut_q)
             base.shoot(page, film["cover_t"], Path(f"{stem}_cover.png"))
             if not args.at:
-                for old in base.SOCIAL.glob(f"{STEM}_t*.png"):
+                for old in base.SOCIAL.glob(f"{stem.name}_t*.png"):
                     old.unlink()
             for t in times:
                 base.shoot(page, t, Path(f"{stem}_t{t:05.2f}.png"))
@@ -61,7 +63,7 @@ def main() -> None:
         return
     folder = Path(tempfile.mkdtemp(prefix="cycles_", dir=BUILD))
     try:
-        jobs = [(port, "a", list(range(k, n, args.workers)), str(folder)) for k in range(args.workers)]
+        jobs = [(port, cut_q, list(range(k, n, args.workers)), str(folder)) for k in range(args.workers)]
         with mp.get_context("spawn").Pool(args.workers) as pool:
             done = sum(pool.map(base.worker, jobs))
         assert done == n and len(list(folder.glob("*.png"))) == n, (done, n)
