@@ -9,6 +9,15 @@
                    Toronto). The server sends no intermediate certificate: the Sectigo intermediate named in its own
                    certificate is fetched and the chain is verified against the system's roots with it.
     etopo/         ETOPO1 (etopo180 on NOAA CoastWatch ERDDAP), every 6th point = 0.1 degree, 85 S to 85 N
+    photos/        five photographs for the documentary cut, from Wikimedia Commons, all under Creative Commons Attribution
+                   licences (no share-alike, no agency pictures); the licence and the author were read from the Commons
+                   API on 23 Nov 2026, and each file's SHA-1 matched the Commons record:
+                   zagros_shepherd_javadi.jpg     "Oshtorinan, Lorestan Province, Iran - panoramio (4).jpg", سید محمود جوادی, CC BY 3.0
+                   sukhteh_goblet_darafsh.jpg     "National Museum of Iran Darafsh (64).JPG", Darafsh, CC BY 3.0
+                   persepolis_gate_guillot.jpg    "Persepolis (25025244422).jpg", Valerian Guillot, CC BY 2.0
+                   persepolis_colossus_krol.jpg   "2018-09-21 Iran, Persepolis, Gate of All Nations (northwestern colossus).jpg",
+                                                  Laurens R. Krol, CC BY 4.0
+                   tehran_milad_rezvani.jpg       "Sunset in north of Tehran, Iran - panoramio (4).jpg", Behrooz Rezvani, CC BY 3.0
 
     python -I src/get_cycles.py
 """
@@ -36,6 +45,14 @@ FILES = {
     "tsi/tsi_v03r00_yearly_s1610_e2025_c20260305.nc": f"{NCEI}/data/total-solar-irradiance/access/yearly/tsi_v03r00_yearly_s1610_e2025_c20260305.nc",
     "etopo/etopo_0p1.nc": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B(-85):6:(85)%5D%5B(-180):6:(180)%5D",
 }
+COMMONS = "https://upload.wikimedia.org/wikipedia/commons"
+FILES.update({
+    "photos/zagros_shepherd_javadi.jpg": f"{COMMONS}/b/b8/Oshtorinan%2C_Lorestan_Province%2C_Iran_-_panoramio_%284%29.jpg",
+    "photos/sukhteh_goblet_darafsh.jpg": f"{COMMONS}/a/a6/National_Museum_of_Iran_Darafsh_%2864%29.JPG",
+    "photos/persepolis_gate_guillot.jpg": f"{COMMONS}/e/e2/Persepolis_%2825025244422%29.jpg",
+    "photos/persepolis_colossus_krol.jpg": f"{COMMONS}/f/fc/2018-09-21_Iran%2C_Persepolis%2C_Gate_of_All_Nations_%28northwestern_colossus%29.jpg",
+    "photos/tehran_milad_rezvani.jpg": f"{COMMONS}/a/ad/Sunset_in_north_of_Tehran%2C_Iran_-_panoramio_%284%29.jpg",
+})
 ICE6G = "https://www.atmosp.physics.utoronto.ca/~peltier/datasets/Ice6G_C_VM5a/I6_C.VM5a_1deg.{k}.nc.gz"
 SECTIGO = "http://crt.sectigo.com/SectigoPublicServerAuthenticationCAOVR36.crt"
 

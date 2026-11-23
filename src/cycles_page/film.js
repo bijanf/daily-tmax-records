@@ -26,7 +26,7 @@ function fit(nodes, limit, floor) {
   if (!nodes.length) return;
   let size = parseFloat(getComputedStyle(nodes[0]).fontSize);
   const wide = () => Math.max(...nodes.map(n => n.scrollWidth));
-  while (wide() > limit && size > floor) { size -= 1; nodes.forEach(n => css(n, { fontSize: size + "px", lineHeight: Math.round(size * 1.4) + "px" })); }
+  while (wide() > limit && size > floor) { size -= 1; nodes.forEach(n => css(n, { fontSize: size + "px", lineHeight: Math.round(size * (CUT === "d" && n.classList.contains("line") ? 1.36 : 1.4)) + "px" })); }
 }
 const show = (e, p) => { e.style.opacity = clamp(p).toFixed(3); };
 const full = () => ({ width: 1080, height: 1920, viewBox: "0 0 1080 1920" });
@@ -53,6 +53,8 @@ function pathOf(pts) { return pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1
 //    carry white type. The film's own colours (film.json) keep their names; only their values are set here. ──
 const THEME = new URLSearchParams(location.search).get("theme") === "night" ? "night" : "light";
 document.documentElement.dataset.theme = THEME;
+const CUT = new URLSearchParams(location.search).get("cut") === "d" ? "d" : "a";     // a: the eight scenes; d: the documentary cut
+document.documentElement.dataset.cut = CUT;
 const LOOK = {
   light: { paper: "#FFFFFF", ink: "#2E2118", dim: "#5E4E42", axis: "rgba(46,33,24,.80)", grid: "rgba(46,33,24,.34)",
            mark: "#B5332A", markf: "#A03129", nat: "#2468B4", natf: "#2468B4", gold: "#A8700F", ice: "#EEF3F8", shelf: "#CDB48A",
@@ -85,7 +87,7 @@ function glow(sv, attrs, blur = 10, strength = 0.62) {   // a stroke with its ow
 async function main() {
   const stage = document.getElementById("stage");
   const F = await (await fetch("/build/film.json")).json();
-  const C = F.cuts.a, col = Object.assign({}, F.colours, LOOK), END = C.end, Wd = F.words, S = F.series;
+  const C = F.cuts[CUT], col = Object.assign({}, F.colours, LOOK), END = C.end, Wd = F.words, S = F.series;
 
   // ── the sky: two slow soft lights by the clock and, at night, a few hundred stars that drift and twinkle ──
   const sky = el("canvas", null, stage); sky.id = "sky"; sky.width = 1080; sky.height = 1920;
@@ -117,8 +119,10 @@ async function main() {
     on(pNat, col.natf, st !== "hum"); on(pHum, col.markf, st !== "nat");
     return st;
   }
-  const KEY = { hook: "hum", melt: "nat", speed: "hum", sun: "nat", co2: "nat", who: "hum", accel: "hum", call: "hum" };   // the headline's highlight wears its scene's side
-  const STARRY = { hook: 1, melt: 1, call: 1 };      // full stars behind the globe, fainter behind the charts
+  const KEY = { hook: "hum", melt: "nat", speed: "hum", sun: "nat", co2: "nat", who: "hum", accel: "hum", call: "hum",
+                gulf: "hum", thaw: "nat", life: "nat", exit: "hum", send: "hum" };   // the headline's highlight wears its scene's side
+  const BEFORE = { speed: "nat", gulf: "hum" };      // and the side of a scene's first headline, where it has two
+  const STARRY = { hook: 1, melt: 1, call: 1, gulf: 1, thaw: 1 };      // full stars behind the globe, fainter behind the charts
 
   // ── the pictures: the Blue Marble, the ice-age map and the relief, as textures for the GPU (three.js, WebGL 2) ──
   async function image(file) { const im = new Image(); im.src = "/build/" + file; await im.decode(); return im; }
@@ -160,6 +164,7 @@ async function main() {
       float lat = degrees(la), lon = mod(uView.y + degrees(d) + 180.0, 360.0) - 180.0;
       vec2 uv = vec2((lon + 180.0) * uPx, (uLat1 - lat) * uPx);
       vec3 c = texture(tWorld, uv / uTex).rgb * 255.0;
+      c = mix(c, vec3(15.0, 40.0, 84.0), smoothstep(77.0, 83.5, lat) * texture(tRelief, uv / uTex).b);   // the open sea by the pole, where the picture's rows run into streaks
       vec2 f = uv - 0.5; ivec2 i0 = ivec2(floor(f)); vec2 fr = fract(f);
       float A = (X < uWx) ? uAgeL : uAgeR, land = 0.0, ice = 0.0, sh = 0.0;
       ivec2 sz = ivec2(uTex);
@@ -241,11 +246,11 @@ async function main() {
   function headOf(root, title, small, side) {       // a headline: its lines, its small line, the side its highlight wears
     const head = el("div", "head k-" + side, root);
     const lines = title.split(" // ").map(s => { const ln = el("span", "line", head); marked(ln, s); return ln; });
-    return { head, lines, small: small ? el("span", "small", head, small) : null };
+    return { head, lines, smalls: small ? small.split(" // ").map(s => el("span", "small", head, s)) : [] };
   }
   function frame(sc) {                               // a scene with "before" has two headlines: the natural side first,
     const root = el("div", "scene", stage), heads = [];   // then its own from the cue "human" on
-    if (sc.before) heads.push(headOf(root, sc.before, "", "nat"));
+    if (sc.before) heads.push(headOf(root, sc.before, "", BEFORE[sc.key] || "nat"));
     heads.push(headOf(root, sc.title, sc.small, KEY[sc.key]));
     const body = css(el("div", "abs", root), { inset: "0" });
     const src = el("div", "sources", root, sc.source);
@@ -565,12 +570,188 @@ async function main() {
     } };
   }
 
-  const builders = { hook, melt, speed, sun, co2, who, accel, call };
+  // ══ the documentary cut: pictures to the edges of the frame, type on a dark fade, one curve that runs through it ══
+  const SCRIM = THEME === "night" ? "5,9,18" : "243,236,225", PENDING = [];
+  function scrims(b, top, bottom) {                  // the fades the type stands on: under the headline, under the curve
+    const a = top ? css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: top, background: `linear-gradient(180deg, rgba(${SCRIM},.90) 0, rgba(${SCRIM},.66) 58%, rgba(${SCRIM},0) 100%)` }) : null;
+    const c = bottom ? css(el("div", "abs", b), { left: 0, top: bottom, width: 1080, height: 1920 - bottom, background: `linear-gradient(180deg, rgba(${SCRIM},0) 0, rgba(${SCRIM},.84) ${Math.round(100 * 230 / (1920 - bottom))}%, rgba(${SCRIM},.96) 100%)` }) : null;
+    return [a, c];
+  }
+  function photo(b, key) {                           // a photograph to the edges of the frame; the camera moves in slowly
+    const P = (F.photos || {})[key];
+    if (!P) return { show() {}, credit: "" };
+    const im = el("img", "abs", b); im.src = "/build/" + P.file;
+    css(im, { left: 0, top: -(P.lift || 0), width: 1080, height: 1920, objectFit: "cover", transformOrigin: "50% 44%", opacity: "0", filter: THEME === "night" ? "brightness(.97) contrast(1.06) saturate(1.02)" : "none" });
+    const lift = P.lift || 0, soft = lift > 0 ? "linear-gradient(0deg, transparent 0, #000 240px)" : lift < 0 ? "linear-gradient(180deg, transparent 0, #000 260px)" : "";
+    if (soft) css(im, { maskImage: soft, webkitMaskImage: soft });          // a lifted picture ends in a fade, not an edge
+    const veil = css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: 1920, background: THEME === "night" ? "rgba(8,18,48,.10)" : "transparent", opacity: "0" });
+    PENDING.push(im.decode().catch(() => {}));       // every photograph is in memory before the first frame is drawn
+    return { credit: P.credit,
+             show(alpha, u) { const z = lerp(P.zoom[0], P.zoom[1], clamp(u)); im.style.opacity = veil.style.opacity = clamp(alpha).toFixed(3); im.style.transform = `scale(${z.toFixed(4)}) translateY(${(-10 * clamp(u)).toFixed(2)}px)`; } };
+  }
+  function motes(b) {                                // dust in the light over a photograph: a few soft specks that drift by the clock
+    const cv = el("canvas", "abs", b); cv.width = 1080; cv.height = 1920; css(cv, { left: 0, top: 0 });
+    const cx2 = cv.getContext("2d");
+    let sd = 7331; const rn = () => (sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0) / 4294967296;
+    const M = Array.from({ length: 64 }, () => ({ x: rn() * 1080, y: 420 + rn() * 700, r: 1.2 + 3.2 * Math.pow(rn(), 2.2), a: 0.05 + 0.2 * rn(), vx: 6 + 16 * rn(), vy: -(3 + 9 * rn()), ph: rn(), per: 3 + 5 * rn() }));
+    return t => { cx2.clearRect(0, 0, 1080, 1920);
+      for (const m of M) { const x = (m.x + m.vx * t) % 1080, y = 420 + ((m.y - 420 + m.vy * t) % 700 + 700) % 700;
+        cx2.globalAlpha = m.a * (0.55 + 0.45 * Math.sin(2 * Math.PI * (t / m.per + m.ph))); cx2.fillStyle = "#FFE9C4";
+        cx2.beginPath(); cx2.arc(x, y, m.r, 0, 6.2832); cx2.fill(); } };
+  }
+  // the strip: the 20,000-year curve under the picture. z = 0 shows all of it, z = 1 the last 11,000 years, where the
+  // corridor is: the band between the coldest and the warmest 200-year mean of the last 10,000 years (film.json "corridor")
+  const ST = { x0: L + 10, x1: R - 10, y0: 1370, y1: 1010 };
+  const sx = (age, z) => { const a0 = lerp(20500, 11200, z), a1 = lerp(-900, -700, z); return ST.x1 - (age - a1) / (a0 - a1) * (ST.x1 - ST.x0); };
+  const sy = (v, z) => { const v0 = lerp(-8.3, -2.3, z), v1 = lerp(2.4, 2.3, z); return ST.y0 - (v - v0) / (v1 - v0) * (ST.y0 - ST.y1); };
+  const TEMP = S.temp.filter(p => p[0] <= 20100).slice().reverse();          // oldest first
+  const HAD = (() => { const h = S.hadcrut, out = []; for (let i = 9; i < h.length; i++) { let m = 0; for (let k = i - 9; k <= i; k++) m += h[k][1]; out.push([1950 - (h[i][0] - 4.5), m / 10]); } return out; })();   // ten-year means, as years before 1950
+  function strip(b) {
+    const sv = svg("svg", full(), b), K = Wd.strip, id = "c" + (UID++);
+    const clip = svg("clipPath", { id }, svg("defs", {}, sv)); svg("rect", { x: ST.x0 - 8, y: ST.y1 - 120, width: ST.x1 - ST.x0 + 60, height: ST.y0 - ST.y1 + 124 }, clip);
+    svg("line", { x1: ST.x0, x2: ST.x1 + 20, y1: ST.y0, y2: ST.y0, stroke: col.axis, "stroke-width": 3 }, sv);
+    const g = svg("g", { "clip-path": `url(#${id})` }, sv);
+    const band = svg("rect", { rx: 10, fill: col.gold, opacity: 0 }, g);
+    const edges = [0, 1].map(() => svg("line", { stroke: col.gold, "stroke-width": 3, "stroke-linecap": "round", opacity: 0 }, g));
+    const area = svg("path", { d: "", fill: grad(sv, col.nat, ST.y1, ST.y0, LOOK.area, 0.0) }, g);
+    const line = glow(g, { d: "", fill: "none", stroke: col.nat, "stroke-width": 8, "stroke-linejoin": "round", "stroke-linecap": "round" });
+    const red = glow(g, { d: "", fill: "none", stroke: col.mark, "stroke-width": 10, "stroke-linejoin": "round", "stroke-linecap": "round" }, 13, 0.85);
+    const lead = svg("circle", { r: 11, fill: "#fff", stroke: col.nat, "stroke-width": 4, opacity: 0 }, g); lead.style.filter = `drop-shadow(0 0 12px ${col.nat})`;
+    const tip = svg("circle", { r: 15, fill: col.mark, stroke: "#fff", "stroke-width": 5, opacity: 0 }, g); tip.style.filter = `drop-shadow(0 0 16px ${col.mark})`;
+    const dots = (Wd.life.markers || []).map(() => svg("circle", { r: 11, fill: col.gold, stroke: "#fff", "stroke-width": 4, opacity: 0 }, g));
+    const ticks = { wide: K.wide.map(([a, t]) => ({ a, e: text(b, "tick", t, { top: ST.y0 + 10 }) })), near: K.near.map(([a, t]) => ({ a, e: text(b, "tick", t, { top: ST.y0 + 10 }) })) };
+    const axis = text(b, "tick", K.axis, { top: ST.y0 + 56, left: MID - 60 });
+    void axis;
+    return { sv, draw(z, age, o = {}) {                // o: band 0..1, red 0..1 (the last 150 years), marks (how many dots), now (seconds, for the breathing)
+      const live = TEMP.filter(q => q[0] >= age), last = [age, interp(S.temp, age)];
+      const pts = [...live, last].map(q => [sx(q[0], z), sy(q[1], z)]);
+      line.setAttribute("d", pathOf(pts)); area.setAttribute("d", under(pts, ST.y0));
+      const tipP = pts[pts.length - 1], bb = clamp(o.band || 0);
+      lead.setAttribute("cx", tipP[0]); lead.setAttribute("cy", tipP[1]); lead.setAttribute("opacity", o.lead ? "1" : "0");
+      const xa = sx(10000, z), xb = sx(-200, z), yt = sy(F.corridor[1], z), yb = sy(F.corridor[0], z);
+      band.setAttribute("x", xa); band.setAttribute("y", yt); band.setAttribute("width", Math.max(0, (xb - xa) * bb)); band.setAttribute("height", yb - yt);
+      band.setAttribute("opacity", (0.16 * bb).toFixed(3));
+      edges.forEach((e, k) => { const y = k ? yb : yt; e.setAttribute("x1", xa); e.setAttribute("x2", xa + (xb - xa) * bb); e.setAttribute("y1", y); e.setAttribute("y2", y); e.setAttribute("opacity", (0.85 * bb * (k === 0 && o.broke ? 0.35 : 1)).toFixed(3)); });
+      const r = clamp(o.red || 0), n = Math.max(2, Math.round(r * HAD.length)), rp = HAD.slice(0, n).map(q => [sx(q[0], z), sy(q[1], z)]);
+      red.setAttribute("d", r > 0 ? pathOf(rp) : ""); const top = rp[rp.length - 1];
+      tip.setAttribute("cx", top[0]); tip.setAttribute("cy", top[1]); tip.setAttribute("opacity", r > 0.02 ? "1" : "0");
+      tip.setAttribute("r", (15 * (1 + 0.15 * Math.sin(2 * Math.PI * (o.now || 0) / 1.1))).toFixed(2));
+      dots.forEach((d, k) => { const m = Wd.life.markers[k], on = k < (o.marks || 0), act = k === (o.marks || 0) - 1 && !o.red;
+        d.setAttribute("cx", sx(m.age, z)); d.setAttribute("cy", sy(interp(S.temp, m.age), z)); d.setAttribute("opacity", on ? "1" : "0");
+        d.setAttribute("r", (11 * (act ? 1.15 + 0.2 * Math.sin(2 * Math.PI * (o.now || 0) / 1.1) : 1)).toFixed(2)); });
+      const wide = clamp(1 - 5 * z), near = clamp(2.2 * z - 1.2);            // the far ticks are gone before the frame closes in past them
+      ticks.wide.forEach(q => css(q.e, { left: sx(q.a, z) - q.e.offsetWidth / 2, opacity: wide.toFixed(3) }));
+      ticks.near.forEach(q => css(q.e, { left: sx(q.a, z) - q.e.offsetWidth / 2, opacity: near.toFixed(3) }));
+      return { tip: top, head: tipP, yt, yb, xb };
+    } };
+  }
+  function counter(b, top) { return css(chipAt(b, ""), { top, fontWeight: "800", fontSize: "50px", lineHeight: "66px" }); }
+  function years(chip, ka, centre) {                 // the chip of the age, in steps of 500 years
+    const a = Math.round(ka * 2) / 2 * 1000, lab = F.chip_ages.melt.find(c => c[0] === a);
+    chip.textContent = lab ? lab[1] : ""; css(chip, { left: centre - chip.offsetWidth / 2 });
+  }
+
+  // ── d1: the Persian Gulf, dry land 20,000 years ago, and the sea coming in ──
+  function gulf(sc) {
+    const f = frame(sc), b = f.body, q = F.cues.gulf, G = Wd.gulf, g = globe(b, 0, 1920);
+    scrims(b, 640, 1330);
+    const chip = counter(b, 700), iran = dotted(b, G.iran, "", col.iran);   // the headline names the Gulf: no label on it
+    return { ...f, update(t) {
+      const ka = lerp(q.age[2], q.age[3], easeInOut(seg(t, q.age[0], q.age[1])));
+      g.draw(keyed(F.view.gulf, t), ka, ka, 0);
+      years(chip, ka, MID); show(chip, seg(t, q.age[0] + 0.05, q.age[0] + 0.3));   // the headline has the age at frame 0; the chip comes in when it starts to count
+      pin(iran, g, F.places.iran[0], F.places.iran[1], 22, -30); ring(iran.dot, t + 0.6);
+    } };
+  }
+
+  // ── d2: the thaw from space, the curve drawing under it ──
+  function thaw(sc) {
+    const f = frame(sc), b = f.body, q = F.cues.thaw, g = globe(b, 0, 1920);
+    scrims(b, 620, 880);
+    const st = strip(b), chip = counter(b, 912);
+    f.prep = () => st.draw(0, 20100);
+    return { ...f, update(t) {
+      const ka = lerp(q.age[2], q.age[3], easeInOut(seg(t, q.age[0], q.age[1])));
+      g.draw(keyed(F.view.thaw, t), ka, ka, 0);
+      years(chip, ka, MID);
+      st.draw(0, Math.min(20100, ka * 1000), { lead: t < q.age[1] + 0.2, now: t });
+    } };
+  }
+
+  // ── d3: the corridor of life: the last 11,000 years, a photograph behind each marker ──
+  function title(b, s) {                             // a picture's name, large, and the line under it
+    const big = css(el("div", "abs ptitle", b, s), { top: 792 }), sub = css(el("div", "abs psub", b, ""), { top: 912 });
+    return { big, sub, show(a, lift) { [big, sub].forEach(e => css(e, { opacity: clamp(a).toFixed(3), transform: `translateY(${(18 * (1 - clamp(lift))).toFixed(2)}px)` })); } };
+  }
+  function life(sc) {
+    const f = frame(sc), b = f.body, q = F.cues.life, M = Wd.life.markers, pics = M.map(m => photo(b, m.photo));
+    const dust = motes(b);
+    const [shade] = scrims(b, 720, 760);
+    const credit = el("div", "abs credit", b, "");
+    const st = strip(b), names = M.map(m => title(b, m.label));
+    f.prep = () => { st.draw(1, 10000); names.forEach((n, k) => { n.sub.textContent = M[k].ago; [n.big, n.sub].forEach(e => css(e, { left: MID - e.offsetWidth / 2 })); }); };
+    const start = k => k === 0 ? 0.0 : q.marks[k] - q.fade[0], full = k => k === 0 ? 0.7 : q.marks[k] - q.fade[1];
+    return { ...f, update(t) {
+      const z = easeInOut(seg(t, q.zoom[0], q.zoom[1])), age = keyed(q.run, t)[0];
+      let shown = 0, cur = 0;
+      M.forEach((m, k) => { if (t >= q.marks[k]) shown = k + 1; if (t >= start(k)) cur = k; });
+      pics.forEach((pc, k) => { const end = k + 1 < M.length ? full(k + 1) : sc.length; pc.show(seg(t, start(k), full(k)), seg(t, start(k), end)); });
+      credit.textContent = pics[cur].credit || "";
+      names.forEach((n, k) => { const out = k + 1 < M.length ? 1 - seg(t, start(k + 1), start(k + 1) + 0.4) : 1; n.show(easeOut(seg(t, q.marks[k] - 0.25, q.marks[k] + 0.25)) * out, easeOut(seg(t, q.marks[k] - 0.25, q.marks[k] + 0.35))); });
+      st.draw(z, age, { band: z, marks: shown, lead: true, now: t }); dust(t);
+      const up = Math.max(1 - seg(t, sc.turn - 0.4, sc.turn + 0.2), seg(t, sc.late - 0.2, sc.late + 0.4));   // a headline is on: its fade is too
+      shade.style.opacity = (0.14 + 0.86 * up).toFixed(3);
+    } };
+  }
+
+  // ── d4: the last 150 years leave the corridor ──
+  function exit(sc) {
+    const f = frame(sc), b = f.body, q = F.cues.exit, pc = photo(b, "today"), dust = motes(b);
+    scrims(b, 720, 760);
+    const credit = el("div", "abs credit", b, pc.credit || "");
+    const st = strip(b), tg = css(tag(b, Wd.exit.tag, col.markf), { fontSize: "58px", lineHeight: "76px", fontWeight: "900" }), flash = css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: 1920, background: `radial-gradient(900px 700px at 80% 62%, rgba(255,70,50,.34), rgba(255,70,50,0) 70%)`, opacity: "0" });
+    const shards = [0, 1, 2, 3, 4].map(() => svg("path", { d: "M0,0 l16,-6 l-5,15 z", fill: col.gold, opacity: 0 }, st.sv));
+    f.prep = () => st.draw(1, 100);
+    return { ...f, update(t) {
+      pc.show(seg(t, 0, 0.6), seg(t, 0, sc.length)); dust(t + 20);
+      const r = easeInOut(seg(t, q.spike[0], q.spike[1])), marks = Wd.life.markers.length;
+      const at = st.draw(1, 100, { band: 1, red: r, marks, now: t, broke: r > 0.5 });
+      const out = at.tip[1] < at.yt, p = seg(t, q.spike[0] + 0.5 * (q.spike[1] - q.spike[0]), q.spike[1] + 0.9);
+      shards.forEach((e, k) => { e.setAttribute("opacity", out ? (1 - p).toFixed(3) : "0"); e.setAttribute("transform", `translate(${at.tip[0] - 26 + (k - 2) * 16 + (k - 2) * 62 * p},${at.yt - 4 - 110 * p + 90 * p * p * (k % 2 ? 1 : 0.45)}) rotate(${(k * 83 + 320 * p).toFixed(1)})`); });
+      flash.style.opacity = (0.9 * r * (0.75 + 0.25 * Math.sin(2 * Math.PI * t / 1.6))).toFixed(3);
+      const g = easeOut(seg(t, q.tag, q.tag + 0.45)), br = t > q.tag + 0.6 ? 0.03 * Math.sin(2 * Math.PI * (t - q.tag) / 1.3) : 0;
+      css(tg, { left: at.tip[0] - tg.offsetWidth - 30, top: at.tip[1] - 34, opacity: g.toFixed(3), scale: (0.85 + 0.15 * g + 0.07 * bump(seg(t, q.tag, q.tag + 0.6)) + br).toFixed(3) });
+    } };
+  }
+
+  // ── d6: send it on, over Persepolis ──
+  function send(sc) {
+    const f = frame(sc), b = f.body, q = F.cues.send, pc = photo(b, "end"), dust = motes(b);
+    scrims(b, 900, 1100);
+    const credit = el("div", "abs credit", b, pc.credit || ""); css(credit, { top: 1452 });
+    const icon = svg("svg", { width: 520, height: 240, viewBox: "-130 -60 260 120" }, b);
+    css(icon, { left: MID - 260, top: 1150, filter: `drop-shadow(0 0 20px rgba(255,90,78,${(0.75 * LOOK.glowK).toFixed(2)}))` });
+    const plane = svg("g", { fill: "none", stroke: "#fff", "stroke-width": 8, "stroke-linecap": "round", "stroke-linejoin": "round" }, icon);
+    svg("path", { d: "M-108,-34 L-28,-40 L-72,38 L-80,2 Z" }, plane); svg("path", { d: "M-80,2 L-28,-40" }, plane);
+    const ic = svg("g", { fill: "none", stroke: col.mark, "stroke-width": 8, "stroke-linecap": "round", "stroke-linejoin": "round" }, icon);
+    svg("path", { d: "M40,-6 v-12 a9,9 0 0 1 9,-9 h46" }, ic); svg("path", { d: "M86,-38 l11,11 l-11,11" }, ic);
+    svg("path", { d: "M104,8 v12 a9,9 0 0 1 -9,9 h-46" }, ic); svg("path", { d: "M58,40 l-11,-11 l11,-11" }, ic);
+    return { ...f, update(t) {
+      pc.show(seg(t, 0, 0.6), seg(t, 0, sc.length)); dust(t + 40);
+      const a = easeOut(seg(t, q.icon, q.icon + 0.5)), fly = 10 * Math.sin(2 * Math.PI * Math.max(0, t - q.icon) / 1.6);
+      css(icon, { opacity: a.toFixed(3), scale: (0.8 + 0.2 * a).toFixed(3) });
+      plane.setAttribute("transform", `translate(${(fly * 0.8).toFixed(2)},${(-fly).toFixed(2)})`);
+      ic.setAttribute("transform", `rotate(${(8 * Math.sin(2 * Math.PI * Math.max(0, t - q.icon) / 2.2)).toFixed(2)} 72 1)`);
+    } };
+  }
+
+  const builders = { hook, melt, speed, sun, co2, who, accel, call, gulf, thaw, life, exit, send };
   const scenes = C.scenes.map(sc => Object.assign(builders[sc.key](sc), { sc }));
   await document.fonts.ready;
+  await Promise.all(PENDING);
   scenes.forEach(s => {
     s.root.style.display = "block";
-    s.heads.forEach(h => { fit(h.lines, W, 54); if (h.small) fit([h.small], W, 38); });
+    s.heads.forEach(h => { fit(h.lines, W, 54); fit(h.smalls, W, 38); });
     (s.fits || []).forEach(n => fit([n], W, 34));
     if (s.follow) fit(s.follow, W, 36);
     fit([s.src], W, 26);
@@ -589,10 +770,13 @@ async function main() {
     lit(sc.key, dt);
     const enter = i === 0 ? 1 : easeOut(seg(dt, 0, 0.35));
     css(s.body, { opacity: (0.25 + 0.75 * enter).toFixed(3), transform: `translateY(${(14 * (1 - enter)).toFixed(2)}px)` });
-    const turn = s.heads.length > 1 ? F.cues[sc.key].human : null, ph = turn !== null && dt >= turn ? 1 : 0, lt = ph ? dt - turn : dt;
-    s.heads.forEach((h, k) => { h.head.style.display = k === ph ? "block" : "none"; });
-    [...s.heads[ph].lines, s.heads[ph].small].forEach((ln, k) => {   // the headline arrives line by line (the first scene stands from frame 0)
-      if (!ln) return;
+    const turn = s.heads.length > 1 ? sc.turn : null, ph = turn !== null && dt >= turn ? 1 : 0;
+    const from = sc.late === undefined ? turn : sc.late, lt = ph ? dt - from : dt;      // a scene may leave its picture alone between its two headlines
+    s.heads.forEach((h, k) => { h.head.style.display = k === ph && !(ph && dt < from) ? "block" : "none"; });
+    s.heads[0].head.style.opacity = !ph && sc.late !== undefined ? (1 - seg(dt, turn - 0.4, turn)).toFixed(3) : "1";
+    const late = sc.small_at === undefined ? null : sc.small_at;           // a small line with its own moment comes in then, from nothing
+    s.heads[ph].smalls.forEach((ln, k) => { if (late === null) return; const p = easeOut(seg(dt, late + 0.12 * k, late + 0.4 + 0.12 * k)); css(ln, { opacity: p.toFixed(3), transform: `translateY(${(18 * (1 - p)).toFixed(2)}px)` }); });
+    [...s.heads[ph].lines, ...(late === null ? s.heads[ph].smalls : [])].forEach((ln, k) => {   // the headline arrives line by line (the first scene stands from frame 0)
       const p = i === 0 && !ph ? 1 : easeOut(seg(lt, 0.08 * k, 0.30 + 0.08 * k));
       css(ln, { opacity: (0.15 + 0.85 * p).toFixed(3), transform: `translateY(${(22 * (1 - p)).toFixed(2)}px)` });
     });

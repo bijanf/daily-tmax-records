@@ -37,14 +37,17 @@ def main() -> None:
     ap.add_argument("--stills", action="store_true", help="cover and stills only, no video")
     ap.add_argument("--at", type=float, nargs="*", help="stills at these times only")
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--theme", choices=("light", "night"), default="light", help="the look of the page (film.html?theme=)")
+    ap.add_argument("--theme", choices=("light", "night"), help="the look of the page (film.html?theme=); light for the cut a, night for d")
+    ap.add_argument("--cut", choices=("a", "d"), default="a", help="a: the eight scenes; d: the documentary cut (the corridor of life)")
     args = ap.parse_args()
     film = json.loads((BUILD / "film.json").read_text(encoding="utf-8"))
-    cut = film["cuts"]["a"]
+    cut = film["cuts"][args.cut]
+    args.theme = args.theme or ("night" if args.cut == "d" else "light")
     n = round(cut["end"] * base.FPS)
     base.SOCIAL.mkdir(parents=True, exist_ok=True)
-    stem = base.SOCIAL / (STEM if args.theme == "light" else f"{STEM}_{args.theme}")
-    cut_q = f"a&theme={args.theme}"                  # open_page asks for film.html?cut=<this>
+    name = STEM if args.cut == "a" else f"{STEM}_doc"
+    stem = base.SOCIAL / (name if args.theme == ("light" if args.cut == "a" else "night") else f"{name}_{args.theme}")
+    cut_q = f"{args.cut}&theme={args.theme}"         # open_page asks for film.html?cut=<this>
     srv = base.serve()
     port = srv.server_address[1]
     if args.stills or args.at:

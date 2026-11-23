@@ -6,6 +6,7 @@
 @font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
 @font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
 @font-face { font-family: "Inter"; font-weight: 500; src: url("/fonts/inter/ttf/Inter-Medium.ttf"); }
+@font-face { font-family: "Lalezar"; font-weight: 400; src: url("/fonts/lalezar/Lalezar-Regular.ttf"); }
 
 :root {
   --page: #F3ECE1; --ink: #2E2118; --dim: #5E4E42; --soft: #4a3a2e;
@@ -43,15 +44,15 @@ html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--
 
 /* the top: the story's progress and the two-part pill */
 #progress { position: absolute; left: var(--left); top: 150px; width: var(--width); height: 8px; display: flex;
-  flex-direction: row; gap: 12px; direction: rtl; }
+  flex-direction: row; gap: 12px; direction: rtl; z-index: 10; }
 #progress .seg { flex: 1; height: 8px; border-radius: 4px; background: var(--seg); overflow: hidden; position: relative; }
 #progress .seg i { position: absolute; right: 0; top: 0; bottom: 0; width: 0; background: var(--ink); border-radius: 4px; }
 .pill { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 178px; border-radius: 16px;
-  font-weight: 800; white-space: nowrap; box-shadow: var(--pillshadow); }
+  font-weight: 800; white-space: nowrap; box-shadow: var(--pillshadow); z-index: 10; }
 
 /* a scene: the headline, the small line, the picture, the sources */
 .scene { position: absolute; inset: 0; }
-.head { position: absolute; left: var(--left); top: 282px; width: var(--width); text-align: right;
+.head { position: absolute; left: var(--left); top: 282px; width: var(--width); text-align: right; z-index: 5;
   --keyc: var(--markf); --keyglow: var(--markglow); }
 .head.k-nat { --keyc: var(--natf); --keyglow: var(--natglow); }
 .head .line { display: block; font-weight: 800; font-size: 74px; line-height: 104px; white-space: nowrap;
@@ -61,7 +62,7 @@ html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--
   box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .small { display: block; font-weight: 500; font-size: 48px; line-height: 66px; margin-top: 10px; white-space: nowrap;
   color: var(--soft); }
-.sources { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 1494px; direction: ltr;
+.sources { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 1494px; direction: ltr; z-index: 5;
   font: 500 34px "Inter", sans-serif; color: var(--dim); opacity: var(--srcalpha); white-space: nowrap; letter-spacing: 0.2px; }
 .chip { position: absolute; background: var(--glass); color: var(--ink); border-radius: 14px; padding: 0 16px 3px;
   font-size: 42px; line-height: 58px; white-space: nowrap; font-weight: 700; box-shadow: var(--chipshadow); }
@@ -80,3 +81,18 @@ svg { position: absolute; overflow: visible; }
 .leg { position: absolute; font-weight: 800; font-size: 42px; line-height: 56px; white-space: nowrap; color: var(--ink); }
 .leg i { display: inline-block; width: 34px; height: 34px; border-radius: 9px; margin-left: 12px; vertical-align: -4px;
   box-shadow: var(--swatch); }
+
+/* the documentary cut: a picture's name over it, the line under the name, the photograph's credit */
+.ptitle { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 118px; line-height: 132px; white-space: nowrap;
+  color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.85), 0 0 3px rgba(0, 0, 0, 0.6); }
+.psub { font-weight: 800; font-size: 46px; line-height: 60px; white-space: nowrap; color: var(--goldbg);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9); }
+.credit { left: var(--left); top: 968px; direction: ltr; font: 500 24px "Inter", "Vazirmatn", sans-serif; color: #fff; opacity: 0.62;
+  white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
+/* the documentary cut's headline: the heavy display face, as large as its lines allow */
+:root[data-cut="d"] .head .line { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 116px; line-height: 152px;
+  text-shadow: 0 4px 26px rgba(0, 0, 0, 0.8); }
+:root[data-cut="d"] .head .key { padding: 0 20px 2px; border-radius: 20px; }
+:root[data-cut="d"] .small { font-weight: 700; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85); }
+:root[data-cut="d"] .head .line + .small { margin-top: 30px; }
+:root[data-cut="d"] .small + .small { margin-top: 0; }
