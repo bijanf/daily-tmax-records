@@ -235,7 +235,8 @@ def words(n: dict) -> dict:
                          dict(key="eu", label="اتحادیه‌ی اروپا", v=round(n["eu"])), dict(key="russia", label="روسیه", v=round(n["russia"])),
                          dict(key="rest", label="بقیه‌ی جهان", v=None), dict(key="iran", label="ایران", v=round(n["iran"], 1))],
                  unit="هر مکعب: ۱٪", four=round(four)),
-        accel=dict(steps=[dec(v, 2) for v in n["steps"]], first="۱۹۶۶ تا ۱۹۷۵", last="۲۰۱۶ تا ۲۰۲۵", tag="بیشترین پله", unit="دمای هر دهه نسبت به ۱۸۵۰ تا ۱۹۰۰"),
+        accel=dict(values=[dec(v, 2) for v in n["decades"]], first="۱۹۶۶ تا ۱۹۷۵", last="۲۰۱۶ تا ۲۰۲۵", tag=f"{dec(n['steps'][-1], 2)} بیشتر از دهه‌ی قبل",
+                   unit="هر ستون: یک دهه // درجه گرم‌تر از ۱۸۵۰ تا ۱۹۰۰", paris="حدِ ۱٫۵ درجه‌ی پاریس", year=f"۲۰۲۴: {dec(n['y2024'], 2)}"),
         call=dict(),
     )
 
@@ -263,7 +264,8 @@ def reading(w: dict, k: str) -> float:
     elif k == "co2":
         half += [w["co2"][x] for x in ("unit", "now", "nat", "hum", "axis")] + [w["co2"]["counter"](10000)]
     elif k == "accel":
-        half += w["accel"]["steps"] + [w["accel"][x] for x in ("first", "last", "tag", "unit")]
+        full += [w["accel"]["tag"], w["accel"]["paris"]]
+        half += w["accel"]["values"] + [w["accel"][x] for x in ("first", "last", "unit", "year")]
     elif k == "who":
         full += [f"{g['label']} {dec(g['v'])}٪" if g["v"] else g["label"] for g in w["who"]["groups"]]
         half += [w["who"]["unit"]]
@@ -279,7 +281,7 @@ CUES = dict(
     sun=dict(temp=[0.3, 2.3], sun=[0.6, 2.6], verdict=3.1),
     co2=dict(draw=[0.3, 4.3], nat=4.4, spike=[5.0, 5.9], chip=6.0, hum=6.3),
     who=dict(groups=dict(usa=[0.6, 2.8], china=[3.2, 5.0], eu=[5.4, 7.0], russia=[7.4, 8.4], rest=[9.4, 10.4]), four=8.8, iran=10.8),
-    accel=dict(bars=[0.3, 5.3], tag=5.6),
+    accel=dict(bars=[0.3, 4.5], paris=4.8, year=5.4, tag=6.0),
     call=dict(icon=1.0))
 PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["spike"][0], "hum"), sun="nat",
             co2=("nat", CUES["co2"]["spike"][0], "hum"), who="hum", accel="hum", call="both")
@@ -306,7 +308,8 @@ def film() -> dict:
     n = numbers()
     f = n.pop("frames")
     n["steps"] = [b - a for a, b in zip(n["decades"], n["decades"][1:])]
-    assert max(n["steps"]) == n["steps"][-1] and n["steps"][-1] > 1.3 * max(n["steps"][:-1]), n["steps"]   # «بیشترین پله»
+    assert max(n["steps"]) == n["steps"][-1] and n["steps"][-1] > 1.3 * max(n["steps"][:-1]), n["steps"]   # the last step the biggest
+    assert round(n["decades"][-1], 2) == 1.28 and 1.5 < n["y2024"] < 1.55, (n["decades"], n["y2024"])      # the bars and 2024 against 1.5
     w = words(n)
     # the words carry the numbers: assert them against the data
     assert round(n["melt"]) == 6 and 5.5 < n["melt"] < 6.5, n["melt"]
@@ -339,7 +342,7 @@ def film() -> dict:
                   small=w["scenes"][k][1], source=w["sources"][k]) for i, k in enumerate(SCENES)])),
         colours=dict(paper="#F3ECE1", ink="#2E2118", mark="#A03129", land="#E2D8C8", ice="#EEF3F8", shelf="#CDB48A", sea="#1c5cab",
                      pale="#d8cdbb", gold="#C8902E", nat="#2468B4", iran="#2F7D4F", usa="#A03129", china="#C0533F", eu="#D9785A", russia="#E6A07E", rest="#D8CDBB"),
-        series=dict(temp=temp, band=band, hadcrut=hc, sun=sun, co2=co, decades=[[1966 + 10 * i, round(v, 3)] for i, v in enumerate(n['decades'])]),
+        series=dict(temp=temp, band=band, hadcrut=hc, sun=sun, co2=co, y2024=round(n['y2024'], 3), decades=[[1966 + 10 * i, round(v, 3)] for i, v in enumerate(n['decades'])]),
         maps=dict(world="world.jpg", age="agemap.png", relief="relief.png", pxd=PXD, lat1=LAT1, lat0=LAT0, lon0=-180.0),
         words={k: v for k, v in chips.items() if k not in ("scenes", "sources")},
         chip_ages=dict(melt=[[a, w["melt"]["chip"](a)] for a in range(0, 21001, 500)], co2=[[a, w["co2"]["counter"](a)] for a in range(0, 800001, 10000)]))

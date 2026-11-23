@@ -409,32 +409,38 @@ async function main() {
     } };
   }
 
-  // ── 7: faster and faster: the warmth of each decade (HadCRUT5), every step labelled, the last one the biggest ──
+  // ── 7: faster and faster: each decade's warmth above 1850-1900 (HadCRUT5), the 1.5-degree line of Paris, 2024 above it ──
   function accel(sc) {
     const f = frame(sc), b = f.body, q = F.cues.accel, A = Wd.accel, D = S.decades, sv = svg("svg", full(), b);
-    const Y0 = 1360, Hh = 560, vmax = 1.4, colw = 104, gapc = 36, X0 = MID - (D.length * colw + (D.length - 1) * gapc) / 2;
-    const ys = v => Y0 - v / vmax * Hh, xs = i => X0 + i * (colw + gapc);
+    const Y0 = 1360, Hh = 600, vmax = 1.75, colw = 104, gapc = 36, X0 = MID - (D.length * colw + (D.length - 1) * gapc) / 2;
+    const ys = v => Y0 - v / vmax * Hh, xs = i => X0 + i * (colw + gapc), last = D.length - 1;
     svg("line", { x1: L, x2: R, y1: Y0, y2: Y0, stroke: col.ink, "stroke-width": 4 }, sv);
-    css(text(b, "tick", A.unit.replace(" نسبت", "\nنسبت"), { top: ys(vmax) - 120, left: L }), { whiteSpace: "pre-line", lineHeight: "46px", textAlign: "right" });   // two lines: the measure, then its base years in one piece
-    const bars = D.map((d, i) => svg("rect", { x: xs(i), width: colw, y: Y0, height: 0, rx: 10, fill: i === D.length - 1 ? col.mark : col.russia }, sv));
-    const steps = A.steps.map((s, i) => css(text(b, "tick", s, { top: 0 }), { fontWeight: "800", color: i === A.steps.length - 1 ? col.mark : col.ink, fontSize: i === A.steps.length - 1 ? "54px" : "38px" }));
-    const arrows = A.steps.map((s, i) => svg("path", { d: "", fill: "none", stroke: i === A.steps.length - 1 ? col.mark : col.ink, "stroke-width": i === A.steps.length - 1 ? 6 : 3.5, "stroke-linecap": "round" }, sv));
-    const first = text(b, "tick", A.first, { top: Y0 + 12 }), last = text(b, "tick", A.last, { top: Y0 + 12 });
-    const tg = css(el("div", "abs mk", b, A.tag), { background: col.mark, color: col.paper, fontSize: "46px", lineHeight: "62px", padding: "0 18px 5px", borderRadius: "16px" });
+    css(text(b, "tick", A.unit.replace(" // ", "\n"), { top: ys(vmax) - 100, left: L }), { whiteSpace: "pre-line", lineHeight: "46px", textAlign: "right" });
+    const bars = D.map((d, i) => svg("rect", { x: xs(i), width: colw, y: Y0, height: 0, rx: 10, fill: i === last ? col.mark : col.russia }, sv));
+    const vals = A.values.map((s, i) => css(text(b, "tick", s, { top: 0 }), { fontWeight: "800", fontSize: i === last ? "50px" : "40px", color: i === last ? col.mark : col.ink }));
+    const first = text(b, "tick", A.first, { top: Y0 + 12 }), lastL = text(b, "tick", A.last, { top: Y0 + 12 });
+    const paris = svg("line", { x1: L, x2: R, y1: ys(1.5), y2: ys(1.5), stroke: col.mark, "stroke-width": 4, "stroke-dasharray": "14 12" }, sv);
+    const parisL = css(text(b, "tick", A.paris, { top: ys(1.5) - 52, left: L }), { fontWeight: "800", color: col.mark });
+    const dot = svg("circle", { cx: xs(last) + colw / 2, cy: ys(S.y2024), r: 16, fill: col.mark, stroke: "#fff", "stroke-width": 5, opacity: 0 }, sv);
+    const yr = css(text(b, "tick", A.year, { top: ys(S.y2024) - 64 }), { fontWeight: "800", color: col.mark });
+    const tg = css(el("div", "abs mk", b, A.tag), { background: col.mark, color: col.paper, fontSize: "42px", lineHeight: "58px", padding: "0 16px 5px", borderRadius: "14px" });
     const at = i => q.bars[0] + (q.bars[1] - q.bars[0]) * i / D.length;
-    f.prep = () => { css(first, { left: xs(0) + colw / 2 - first.offsetWidth / 2 }); css(last, { left: xs(D.length - 1) + colw / 2 - last.offsetWidth / 2 });
-      css(tg, { left: xs(D.length - 1) - tg.offsetWidth - 24, top: ys(D[D.length - 1][1]) - 150 }); };
+    f.prep = () => { css(first, { left: xs(0) + colw / 2 - first.offsetWidth / 2 }); css(lastL, { left: xs(last) + colw / 2 - lastL.offsetWidth / 2 });
+      css(yr, { left: xs(last) - yr.offsetWidth - 10 });
+      css(tg, { left: xs(last) - tg.offsetWidth - 20, top: ys(1.5) + 16 }); };   // under the 1.5 line, clear of the columns' values
     return { ...f, update(t) {
-      D.forEach((d, i) => { const p = easeOut(seg(t, at(i), at(i) + 0.6)), v = d[1] * p; bars[i].setAttribute("y", ys(v)); bars[i].setAttribute("height", Y0 - ys(v)); });
-      A.steps.forEach((s, i) => {                   // the step from decade i to i + 1, beside the new column
-        const p = easeOut(seg(t, at(i + 1) + 0.5, at(i + 1) + 0.9)), x = xs(i + 1) - gapc / 2, ya = ys(D[i][1]), yb = ys(D[i + 1][1]);
-        arrows[i].setAttribute("d", p > 0 ? `M${x},${ya} V${yb + 4} m-9,13 l9,-13 l9,13` : "");
-        arrows[i].setAttribute("opacity", p.toFixed(3));
-        css(steps[i], { left: x - steps[i].offsetWidth / 2, top: yb - (i === A.steps.length - 1 ? 82 : 58), opacity: p.toFixed(3) });
+      D.forEach((d, i) => {                          // each column rises with its value counting up on top of it
+        const p = easeOut(seg(t, at(i), at(i) + 0.6)), v = d[1] * p;
+        bars[i].setAttribute("y", ys(v)); bars[i].setAttribute("height", Y0 - ys(v));
+        vals[i].textContent = fa(v.toFixed(2)); css(vals[i], { left: xs(i) + colw / 2 - vals[i].offsetWidth / 2, top: ys(v) - (i === last ? 64 : 54), opacity: (p > 0.02 ? 1 : 0).toString() });
+        if (p >= 1) vals[i].textContent = A.values[i];
       });
-      const g = easeOut(seg(t, q.tag, q.tag + 0.45)), br = t > q.tag + 0.6 ? 0.035 * Math.sin(2 * Math.PI * (t - q.tag) / 1.2) : 0;
+      const pl = easeOut(seg(t, q.paris, q.paris + 0.6));
+      paris.setAttribute("x2", (L + (R - L) * pl).toFixed(1)); show(parisL, pl);
+      const dp = easeOut(seg(t, q.year, q.year + 0.4));
+      dot.setAttribute("opacity", dp.toFixed(3)); dot.setAttribute("r", (16 * (0.6 + 0.4 * dp) * (1 + 0.15 * Math.sin(2 * Math.PI * Math.max(0, t - q.year) / 1.2))).toFixed(2)); show(yr, dp);
+      const g = easeOut(seg(t, q.tag, q.tag + 0.45)), br = t > q.tag + 0.6 ? 0.03 * Math.sin(2 * Math.PI * (t - q.tag) / 1.3) : 0;
       css(tg, { opacity: g.toFixed(3), scale: (0.85 + 0.15 * g + 0.07 * bump(seg(t, q.tag, q.tag + 0.6)) + br).toFixed(3) });
-      bars[D.length - 1].setAttribute("opacity", (0.85 + 0.15 * Math.sin(2 * Math.PI * t / 1.2)).toFixed(3));
     } };
   }
 
