@@ -262,7 +262,7 @@ CUES = dict(
     hook=dict(wipe=[0.25, 1.75], back=[2.55, 3.45], gulf=3.55, spin=[30.0, 36.0]),
     melt=dict(age=[0.5, 7.0, 20.5, 7.0], zoom=[2.6, 6.4], thermo=0.3, gap=4.6),
     calm=dict(draw=[0.2, 3.2], band=3.4, markers=[4.0, 4.6, 5.2]),
-    jump=dict(spike=[0.3, 1.9], chip=2.0, inset=[2.4, 3.4]),
+    jump=dict(spike=[0.3, 1.9], chip=2.0, inset=[2.2, 4.6]),
     sun=dict(temp=[0.3, 2.3], sun=[0.9, 2.9], verdict=3.1),
     co2=dict(draw=[0.3, 4.6], spike=[4.8, 5.7], chip=5.8, small=6.3),
     who=dict(fill=[0.4, 4.6], four=4.9, iran=5.5),
@@ -282,7 +282,7 @@ def seconds(w: dict) -> list[float]:
 VIEW = dict(
     hook=[[0.0, 44.0, 25.0, 1.0, 540, 1005, 420], [7.5, 44.0, 33.0, 1.0, 540, 1005, 420]],
     melt=[[0.0, 44.0, 33.0, 1.0, 540, 1005, 420], [2.6, 42.0, 38.0, 1.0, 540, 1005, 420], [6.4, 29.0, 50.5, 3.2, 540, 1005, 420],
-          [99.0, 29.0, 52.0, 3.2, 540, 1005, 420]],
+          [10.0, 28.4, 53.5, 3.5, 540, 1005, 420]],                                 # the Gulf: a slow drift and zoom while it holds
     call=[[0.0, 30.0, 40.0, 1.0, 540, 770, 220], [11.0, 30.0, 58.0, 1.0, 540, 770, 220]])
 PLACES = dict(gulf=(27.3, 51.2), iran=(33.0, 54.0))
 

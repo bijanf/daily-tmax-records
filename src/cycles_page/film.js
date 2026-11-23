@@ -231,8 +231,11 @@ async function main() {
       const lab = text(b, "mk", m.label, { top: y - 128 - 62 * i });
       return { dot, stem, lab, x };
     });
+    const last = o.pts[o.pts.length - 1], now = svg("circle", { cx: last[0], cy: last[1], r: 14, fill: col.mark, stroke: "#fff", "stroke-width": 5, opacity: 0 }, o.sv);
     f.prep = () => { centreTicks(b); marks.forEach(m => { css(m.lab, { left: clamp(m.x - m.lab.offsetWidth / 2, L, R - m.lab.offsetWidth) }); }); };
     return { ...f, update(t) {
+      now.setAttribute("opacity", t > q.draw[1] ? "1" : "0"); now.setAttribute("r", (14 * (1 + 0.16 * Math.sin(2 * Math.PI * t / 1.2))).toFixed(2));
+      marks.forEach((m, i) => m.dot.setAttribute("r", (13 * (1 + 0.1 * Math.sin(2 * Math.PI * (t / 1.5 - i / 3)))).toFixed(2)));
       const p = easeInOut(seg(t, q.draw[0], q.draw[1])), n = Math.max(2, Math.round(p * o.pts.length));
       o.line.setAttribute("d", pathOf(o.pts.slice(0, n))); o.band.style.opacity = (0.14 * p).toFixed(3);
       o.holo.setAttribute("opacity", (0.16 * easeOut(seg(t, q.band, q.band + 0.6))).toFixed(3));
@@ -263,7 +266,8 @@ async function main() {
       const ip = easeOut(seg(t, q.inset[0], q.inset[0] + 0.4)), d = seg(t, q.inset[0] + 0.2, q.inset[1]);
       [inset, isv, ilab].forEach(e => show(e, ip)); link.setAttribute("opacity", (0.6 * ip).toFixed(3));
       iline.setAttribute("d", pathOf(ipts.slice(0, Math.max(2, Math.round(d * ipts.length)))));
-      const pulse = t > q.spike[1] ? 1 + 0.05 * Math.sin(2 * Math.PI * (t - q.spike[1]) / 1.4) : 1;
+      const pulse = t > q.spike[1] ? 1 + 0.16 * Math.sin(2 * Math.PI * (t - q.spike[1]) / 1.2) : 1;
+      css(chip, { translate: `0 ${(5 * Math.sin(2 * Math.PI * t / 1.6)).toFixed(2)}px` });
       top.setAttribute("r", (16 * pulse).toFixed(2));
     } };
   }
@@ -294,8 +298,9 @@ async function main() {
       [[pt, q.temp], [ps, q.sun]].forEach(([p, w]) => { const d = easeInOut(seg(t, w[0], w[1])); p.thin.setAttribute("d", pathOf(p.a.slice(0, Math.max(2, Math.round(d * p.a.length))))); p.bold.setAttribute("d", pathOf(p.e.slice(0, Math.max(2, Math.round(d * p.e.length))))); });
       const v = easeOut(seg(t, q.verdict, q.verdict + 0.4));
       const tipT = pt.e[pt.e.length - 1], tipS = ps.e[ps.e.length - 1];
-      aT.setAttribute("d", `M${tipT[0] + 4},${tipT[1] - 46} l-22,34 h44 z`); aT.setAttribute("fill", col.mark); aT.setAttribute("opacity", v.toFixed(3));
-      aS.setAttribute("d", `M${tipS[0] + 44},${tipS[1]} l-34,-22 v44 z`); aS.setAttribute("fill", col.gold); aS.setAttribute("opacity", v.toFixed(3));
+      const bob = 7 * Math.sin(2 * Math.PI * t / 1.2);
+      aT.setAttribute("d", `M${tipT[0] + 4},${tipT[1] - 46 - bob} l-22,34 h44 z`); aT.setAttribute("fill", col.mark); aT.setAttribute("opacity", v.toFixed(3));
+      aS.setAttribute("d", `M${tipS[0] + 44 + bob},${tipS[1]} l-34,-22 v44 z`); aS.setAttribute("fill", col.gold); aS.setAttribute("opacity", v.toFixed(3));
     } };
   }
 
@@ -318,6 +323,7 @@ async function main() {
     const line = svg("path", { d: "", fill: "none", stroke: col.ink, "stroke-width": 4.5, "stroke-linejoin": "round" }, sv);
     const sp = svg("path", { d: "", fill: "none", stroke: col.mark, "stroke-width": 11, "stroke-linecap": "round" }, sv);
     const now = young[young.length - 1][1], xNow = X1 + 4;
+    const tip = svg("circle", { cx: xNow, cy: ys(now), r: 15, fill: col.mark, stroke: "#fff", "stroke-width": 5, opacity: 0 }, sv);
     const shards = [0, 1, 2, 3].map(k => svg("path", { d: "M0,0 l14,-6 l-4,14 z", fill: col.ink, opacity: 0 }, sv));
     const counter = css(text(b, "chip", "", { top: 690 }), { fontWeight: "900", fontSize: "60px", lineHeight: "78px" });
     const chip = css(text(b, "chip", K.now, { top: ys(now) - 34 }), { background: col.mark, color: col.paper, fontWeight: "900", fontSize: "54px", lineHeight: "70px" });
@@ -326,14 +332,16 @@ async function main() {
       const d = easeInOut(seg(t, q.draw[0], q.draw[1])), n = Math.max(2, Math.round(d * pts.length));
       line.setAttribute("d", pathOf(pts.slice(0, n)));
       const a = old[Math.min(n, old.length) - 1][0], ka = Math.max(0, Math.round(a / 10000) * 10000);
-      const lab = F.chip_ages.co2.find(c => c[0] === ka); counter.textContent = lab ? lab[1] : "";
+      const lab = F.chip_ages.co2.find(c => c[0] === ka); counter.textContent = lab && lab[0] > 0 ? lab[1] : ""; counter.style.visibility = counter.textContent ? "visible" : "hidden";
       css(counter, { left: MID - counter.offsetWidth / 2, opacity: (1 - seg(d, 0.93, 0.99)).toFixed(3) });   // gone before the line reaches the last centuries
       const s = easeOut(seg(t, q.spike[0], q.spike[1])), last = old[old.length - 1][1], v = last + (now - last) * s;
       sp.setAttribute("d", s > 0 ? `M${xNow},${ys(last)} L${xNow},${ys(v)}` : "");
       const broke = v > P1;                           // the top of the chart cracks where the line goes through
       topR.setAttribute("opacity", broke ? "0" : "1");
       shards.forEach((e, k) => { const p = seg(t, q.spike[0] + 0.35, q.spike[0] + 1.3); e.setAttribute("opacity", broke ? (1 - p).toFixed(3) : "0"); e.setAttribute("transform", `translate(${xNow - 20 + (k - 1.5) * 18 + (k - 1.5) * 60 * p},${Y1 - 4 - 90 * p + 70 * p * p * (k % 2 ? 1 : 0.4)}) rotate(${(k * 97 + 300 * p).toFixed(1)})`); });
-      const c = easeOut(seg(t, q.chip, q.chip + 0.4)); css(chip, { opacity: c.toFixed(3), scale: (0.8 + 0.2 * c + 0.08 * bump(seg(t, q.chip, q.chip + 0.6))).toFixed(3) });
+      const c = easeOut(seg(t, q.chip, q.chip + 0.4)), br = t > q.chip + 0.6 ? 0.035 * Math.sin(2 * Math.PI * (t - q.chip - 0.6) / 1.3) : 0;
+      css(chip, { opacity: c.toFixed(3), scale: (0.8 + 0.2 * c + 0.08 * bump(seg(t, q.chip, q.chip + 0.6)) + br).toFixed(3) });
+      tip.setAttribute("opacity", s > 0.98 ? "1" : "0"); tip.setAttribute("r", (15 * (1 + 0.15 * Math.sin(2 * Math.PI * t / 1.1))).toFixed(2));
       f.head.querySelector(".small").style.opacity = easeOut(seg(t, q.small, q.small + 0.5)).toFixed(3);
     } };
   }
@@ -364,7 +372,8 @@ async function main() {
       sq.forEach((e, i) => {
         const t0 = q.fill[0] + (q.fill[1] - q.fill[0]) * i / sq.length, p = easeOut(seg(t, t0, t0 + 0.35)), P = pos(i);
         const four = order[i] !== "rest" && order[i] !== "iran" && order[i] !== "split" ? 0.08 * bump(seg(t, q.four, q.four + 0.6)) : 0;
-        css(e, { left: P.x, top: P.y - 120 * (1 - p), opacity: p.toFixed(3), scale: (0.4 + 0.6 * p + four).toFixed(3) });
+        const wave = t > q.fill[1] + 0.4 ? 0.06 * Math.max(0, Math.sin(2 * Math.PI * ((t - q.fill[1]) / 2.0 - i / 40))) : 0;
+        css(e, { left: P.x, top: P.y - 120 * (1 - p), opacity: p.toFixed(3), scale: (0.4 + 0.6 * p + four + wave).toFixed(3) });
       });
       const P = pos(98), ip = easeOut(seg(t, q.iran, q.iran + 0.5));
       css(ring, { left: P.x - size - gapq - 12, top: P.y - 12, opacity: ip.toFixed(3), scale: (1 + 0.06 * Math.sin(2 * Math.PI * Math.max(0, t - q.iran) / 1.2)).toFixed(3) });
