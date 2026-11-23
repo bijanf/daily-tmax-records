@@ -110,6 +110,7 @@ def numbers() -> dict:
         t11_1960=float(h11.loc[1960]), t11_2020=float(h11.loc[2020]),
         usa=float(j["USA"]), china=float(j["China"]), eu=float(j["EU27"]), russia=float(j["Russia"]), iran=float(j["Iran"]),
         uk=float(j["United Kingdom"]),
+        decades=[float(h.loc[a:a + 9].mean()) for a in range(1966, 2017, 10)],
         frames=dict(o=o, h=h, s=s, s11=s11, h11=h11, c=c, m=m))
 
 
@@ -174,12 +175,27 @@ def agemap() -> Path:
     return out
 
 
+def relief() -> Path:
+    """relief.png on the same grid: red = today's land height (square root of m / 6000), green = the ice thickness of
+    21,000 years ago (square root of m / 4500), blue = 255 where today's surface is water. Only for light and shade."""
+    out = BUILD / "relief.png"
+    if out.exists():
+        return out
+    from PIL import Image
+    lon, lat = grid()
+    z = xr.open_dataset(PALEO / "etopo" / "etopo_0p1.nc").altitude.interp(latitude=lat, longitude=lon, method="linear").values
+    thick = np.clip(to_grid(xr.open_dataset(PALEO / "ice6g" / "I6_C.VM5a_1deg.21.nc").stgit, lon, lat), 0, 4500)
+    rgb = np.stack([255 * np.sqrt(np.clip(z, 0, 6000) / 6000), 255 * np.sqrt(thick / 4500), 255.0 * (z < 0)], -1)
+    Image.fromarray(np.round(rgb).astype(np.uint8), "RGB").save(out, optimize=True)
+    return out
+
+
 def world() -> Path:
     return onebit_compare.fetch_bm(BUILD / "world.jpg", -180.0, 180.0, LAT0, LAT1, 360 * PXD)
 
 
 # ── the words ────────────────────────────────────────────────────────────────────────────────────────────────────
-SCENES = ("hook", "melt", "calm", "jump", "sun", "co2", "who", "call")
+SCENES = ("hook", "melt", "speed", "sun", "co2", "who", "accel", "call")
 MARKERS = ((10000, "بزهای اهلیِ زاگرس"), (5200, "شهرِ سوخته"), (2500, "تخت‌جمشید"))   # years ago (see the sources in the caption)
 
 
@@ -187,42 +203,40 @@ def words(n: dict) -> dict:
     melt, now = round(n["melt"]), round(n["now"], 1)
     four = n["usa"] + n["china"] + n["eu"] + n["russia"]
     return dict(
-        pill="طبیعی یا انسانی؟",
+        pill=dict(nat="طبیعی", hum="انسانی"),
         scenes=dict(
             hook=("زمین همیشه گرم و سرد شده؟ // {آره، ولی نه با این سرعت}", ""),
-            melt=(f"یخ‌ها آب شدند: // {{حدودِ {fa(melt)} درجه گرم‌تر، در ۱۰ هزار سال}}", "سطحِ دریا در کل حدودِ ۱۲۰ متر بالا آمد"),
-            calm=("۱۰ هزار سالِ پایدار: // {کشاورزی، شهرها، تمدن‌ها}", "دما فقط حدودِ ۱ درجه تغییر کرد"),
-            jump=(f"۱۵۰ سالِ اخیر: // {{{dec(now)} درجه گرم‌تر}}", "حدودِ ۱۰ برابر تندتر از میانگینِ گرم شدنِ پس از یخبندان"),
-            sun=("کارِ خورشید است؟ // {نه}", "از ۱۹۶۰: زمین گرم‌تر شد، خورشید نه"),
-            co2=("دی‌اکسیدِ کربنِ هوا: // {۸۰۰ هزار سال، هرگز بالای ۳۰۰}", "بیشترش از سوزاندنِ نفت، گاز و زغال‌سنگ"),
+            melt=(f"طبیعی: // {{حدودِ {fa(melt)} درجه، در ۱۰ هزار سال}}", ""),
+            speed=("انسانی: // {حدودِ ۱۰ برابر تندتر}", ""),
+            sun=("خورشید؟ // {گرم‌تر نشده}", ""),
+            co2=("دی‌اکسیدِ کربنِ هوا: // {۸۰۰ هزار سال، هرگز بالای ۳۰۰}", ""),
             who=("چهار آلاینده‌ی بزرگ: // {حدودِ ۶ از هر ۱۰}", "سهم از گرمایشِ سوخت‌های فسیلی، تا ۲۰۲۴"),
+            accel=("گرم شدن // {تندتر هم می‌شود}", "COP31 هم بدونِ توافق تمام شد"),
             call=("اگر می‌خواهید ادامه بدهم، // {با بازنشر انگیزه بدهید}", "با هم آگاهی را بیشتر می‌کنیم")),
         sources=dict(
             hook="ICE-6G_C (Peltier et al. 2015) · ETOPO1 · NASA Blue Marble",
             melt="ICE-6G_C · Osman et al. 2021 (Nature)",
-            calm="Osman et al. 2021 (Nature)",
-            jump="Osman et al. 2021 · HadCRUT5 (Met Office)",
+            speed="Osman et al. 2021 · HadCRUT5 · NASA · IPCC AR6",
             sun="NOAA TSI CDR · HadCRUT5 · 11-yr means",
             co2="Bereiter et al. 2015 · NOAA Mauna Loa 2025",
             who="Jones et al. 2023 (Sci. Data), v2025.1",
+            accel="HadCRUT5 · COP31: CNN, NPR, 22 Nov 2026",
             call="NASA Blue Marble"),
         hook=dict(then="۲۰ هزار سال پیش", now="امروز", gulf="خلیجِ فارس: خشکی", iran="ایران"),
-        melt=dict(chip=lambda a: f"{thou(a)} سال پیش", thermo="دمای میانگینِ زمین",
-                  gap=f"{fa(melt)} درجه", gulf="خلیجِ فارس"),
-        calm=dict(axis="سال پیش", ticks=[(20000, "۲۰ هزار"), (10000, "۱۰ هزار"), (0, "امروز")], y="دمای میانگینِ زمین",
-                  yticks=[(-6, "۶ درجه سردتر"), (0, "پیش از صنعتی شدن")],
-                  markers=[dict(age=a, label=s) for a, s in MARKERS]),
-        jump=dict(chip="میانگینِ ۲۰۱۶ تا ۲۰۲۵", inset="۱۸۵۰ تا ۲۰۲۵"),
-        sun=dict(temp="دمای زمین", sun="تابشِ خورشید", unit_t="درجه", unit_s="وات بر مترمربع", mean="میانگینِ ۱۱ ساله",
+        melt=dict(chip=lambda a: f"{thou(a)} سال پیش", gap=f"{fa(melt)} درجه", gulf="خلیجِ فارس پُر شد"),
+        speed=dict(nat=f"طبیعی: {fa(melt)} درجه در ۱۰ هزار سال", hum=f"انسانی: {dec(now)} درجه در ۱۵۰ سال",
+                   ticks=[(20000, "۲۰ هزار"), (10000, "۱۰ هزار"), (0, "امروز")], axis="سال پیش"),
+        sun=dict(temp="دمای زمین", sun="تابشِ خورشید", unit_t="درجه", unit_s="وات بر مترمربع",
                  years=[(1960, "۱۹۶۰"), (1990, "۱۹۹۰"), (2025, "۲۰۲۵")]),
-        co2=dict(unit="قسمت در میلیون (ppm)", now=f"امروز: {fa(round(n['mlo']))}", band="۱۸۰ تا ۳۰۰",
+        co2=dict(unit="ppm", now=f"امروز: {fa(round(n['mlo']))}", nat="طبیعی", hum="انسانی",
                  ticks=[(800000, "۸۰۰ هزار"), (400000, "۴۰۰ هزار"), (0, "امروز")], axis="سال پیش",
                  counter=lambda a: f"{thou(a)} سال پیش"),
         who=dict(groups=[dict(key="usa", label="آمریکا", v=round(n["usa"])), dict(key="china", label="چین", v=round(n["china"])),
                          dict(key="eu", label="اتحادیه‌ی اروپا", v=round(n["eu"])), dict(key="russia", label="روسیه", v=round(n["russia"])),
-                         dict(key="iran", label="ایران", v=round(n["iran"], 1)), dict(key="rest", label="بقیه‌ی جهان", v=None)],
-                 unit="هر مربع: ۱٪", four=round(four)),
-        call=dict(follow="برای کسی بفرستید که می‌گوید زمین همیشه گرم و سرد شده"),
+                         dict(key="rest", label="بقیه‌ی جهان", v=None), dict(key="iran", label="ایران", v=round(n["iran"], 1))],
+                 unit="هر مکعب: ۱٪", four=round(four)),
+        accel=dict(steps=[dec(v, 2) for v in n["steps"]], first="۱۹۶۶ تا ۱۹۷۵", last="۲۰۱۶ تا ۲۰۲۵", tag="بیشترین پله", unit="دمای هر دهه، درجه بالاتر از ۱۸۵۰ تا ۱۹۰۰"),
+        call=dict(),
     )
 
 
@@ -240,36 +254,37 @@ def reading(w: dict, k: str) -> float:
     if k == "hook":
         half += [w["hook"][x] for x in ("then", "now", "gulf")]
     elif k == "melt":
-        half += [w["melt"]["chip"](10000), w["melt"]["thermo"], w["melt"]["gap"]]
-    elif k == "calm":
-        half += [w["calm"]["y"]] + [m["label"] for m in w["calm"]["markers"]] + [s for _, s in w["calm"]["yticks"]]
-    elif k == "jump":
-        half += [w["jump"]["chip"], w["jump"]["inset"]]
+        half += [w["melt"]["chip"](10000), w["melt"]["gap"], w["melt"]["gulf"]]
+    elif k == "speed":
+        full += [w["speed"]["nat"], w["speed"]["hum"]]
+        half += [s for _, s in w["speed"]["ticks"]] + [w["speed"]["axis"]]
     elif k == "sun":
-        half += [w["sun"][x] for x in ("temp", "sun", "mean")]
+        half += [w["sun"][x] for x in ("temp", "sun", "unit_t", "unit_s")]
     elif k == "co2":
-        half += [w["co2"]["unit"], w["co2"]["now"], w["co2"]["counter"](10000)]
+        half += [w["co2"][x] for x in ("unit", "now", "nat", "hum", "axis")] + [w["co2"]["counter"](10000)]
+    elif k == "accel":
+        half += w["accel"]["steps"] + [w["accel"][x] for x in ("first", "last", "tag", "unit")]
     elif k == "who":
-        half += [f"{g['label']} {dec(g['v'])}٪" for g in w["who"]["groups"] if g["v"]] + [w["who"]["unit"]]
-    elif k == "call":
-        full += [w["call"]["follow"]]
+        full += [f"{g['label']} {dec(g['v'])}٪" if g["v"] else g["label"] for g in w["who"]["groups"]]
+        half += [w["who"]["unit"]]
     return 1.0 + (sum(map(count, full)) + 0.5 * sum(map(count, half))) / 2.5
 
 
 # ── the clock ────────────────────────────────────────────────────────────────────────────────────────────────────
 # moments inside a scene (seconds after its start); the score plays to them
 CUES = dict(
-    hook=dict(wipe=[0.25, 1.75], back=[2.55, 3.45], gulf=3.55, spin=[30.0, 36.0]),
-    melt=dict(age=[0.5, 7.0, 20.5, 7.0], zoom=[2.6, 6.4], thermo=0.3, gap=4.6),
-    calm=dict(draw=[0.2, 3.2], band=3.4, markers=[4.0, 4.6, 5.2]),
-    jump=dict(spike=[0.3, 1.9], chip=2.0, inset=[2.2, 4.6]),
-    sun=dict(temp=[0.3, 2.3], sun=[0.9, 2.9], verdict=3.1),
-    co2=dict(draw=[0.3, 4.6], spike=[4.8, 5.7], chip=5.8, small=6.3),
-    who=dict(fill=[0.4, 4.6], four=4.9, iran=5.5),
-    call=dict(card=0.5, icon=1.4, follow=3.3))
-LAST = dict(hook=CUES["hook"]["gulf"] + 0.5, melt=CUES["melt"]["age"][1], calm=CUES["calm"]["markers"][-1] + 0.5,
-            jump=CUES["jump"]["inset"][1], sun=CUES["sun"]["verdict"] + 0.5, co2=CUES["co2"]["small"] + 0.5,
-            who=CUES["who"]["iran"] + 0.6, call=CUES["call"]["follow"] + 0.6)
+    hook=dict(wipe=[0.25, 1.75], back=[2.55, 3.45], gulf=3.55),
+    melt=dict(age=[0.4, 6.0, 20.5, 7.0], zoom=[2.4, 5.6], gap=3.8),
+    speed=dict(draw=[0.2, 3.0], nat=3.1, spike=[4.4, 5.6], hum=5.7),          # the pill turns from natural to human at the spike
+    sun=dict(temp=[0.3, 2.3], sun=[0.6, 2.6], verdict=2.8),
+    co2=dict(draw=[0.3, 4.3], nat=4.4, spike=[5.0, 5.9], chip=6.0, hum=6.3),
+    who=dict(groups=dict(usa=[0.6, 2.8], china=[3.2, 5.0], eu=[5.4, 7.0], russia=[7.4, 8.4], rest=[9.4, 10.4]), four=8.8, iran=10.8),
+    accel=dict(bars=[0.3, 4.3], tag=4.6),
+    call=dict(icon=1.0))
+PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["spike"][0], "hum"), sun="nat",
+            co2=("nat", CUES["co2"]["spike"][0], "hum"), who="hum", accel="hum", call="both")
+LAST = dict(hook=CUES["hook"]["gulf"] + 0.5, melt=CUES["melt"]["age"][1], speed=CUES["speed"]["hum"] + 0.5,
+            sun=CUES["sun"]["verdict"] + 0.5, co2=CUES["co2"]["hum"] + 0.5, who=CUES["who"]["iran"] + 0.6, accel=CUES["accel"]["tag"] + 0.5, call=CUES["call"]["icon"] + 0.6)
 
 
 def seconds(w: dict) -> list[float]:
@@ -281,8 +296,8 @@ def seconds(w: dict) -> list[float]:
 # the globe: centre latitude, longitude, zoom and the disc (centre x, y, radius in px), keyframes per scene
 VIEW = dict(
     hook=[[0.0, 44.0, 25.0, 1.0, 540, 1005, 420], [7.5, 44.0, 33.0, 1.0, 540, 1005, 420]],
-    melt=[[0.0, 44.0, 33.0, 1.0, 540, 1005, 420], [2.6, 42.0, 38.0, 1.0, 540, 1005, 420], [6.4, 29.0, 50.5, 3.2, 540, 1005, 420],
-          [10.0, 28.4, 53.5, 3.5, 540, 1005, 420]],                                 # the Gulf: a slow drift and zoom while it holds
+    melt=[[0.0, 44.0, 33.0, 1.0, 540, 1005, 420], [2.4, 42.0, 38.0, 1.0, 540, 1005, 420], [5.6, 29.0, 50.5, 3.2, 540, 1005, 420],
+          [9.5, 28.4, 53.5, 3.5, 540, 1005, 420]],                                 # the Gulf: a slow drift and zoom while it holds
     call=[[0.0, 30.0, 40.0, 1.0, 540, 770, 220], [11.0, 30.0, 58.0, 1.0, 540, 770, 220]])
 PLACES = dict(gulf=(27.3, 51.2), iran=(33.0, 54.0))
 
@@ -290,6 +305,8 @@ PLACES = dict(gulf=(27.3, 51.2), iran=(33.0, 54.0))
 def film() -> dict:
     n = numbers()
     f = n.pop("frames")
+    n["steps"] = [b - a for a, b in zip(n["decades"], n["decades"][1:])]
+    assert max(n["steps"]) == n["steps"][-1] and n["steps"][-1] > 1.3 * max(n["steps"][:-1]), n["steps"]   # «بیشترین پله»
     w = words(n)
     # the words carry the numbers: assert them against the data
     assert round(n["melt"]) == 6 and 5.5 < n["melt"] < 6.5, n["melt"]
@@ -301,7 +318,7 @@ def film() -> dict:
     assert abs(n["tsi_2014"] - n["tsi_1960"]) < 0.5 and n["t11_2020"] - n["t11_1960"] > 0.9   # flat sun, warmer Earth
     four = n["usa"] + n["china"] + n["eu"] + n["russia"]
     assert 55 < four < 65 and round(four / 10) == 6, four               # «حدودِ ۶ از هر ۱۰»
-    assert [g["v"] for g in w["who"]["groups"][:5]] == [22, 16, 14, 7, 1.5]
+    assert [g["v"] for g in w["who"]["groups"]] == [22, 16, 14, 7, None, 1.5]
     secs = seconds(w)
     starts = [sum(secs[:i]) for i in range(len(SCENES))]
     o, h, s, s11, h11, c, m = (f[k] for k in ("o", "h", "s", "s11", "h11", "c", "m"))
@@ -317,13 +334,13 @@ def film() -> dict:
     chips["melt"] = {k: v for k, v in w["melt"].items() if k != "chip"}
     chips["co2"] = {k: v for k, v in w["co2"].items() if k != "counter"}
     return dict(
-        fps=onebit.FPS, size=list(onebit.SIZES["reel"]), cover_t=1.0, cues=CUES, view=VIEW, places=PLACES, numbers={k: round(v, 3) for k, v in n.items()},
+        fps=onebit.FPS, size=list(onebit.SIZES["reel"]), cover_t=1.0, cues=CUES, pill=PILL, view=VIEW, places=PLACES, numbers={k: (round(v, 3) if isinstance(v, (int, float)) else [round(x, 3) for x in v]) for k, v in n.items()},
         cuts=dict(a=dict(end=float(sum(secs)), scenes=[dict(key=k, start=float(starts[i]), length=float(secs[i]), title=w["scenes"][k][0],
                   small=w["scenes"][k][1], source=w["sources"][k]) for i, k in enumerate(SCENES)])),
         colours=dict(paper="#F3ECE1", ink="#2E2118", mark="#A03129", land="#E2D8C8", ice="#EEF3F8", shelf="#CDB48A", sea="#1c5cab",
-                     pale="#d8cdbb", gold="#C8902E", iran="#2F7D4F", usa="#A03129", china="#C0533F", eu="#D9785A", russia="#E6A07E", rest="#D8CDBB"),
-        series=dict(temp=temp, band=band, hadcrut=hc, sun=sun, co2=co),
-        maps=dict(world="world.jpg", age="agemap.png", pxd=PXD, lat1=LAT1, lat0=LAT0, lon0=-180.0),
+                     pale="#d8cdbb", gold="#C8902E", nat="#2468B4", iran="#2F7D4F", usa="#A03129", china="#C0533F", eu="#D9785A", russia="#E6A07E", rest="#D8CDBB"),
+        series=dict(temp=temp, band=band, hadcrut=hc, sun=sun, co2=co, decades=[[1966 + 10 * i, round(v, 3)] for i, v in enumerate(n['decades'])]),
+        maps=dict(world="world.jpg", age="agemap.png", relief="relief.png", pxd=PXD, lat1=LAT1, lat0=LAT0, lon0=-180.0),
         words={k: v for k, v in chips.items() if k not in ("scenes", "sources")},
         chip_ages=dict(melt=[[a, w["melt"]["chip"](a)] for a in range(0, 21001, 500)], co2=[[a, w["co2"]["counter"](a)] for a in range(0, 800001, 10000)]))
 
@@ -332,6 +349,7 @@ def main() -> None:
     BUILD.mkdir(parents=True, exist_ok=True)
     world()
     agemap()
+    relief()
     data = film()
     (BUILD / "film.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     for k, v in data["numbers"].items():

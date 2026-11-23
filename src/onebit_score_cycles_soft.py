@@ -43,23 +43,23 @@ TUNES = dict(
     ice=dict(steps=8, low=(0, 4), comp=((1, 1, 0.20), (3, 2, 0.24), (5, 1, 0.20), (7, 3, 0.22)), beats=(0, 2, 4, 6),
              pace=(2.0, 2.8), scale=(65, 67, 68, 70, 72, 74, 75, 77, 79, 80),
              scenes=(("hook", ("Cm", "Ab", "G"), (72, 74)),                  # a question
-                     ("melt", ("Cm", "Fm", "Ab", "Eb"), (67, 79)),            # the ice melts: a long climb
-                     ("calm", ("Ab", "Eb", "Ab", "Eb"), (75, 75)),            # ten thousand stable years: level
-                     ("jump", ("Fm", "G", "Cm"), (74, 82)),                   # the last 150 years: a jump
+                     ("melt", ("Cm", "Fm", "Ab", "Eb"), (67, 79)),            # natural: a long, slow climb
+                     ("speed", ("Ab", "Eb", "Fm", "G"), (75, 82)),            # level, then the human jump
                      ("sun", ("Ab", "Bb", "Eb"), (72, 68)),                   # the sun: low
                      ("co2", ("Fm", "Cm", "Ab", "G"), (67, 81)),              # carbon dioxide: a climb to the spike
-                     ("who", ("Cm", "Ab", "Fm", "G"), (77, 72))),             # the squares: steady
-             last=("call", ("Ab", "Eb", "Bb"), 2.4, (70, 75)), end=(39, 46, 51, 55, 58, 63)),
+                     ("who", ("Cm", "Ab", "Fm", "G", "Cm", "Ab"), (77, 72)), # one country at a time: steady
+                     ("accel", ("Fm", "Ab", "Bb", "G"), (70, 82))),           # faster and faster: up
+             last=("call", ("Ab", "Eb"), 2.3, (70, 75)), end=(39, 46, 51, 55, 58, 63)),
     dawn=dict(steps=12, low=(0, 6), comp=((1, 1, 0.19), (2, 2, 0.21), (4, 1, 0.19), (5, 3, 0.21), (7, 1, 0.19), (8, 2, 0.21), (10, 1, 0.19), (11, 3, 0.21)),
               beats=(0, 3, 6, 9), pace=(2.0, 3.8), scale=(64, 66, 68, 69, 71, 73, 75, 76, 78, 80),
               scenes=(("hook", ("Csm", "A", "B"), (71, 73)),
                       ("melt", ("Csm", "A", "E", "B"), (64, 80)),
-                      ("calm", ("A", "E", "A", "E"), (76, 76)),
-                      ("jump", ("Fsm", "B", "Csm"), (73, 81)),
+                      ("speed", ("A", "E", "Fsm", "B"), (76, 81)),
                       ("sun", ("A", "Gsm", "Fsm"), (71, 66)),
                       ("co2", ("Fsm", "Csm", "A", "B"), (66, 80)),
-                      ("who", ("Csm", "A", "Fsm", "B"), (76, 71))),
-              last=("call", ("A", "E", "B"), 2.4, (71, 76)), end=(40, 47, 52, 56, 59, 64)),
+                      ("who", ("Csm", "A", "Fsm", "B", "Csm", "A"), (76, 71)),
+                      ("accel", ("Fsm", "A", "B", "Gsm"), (69, 81))),
+              last=("call", ("A", "E"), 2.3, (71, 76)), end=(40, 47, 52, 56, 59, 64)),
 )
 
 
