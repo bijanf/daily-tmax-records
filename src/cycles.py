@@ -200,7 +200,7 @@ def photos() -> dict:
     own point, as photo_<key>.jpg in the build folder; what the page needs to know about each."""
     from PIL import Image, ImageOps
     out = {}
-    for key, (file, credit, fx, fy, z0, z1, lift) in PHOTOS.items():
+    for key, (file, credit, what, fx, fy, z0, z1, lift, tone) in PHOTOS.items():
         src, dst = PALEO / "photos" / file, BUILD / f"photo_{key}.jpg"
         if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime or dst.stat().st_mtime < Path(__file__).stat().st_mtime:
             im = ImageOps.exif_transpose(Image.open(src)).convert("RGB")       # one of them is stored on its side
@@ -210,7 +210,7 @@ def photos() -> dict:
             x0 = min(max(0, round(fx * w - cw / 2)), w - cw)
             y0 = min(max(0, round(fy * h - ch / 2)), h - ch)
             im.crop((x0, y0, x0 + cw, y0 + ch)).resize((1620, 2880), Image.LANCZOS).save(dst, quality=90)
-        out[key] = dict(file=dst.name, credit=credit, zoom=[z0, z1], lift=lift)
+        out[key] = dict(file=dst.name, credit=credit, what=what, zoom=[z0, z1], lift=lift, tone=tone)
     return out
 
 
@@ -237,23 +237,31 @@ DOC = ("gulf", "thaw", "life", "exit", "co2", "send")
 # the photographs (data/paleo/photos, fetched by src/get_cycles.py, all from Wikimedia Commons under Creative Commons
 # Attribution licences, none share-alike): the file, the credit as its licence asks (the author as Commons names him, the
 # licence), the point of the photograph that stays in the middle of the frame (x, y as fractions), how far the camera
-# moves in (zoom at the start and at the end of its time on screen) and how many pixels the picture is lifted, so that
-# its subject stands in the clear part of the frame, above the curve. Cut to 9:16 and darkened on the page; the first
-# comment says so, as the licences ask.
-#   zagros      a shepherd and his flock at Oshtorinan, Lorestan (today): herding in the Zagros
+# moves in (zoom at the start and at the end of its time on screen), how many pixels the picture is lifted, so that its
+# subject stands in the clear part of the frame, above the curve, and a tone for a picture whose colours fight the film's
+# (a museum's red cloth). Each has one small line that says what it shows, where the headline does not. Cut to 9:16 on
+# the page; the first comment says so, as the licences ask.
+#   zagros      a clay human figure from Tepe Sarab, Kermanshah, 7000-6100 BC (National Museum of Iran, inventory
+#               number 4560, as the museum's label reads on the photograph's Commons page): made by the herders and
+#               farmers of the Zagros themselves. The owner, 23 Nov 2026, on the photograph of a shepherd of today that
+#               stood here first: "a recent human. If not available use a reconstructed man". No reconstruction of an
+#               early Iranian was found under an open licence; this figure is from the time itself.
 #   sukhteh     the painted goblet with the goats and the tree from Shahr-e Sukhteh, National Museum of Iran
 #   persepolis  the winged bull of the Gate of All Nations
 #   today       Milad Tower at dusk, Tehran
 #   end         the north-western colossus of the Gate of All Nations and a column
 PHOTOS = dict(
-    zagros=("zagros_shepherd_javadi.jpg", "Photo: سید محمود جوادی · CC BY 3.0", 0.52, 0.5, 1.05, 1.15, 470),
-    sukhteh=("sukhteh_goblet_darafsh.jpg", "Photo: Darafsh · CC BY 3.0", 0.52, 0.5, 1.03, 1.12, 240),
-    persepolis=("persepolis_gate_guillot.jpg", "Photo: Valerian Guillot · CC BY 2.0", 0.42, 0.5, 1.04, 1.16, 0),
-    today=("tehran_milad_rezvani.jpg", "Photo: Behrooz Rezvani · CC BY 3.0", 0.38, 0.5, 1.03, 1.12, -110),
-    end=("persepolis_colossus_krol.jpg", "Photo: Laurens R. Krol · CC BY 4.0", 0.5, 0.5, 1.03, 1.12, 0))
-# the corridor's markers. The first is "the start of herding" (the photograph shows a flock of today, mostly sheep; the
-# source is the goats of Zeder & Hesse 2000, as for MARKERS)
-LIFE = ((10000, "آغازِ دامداری، زاگرس", "zagros"), (5200, "شهرِ سوخته", "sukhteh"), (2500, "تخت‌جمشید", "persepolis"))
+    zagros=("sarab_figurine_albers.jpg", "Photo: Erik Albers · CC0", "تندیسِ گِلی، تپه سراب، کرمانشاه (۷۰۰۰ تا ۶۱۰۰ پیش از میلاد)",
+            0.53, 0.5, 1.03, 1.12, 150, "saturate(.52) brightness(.94) contrast(1.05)"),
+    sukhteh=("sukhteh_goblet_darafsh.jpg", "Photo: Darafsh · CC BY 3.0", "جامِ سفالی با نقشِ بز، از شهرِ سوخته", 0.52, 0.5, 1.03, 1.12, 240, ""),
+    persepolis=("persepolis_gate_guillot.jpg", "Photo: Valerian Guillot · CC BY 2.0", "دروازه‌ی ملل", 0.42, 0.5, 1.04, 1.16, 0, ""),
+    today=("tehran_milad_rezvani.jpg", "Photo: Behrooz Rezvani · CC BY 3.0", "برجِ میلاد، تهران", 0.38, 0.5, 1.03, 1.12, -110, ""),
+    end=("persepolis_colossus_krol.jpg", "Photo: Laurens R. Krol · CC BY 4.0", "دروازه‌ی ملل، تخت‌جمشید", 0.5, 0.5, 1.03, 1.12, 0, ""))
+# the corridor's markers: years ago, the name over the picture, the photograph, the line under the name. The first is the
+# turn from hunting to herding and farming in the Zagros about 10,000 years ago (goats first herded: Zeder & Hesse 2000,
+# as for MARKERS; cereals at Chogha Golan: Riehl et al. 2013, Science 341, 65, cited from memory, to be checked)
+LIFE = ((10000, "از شکار به کشاورزی", "zagros", "زاگرس، حدودِ ۱۰ هزار سال پیش"),
+        (5200, "شهرِ سوخته", "sukhteh", ""), (2500, "تخت‌جمشید", "persepolis", ""))
 
 
 def words(n: dict) -> dict:
@@ -308,7 +316,7 @@ def words(n: dict) -> dict:
         strip=dict(wide=[(20000, "۲۰ هزار"), (10000, "۱۰ هزار"), (0, "امروز")], near=[(10000, "۱۰ هزار"), (5000, "۵ هزار"), (0, "امروز")],
                    axis="سال پیش"),
         life=dict(before="دالانِ زندگی: // {۱۰ هزار سال، فقط حدودِ ۱ درجه}",
-                  markers=[dict(age=a, label=m, photo=ph, ago=f"{thou(a)} سال پیش") for a, m, ph in LIFE]),
+                  markers=[dict(age=a, label=m, photo=ph, ago=sub or f"{thou(a)} سال پیش") for a, m, ph, sub in LIFE]),
         exit=dict(tag=f"{dec(now)} درجه"),                     # the number alone: its headline has the 150 years, the pill the side
         send=dict(),
     )

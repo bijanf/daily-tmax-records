@@ -579,14 +579,14 @@ async function main() {
   }
   function photo(b, key) {                           // a photograph to the edges of the frame; the camera moves in slowly
     const P = (F.photos || {})[key];
-    if (!P) return { show() {}, credit: "" };
+    if (!P) return { show() {}, credit: "", what: "" };
     const im = el("img", "abs", b); im.src = "/build/" + P.file;
-    css(im, { left: 0, top: -(P.lift || 0), width: 1080, height: 1920, objectFit: "cover", transformOrigin: "50% 44%", opacity: "0", filter: THEME === "night" ? "brightness(.97) contrast(1.06) saturate(1.02)" : "none" });
+    css(im, { left: 0, top: -(P.lift || 0), width: 1080, height: 1920, objectFit: "cover", transformOrigin: "50% 44%", opacity: "0", filter: P.tone || (THEME === "night" ? "brightness(.97) contrast(1.06) saturate(1.02)" : "none") });
     const lift = P.lift || 0, soft = lift > 0 ? "linear-gradient(0deg, transparent 0, #000 240px)" : lift < 0 ? "linear-gradient(180deg, transparent 0, #000 260px)" : "";
     if (soft) css(im, { maskImage: soft, webkitMaskImage: soft });          // a lifted picture ends in a fade, not an edge
     const veil = css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: 1920, background: THEME === "night" ? "rgba(8,18,48,.10)" : "transparent", opacity: "0" });
     PENDING.push(im.decode().catch(() => {}));       // every photograph is in memory before the first frame is drawn
-    return { credit: P.credit,
+    return { credit: P.credit, what: P.what || "",
              show(alpha, u) { const z = lerp(P.zoom[0], P.zoom[1], clamp(u)); im.style.opacity = veil.style.opacity = clamp(alpha).toFixed(3); im.style.transform = `scale(${z.toFixed(4)}) translateY(${(-10 * clamp(u)).toFixed(2)}px)`; } };
   }
   function motes(b) {                                // dust in the light over a photograph: a few soft specks that drift by the clock
@@ -687,7 +687,7 @@ async function main() {
     const f = frame(sc), b = f.body, q = F.cues.life, M = Wd.life.markers, pics = M.map(m => photo(b, m.photo));
     const dust = motes(b);
     const [shade] = scrims(b, 720, 760);
-    const credit = el("div", "abs credit", b, "");
+    const credit = el("div", "abs credit", b, ""), what = el("div", "abs what", b, "");
     const st = strip(b), names = M.map(m => title(b, m.label));
     f.prep = () => { st.draw(1, 10000); names.forEach((n, k) => { n.sub.textContent = M[k].ago; [n.big, n.sub].forEach(e => css(e, { left: MID - e.offsetWidth / 2 })); }); };
     const start = k => k === 0 ? 0.0 : q.marks[k] - q.fade[0], full = k => k === 0 ? 0.7 : q.marks[k] - q.fade[1];
@@ -696,7 +696,8 @@ async function main() {
       let shown = 0, cur = 0;
       M.forEach((m, k) => { if (t >= q.marks[k]) shown = k + 1; if (t >= start(k)) cur = k; });
       pics.forEach((pc, k) => { const end = k + 1 < M.length ? full(k + 1) : sc.length; pc.show(seg(t, start(k), full(k)), seg(t, start(k), end)); });
-      credit.textContent = pics[cur].credit || "";
+      credit.textContent = pics[cur].credit || ""; what.textContent = pics[cur].what || "";
+      const seen = seg(t, sc.turn - 0.1, sc.turn + 0.4); show(credit, 0.62 * seen); show(what, 0.8 * seen);   // with the headline away: the picture's own lines
       names.forEach((n, k) => { const out = k + 1 < M.length ? 1 - seg(t, start(k + 1), start(k + 1) + 0.4) : 1; n.show(easeOut(seg(t, q.marks[k] - 0.25, q.marks[k] + 0.25)) * out, easeOut(seg(t, q.marks[k] - 0.25, q.marks[k] + 0.35))); });
       st.draw(z, age, { band: z, marks: shown, lead: true, now: t }); dust(t);
       const up = Math.max(1 - seg(t, sc.turn - 0.4, sc.turn + 0.2), seg(t, sc.late - 0.2, sc.late + 0.4));   // a headline is on: its fade is too
@@ -708,7 +709,7 @@ async function main() {
   function exit(sc) {
     const f = frame(sc), b = f.body, q = F.cues.exit, pc = photo(b, "today"), dust = motes(b);
     scrims(b, 720, 760);
-    const credit = el("div", "abs credit", b, pc.credit || "");
+    const credit = el("div", "abs credit", b, pc.credit || ""); el("div", "abs what", b, pc.what || "");
     const st = strip(b), tg = css(tag(b, Wd.exit.tag, col.markf), { fontSize: "58px", lineHeight: "76px", fontWeight: "900" }), flash = css(el("div", "abs", b), { left: 0, top: 0, width: 1080, height: 1920, background: `radial-gradient(900px 700px at 80% 62%, rgba(255,70,50,.34), rgba(255,70,50,0) 70%)`, opacity: "0" });
     const shards = [0, 1, 2, 3, 4].map(() => svg("path", { d: "M0,0 l16,-6 l-5,15 z", fill: col.gold, opacity: 0 }, st.sv));
     f.prep = () => st.draw(1, 100);
@@ -728,7 +729,7 @@ async function main() {
   function send(sc) {
     const f = frame(sc), b = f.body, q = F.cues.send, pc = photo(b, "end"), dust = motes(b);
     scrims(b, 900, 1100);
-    const credit = el("div", "abs credit", b, pc.credit || ""); css(credit, { top: 1452 });
+    const credit = el("div", "abs credit", b, pc.credit || ""); css(credit, { top: 1452 }); css(el("div", "abs what", b, pc.what || ""), { top: 1414 });
     const icon = svg("svg", { width: 520, height: 240, viewBox: "-130 -60 260 120" }, b);
     css(icon, { left: MID - 260, top: 1150, filter: `drop-shadow(0 0 20px rgba(255,90,78,${(0.75 * LOOK.glowK).toFixed(2)}))` });
     const plane = svg("g", { fill: "none", stroke: "#fff", "stroke-width": 8, "stroke-linecap": "round", "stroke-linejoin": "round" }, icon);

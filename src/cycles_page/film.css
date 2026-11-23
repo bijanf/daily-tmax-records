@@ -87,7 +87,7 @@ svg { position: absolute; overflow: visible; }
   color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.85), 0 0 3px rgba(0, 0, 0, 0.6); }
 .psub { font-weight: 800; font-size: 46px; line-height: 60px; white-space: nowrap; color: var(--goldbg);
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9); }
-.credit { left: var(--left); top: 968px; direction: ltr; font: 500 24px "Inter", "Vazirmatn", sans-serif; color: #fff; opacity: 0.62;
+.credit { left: var(--left); top: 1000px; direction: ltr; font: 500 24px "Inter", "Vazirmatn", sans-serif; color: #fff; opacity: 0.62;
   white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
 /* the documentary cut's headline: the heavy display face, as large as its lines allow */
 :root[data-cut="d"] .head .line { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 116px; line-height: 152px;
@@ -96,3 +96,5 @@ svg { position: absolute; overflow: visible; }
 :root[data-cut="d"] .small { font-weight: 700; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85); }
 :root[data-cut="d"] .head .line + .small { margin-top: 30px; }
 :root[data-cut="d"] .small + .small { margin-top: 0; }
+.what { right: calc(1080px - var(--left) - var(--width)); top: 962px; font-weight: 700; font-size: 26px; line-height: 36px; white-space: nowrap;
+  color: #fff; opacity: 0.8; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95); }
