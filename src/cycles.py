@@ -235,7 +235,7 @@ def words(n: dict) -> dict:
                          dict(key="eu", label="اتحادیه‌ی اروپا", v=round(n["eu"])), dict(key="russia", label="روسیه", v=round(n["russia"])),
                          dict(key="rest", label="بقیه‌ی جهان", v=None), dict(key="iran", label="ایران", v=round(n["iran"], 1))],
                  unit="هر مکعب: ۱٪", four=round(four)),
-        accel=dict(steps=[dec(v, 2) for v in n["steps"]], first="۱۹۶۶ تا ۱۹۷۵", last="۲۰۱۶ تا ۲۰۲۵", tag="بیشترین پله", unit="دمای هر دهه، درجه بالاتر از ۱۸۵۰ تا ۱۹۰۰"),
+        accel=dict(steps=[dec(v, 2) for v in n["steps"]], first="۱۹۶۶ تا ۱۹۷۵", last="۲۰۱۶ تا ۲۰۲۵", tag="بیشترین پله", unit="دمای هر دهه نسبت به ۱۸۵۰ تا ۱۹۰۰"),
         call=dict(),
     )
 
@@ -276,10 +276,10 @@ CUES = dict(
     hook=dict(wipe=[0.25, 1.75], back=[2.55, 3.45], gulf=3.55),
     melt=dict(age=[0.4, 6.0, 20.5, 7.0], zoom=[2.4, 5.6], gap=3.8),
     speed=dict(draw=[0.2, 3.0], nat=3.1, spike=[4.4, 5.6], hum=5.7),          # the pill turns from natural to human at the spike
-    sun=dict(temp=[0.3, 2.3], sun=[0.6, 2.6], verdict=2.8),
+    sun=dict(temp=[0.3, 2.3], sun=[0.6, 2.6], verdict=3.1),
     co2=dict(draw=[0.3, 4.3], nat=4.4, spike=[5.0, 5.9], chip=6.0, hum=6.3),
     who=dict(groups=dict(usa=[0.6, 2.8], china=[3.2, 5.0], eu=[5.4, 7.0], russia=[7.4, 8.4], rest=[9.4, 10.4]), four=8.8, iran=10.8),
-    accel=dict(bars=[0.3, 4.3], tag=4.6),
+    accel=dict(bars=[0.3, 5.3], tag=5.6),
     call=dict(icon=1.0))
 PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["spike"][0], "hum"), sun="nat",
             co2=("nat", CUES["co2"]["spike"][0], "hum"), who="hum", accel="hum", call="both")
@@ -298,7 +298,7 @@ VIEW = dict(
     hook=[[0.0, 44.0, 25.0, 1.0, 540, 1005, 420], [7.5, 44.0, 33.0, 1.0, 540, 1005, 420]],
     melt=[[0.0, 44.0, 33.0, 1.0, 540, 1005, 420], [2.4, 42.0, 38.0, 1.0, 540, 1005, 420], [5.6, 29.0, 50.5, 3.2, 540, 1005, 420],
           [9.5, 28.4, 53.5, 3.5, 540, 1005, 420]],                                 # the Gulf: a slow drift and zoom while it holds
-    call=[[0.0, 30.0, 40.0, 1.0, 540, 770, 220], [11.0, 30.0, 58.0, 1.0, 540, 770, 220]])
+    call=[[0.0, 30.0, 40.0, 1.0, 540, 795, 215], [11.0, 30.0, 58.0, 1.0, 540, 795, 215]])
 PLACES = dict(gulf=(27.3, 51.2), iran=(33.0, 54.0))
 
 

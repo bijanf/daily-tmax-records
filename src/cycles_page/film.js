@@ -293,6 +293,7 @@ async function main() {
     U.years.forEach(([y, s]) => { const e = text(b, "tick", s, { top: 1384 }); e.dataset.cx = xs(y); });
     const arrow = (p, dy) => svg("path", { d: "", fill: col.ink, opacity: 0 }, sv);
     const aT = arrow(pt), aS = arrow(ps);
+    const dT = svg("circle", { r: 11, fill: col.mark, stroke: "#fff", "stroke-width": 4, opacity: 0 }, sv), dS = svg("circle", { r: 11, fill: col.nat, stroke: "#fff", "stroke-width": 4, opacity: 0 }, sv);   // the lines' ends breathe
     f.prep = () => centreTicks(b);
     return { ...f, update(t) {
       [[pt, q.temp], [ps, q.sun]].forEach(([p, w]) => { const d = easeInOut(seg(t, w[0], w[1])); p.thin.setAttribute("d", pathOf(p.a.slice(0, Math.max(2, Math.round(d * p.a.length))))); p.bold.setAttribute("d", pathOf(p.e.slice(0, Math.max(2, Math.round(d * p.e.length))))); });
@@ -300,7 +301,8 @@ async function main() {
       const tipT = pt.e[pt.e.length - 1], tipS = ps.e[ps.e.length - 1];
       const bob = 7 * Math.sin(2 * Math.PI * t / 1.2);
       aT.setAttribute("d", `M${tipT[0] + 4},${tipT[1] - 46 - bob} l-22,34 h44 z`); aT.setAttribute("fill", col.mark); aT.setAttribute("opacity", v.toFixed(3));
-      aS.setAttribute("d", `M${tipS[0] + 44 + bob},${tipS[1]} l-34,-22 v44 z`); aS.setAttribute("fill", col.nat); aS.setAttribute("opacity", v.toFixed(3));
+      aS.setAttribute("d", `M${tipS[0] + 44 + bob},${tipS[1]} l-34,-22 v44 z`);
+      [[dT, tipT], [dS, tipS]].forEach(([c, tip]) => { c.setAttribute("cx", tip[0]); c.setAttribute("cy", tip[1]); c.setAttribute("opacity", v.toFixed(3)); c.setAttribute("r", (11 * (1 + 0.2 * Math.sin(2 * Math.PI * t / 1.1))).toFixed(2)); }); aS.setAttribute("fill", col.nat); aS.setAttribute("opacity", v.toFixed(3));
     } };
   }
 
@@ -413,7 +415,7 @@ async function main() {
     const Y0 = 1360, Hh = 560, vmax = 1.4, colw = 104, gapc = 36, X0 = MID - (D.length * colw + (D.length - 1) * gapc) / 2;
     const ys = v => Y0 - v / vmax * Hh, xs = i => X0 + i * (colw + gapc);
     svg("line", { x1: L, x2: R, y1: Y0, y2: Y0, stroke: col.ink, "stroke-width": 4 }, sv);
-    css(text(b, "tick", A.unit, { top: ys(vmax) - 120, left: L, width: 430 }), { whiteSpace: "normal", lineHeight: "46px", textAlign: "left" });   // two short lines, clear of the tag on the right
+    css(text(b, "tick", A.unit.replace(" نسبت", "\nنسبت"), { top: ys(vmax) - 120, left: L }), { whiteSpace: "pre-line", lineHeight: "46px", textAlign: "right" });   // two lines: the measure, then its base years in one piece
     const bars = D.map((d, i) => svg("rect", { x: xs(i), width: colw, y: Y0, height: 0, rx: 10, fill: i === D.length - 1 ? col.mark : col.russia }, sv));
     const steps = A.steps.map((s, i) => css(text(b, "tick", s, { top: 0 }), { fontWeight: "800", color: i === A.steps.length - 1 ? col.mark : col.ink, fontSize: i === A.steps.length - 1 ? "54px" : "38px" }));
     const arrows = A.steps.map((s, i) => svg("path", { d: "", fill: "none", stroke: i === A.steps.length - 1 ? col.mark : col.ink, "stroke-width": i === A.steps.length - 1 ? 6 : 3.5, "stroke-linecap": "round" }, sv));
