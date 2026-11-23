@@ -44,7 +44,7 @@ TUNES = dict(
              pace=(2.0, 2.8), scale=(65, 67, 68, 70, 72, 74, 75, 77, 79, 80),
              scenes=(("hook", ("Cm", "Ab", "G"), (72, 74)),                  # a question
                      ("melt", ("Cm", "Fm", "Ab", "Eb"), (67, 79)),            # natural: a long, slow climb
-                     ("speed", ("Ab", "Eb", "Fm", "G"), (75, 82)),            # level, then the human jump
+                     ("speed", ("Ab", "Eb", "Ab", "Eb", "Fm", "G"), (75, 82)),  # level through the calm years, then the human jump
                      ("sun", ("Ab", "Bb", "Eb"), (72, 68)),                   # the sun: low
                      ("co2", ("Fm", "Cm", "Ab", "G"), (67, 81)),              # carbon dioxide: a climb to the spike
                      ("who", ("Cm", "Ab", "Fm", "G", "Cm", "Ab"), (77, 72)), # one country at a time: steady
@@ -54,7 +54,7 @@ TUNES = dict(
               beats=(0, 3, 6, 9), pace=(2.0, 3.8), scale=(64, 66, 68, 69, 71, 73, 75, 76, 78, 80),
               scenes=(("hook", ("Csm", "A", "B"), (71, 73)),
                       ("melt", ("Csm", "A", "E", "B"), (64, 80)),
-                      ("speed", ("A", "E", "Fsm", "B"), (76, 81)),
+                      ("speed", ("A", "E", "A", "E", "Fsm", "B"), (76, 81)),
                       ("sun", ("A", "Gsm", "Fsm"), (71, 66)),
                       ("co2", ("Fsm", "Csm", "A", "B"), (66, 80)),
                       ("who", ("Csm", "A", "Fsm", "B", "Csm", "A"), (76, 71)),

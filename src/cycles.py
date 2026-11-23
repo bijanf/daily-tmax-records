@@ -4,7 +4,8 @@
 One connected reel (the owner, 23 Nov 2026: "one long but connected part with light music"), no voice, eight scenes:
 the Earth of the last ice age on a turning globe (ICE-6G_C ice sheets, the Persian Gulf as dry land) wiped to today;
 the ice melting and the sea filling the Gulf while the Earth warms about 6 degrees in about 10,000 years (Osman et al.
-2021); ten thousand calm years with Iranian markers; the last 150 years (HadCRUT5); the sun (NOAA TSI CDR); carbon
+2021); the ten thousand calm years of the Holocene with what Iran built in them (goats herded in the Zagros,
+Shahr-e Sukhteh, Persepolis) and, on the same curve, the last 150 years (HadCRUT5); the sun (NOAA TSI CDR); carbon
 dioxide over 800,000 years (Bereiter et al. 2015) and today (NOAA Mauna Loa); whose fuel heated the planet (Jones et
 al. 2023, release 2025.1, the owner's approved wording «چهار آلاینده‌ی بزرگ»); the owner's call to repost.
 
@@ -196,7 +197,15 @@ def world() -> Path:
 
 # ── the words ────────────────────────────────────────────────────────────────────────────────────────────────────
 SCENES = ("hook", "melt", "speed", "sun", "co2", "who", "accel", "call")
-MARKERS = ((10000, "بزهای اهلیِ زاگرس"), (5200, "شهرِ سوخته"), (2500, "تخت‌جمشید"))   # years ago (see the sources in the caption)
+# what Iran built on the level part of the curve, years ago: goats first herded in the Zagros (Zeder & Hesse 2000, Science
+# 287, 2254: "10,000 years ago"); Shahr-e Sukhteh, "founded around 3200 BC" (UNESCO World Heritage List no. 1456);
+# Persepolis, "founded by Darius I in 518 B.C." (UNESCO World Heritage List no. 114)
+MARKERS = ((10000, "بزهای اهلیِ زاگرس"), (5200, "شهرِ سوخته"), (2500, "تخت‌جمشید"))
+# the curve scene has two headlines: the calm ten thousand years first (the owner, 23 Nov 2026: "mention the Holocene and
+# which civilizations appeared ... Persians love Persepolis"), then the human side when the spike rises. "In this calm",
+# not "because of it": the stable climate as the condition of farming is a hypothesis (Richerson, Boyd & Bettinger 2001,
+# American Antiquity 66, 387). The Holocene began 11,700 years ago; "about 1 degree" is measured over the last 10,000.
+CALM = "۱۰ هزار سالِ آرام (هولوسِن): // {ایران در همین آرامش ساخته شد}"
 
 
 def words(n: dict) -> dict:
@@ -225,6 +234,7 @@ def words(n: dict) -> dict:
         hook=dict(then="۲۰ هزار سال پیش", now="امروز", gulf="خلیجِ فارس: خشکی", iran="ایران"),
         melt=dict(chip=lambda a: f"{thou(a)} سال پیش", gap=f"{fa(melt)} درجه", gulf="خلیجِ فارس پُر شد"),
         speed=dict(nat=f"طبیعی: {fa(melt)} درجه در ۱۰ هزار سال", hum=f"انسانی: {dec(now)} درجه در ۱۵۰ سال",
+                   calm=CALM, markers=[dict(age=a, label=m) for a, m in MARKERS],
                    ticks=[(20000, "۲۰ هزار"), (10000, "۱۰ هزار"), (0, "امروز")], axis="سال پیش"),
         sun=dict(temp="دمای زمین", sun="تابشِ خورشید", unit_t="درجه", unit_s="وات بر مترمربع",
                  years=[(1960, "۱۹۶۰"), (1990, "۱۹۹۰"), (2025, "۲۰۲۵")]),
@@ -257,8 +267,8 @@ def reading(w: dict, k: str) -> float:
     elif k == "melt":
         half += [w["melt"]["chip"](10000), w["melt"]["gap"], w["melt"]["gulf"]]
     elif k == "speed":
-        full += [w["speed"]["nat"], w["speed"]["hum"]]
-        half += [s for _, s in w["speed"]["ticks"]] + [w["speed"]["axis"]]
+        full += [w["speed"]["calm"], w["speed"]["nat"], w["speed"]["hum"]]
+        half += [s for _, s in w["speed"]["ticks"]] + [w["speed"]["axis"]] + [m["label"] for m in w["speed"]["markers"]]
     elif k == "sun":
         half += [w["sun"][x] for x in ("temp", "sun", "unit_t", "unit_s")]
     elif k == "co2":
@@ -277,13 +287,14 @@ def reading(w: dict, k: str) -> float:
 CUES = dict(
     hook=dict(wipe=[0.25, 1.75], back=[2.55, 3.45], gulf=3.55),
     melt=dict(age=[0.4, 6.0, 20.5, 7.0], zoom=[2.4, 5.6], gap=3.8),
-    speed=dict(draw=[0.2, 3.0], nat=3.1, spike=[4.4, 5.6], hum=5.7),          # the pill turns from natural to human at the spike
+    # the curve, the band of the calm years, one marker at a time; at "human" the headline and the pill turn to the human side
+    speed=dict(draw=[0.2, 3.0], band=3.2, marks=[3.8, 4.8, 5.8], human=7.6, nat=7.9, spike=[8.4, 9.6], hum=9.7),
     sun=dict(temp=[0.3, 2.3], sun=[0.6, 2.6], verdict=3.1),
     co2=dict(draw=[0.3, 4.3], nat=4.4, spike=[5.0, 5.9], chip=6.0, hum=6.3),
     who=dict(groups=dict(usa=[0.6, 2.8], china=[3.2, 5.0], eu=[5.4, 7.0], russia=[7.4, 8.4], rest=[9.4, 10.4]), four=8.8, iran=10.8),
     accel=dict(bars=[0.3, 4.5], paris=4.8, year=5.4, tag=6.0),
     call=dict(icon=1.0))
-PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["spike"][0], "hum"), sun="nat",
+PILL = dict(hook="both", melt="nat", speed=("nat", CUES["speed"]["human"], "hum"), sun="nat",
             co2=("nat", CUES["co2"]["spike"][0], "hum"), who="hum", accel="hum", call="both")
 LAST = dict(hook=CUES["hook"]["gulf"] + 0.5, melt=CUES["melt"]["age"][1], speed=CUES["speed"]["hum"] + 0.5,
             sun=CUES["sun"]["verdict"] + 0.5, co2=CUES["co2"]["hum"] + 0.5, who=CUES["who"]["iran"] + 0.6, accel=CUES["accel"]["tag"] + 0.5, call=CUES["call"]["icon"] + 0.6)
@@ -315,6 +326,9 @@ def film() -> dict:
     assert round(n["melt"]) == 6 and 5.5 < n["melt"] < 6.5, n["melt"]
     assert 0.9 < n["holo_span"] < 1.2, n["holo_span"]                     # «در بازه‌ی حدودِ ۱ درجه»
     assert round(n["now"], 1) == 1.3, n["now"]
+    calm = 1.0 + (count(w["speed"]["calm"]) + 0.5 * sum(map(count, [m["label"] for m in w["speed"]["markers"]] + [s for _, s in w["speed"]["ticks"]] + [w["speed"]["axis"]]))) / 2.5
+    assert calm <= CUES["speed"]["human"] + 0.05, calm                 # time to read the calm headline and its markers before it turns
+    assert all(100 <= a <= 10000 for a, _ in MARKERS)                  # every marker on the level part that holo_span measures
     assert 8 < n["rate_ratio"] < 20, n["rate_ratio"]                     # «حدودِ ۱۰ برابر» (NASA: "roughly 10 times faster than the average rate of warming after an ice age")
     assert n["co2_max_old"] < 300 and n["co2_span"] > 800000 and n["co2_min"] > 170, (n["co2_max_old"], n["co2_span"])
     assert round(n["mlo"]) == 427
@@ -339,7 +353,7 @@ def film() -> dict:
     return dict(
         fps=onebit.FPS, size=list(onebit.SIZES["reel"]), cover_t=1.0, cues=CUES, pill=PILL, view=VIEW, places=PLACES, numbers={k: (round(v, 3) if isinstance(v, (int, float)) else [round(x, 3) for x in v]) for k, v in n.items()},
         cuts=dict(a=dict(end=float(sum(secs)), scenes=[dict(key=k, start=float(starts[i]), length=float(secs[i]), title=w["scenes"][k][0],
-                  small=w["scenes"][k][1], source=w["sources"][k]) for i, k in enumerate(SCENES)])),
+                  small=w["scenes"][k][1], source=w["sources"][k], **({"before": w["speed"]["calm"]} if k == "speed" else {})) for i, k in enumerate(SCENES)])),
         colours=dict(paper="#F3ECE1", ink="#2E2118", mark="#A03129", land="#E2D8C8", ice="#EEF3F8", shelf="#CDB48A", sea="#1c5cab",
                      pale="#d8cdbb", gold="#C8902E", nat="#2468B4", iran="#2F7D4F", usa="#A03129", china="#C0533F", eu="#D9785A", russia="#E6A07E", rest="#D8CDBB"),
         series=dict(temp=temp, band=band, hadcrut=hc, sun=sun, co2=co, y2024=round(n['y2024'], 3), decades=[[1966 + 10 * i, round(v, 3)] for i, v in enumerate(n['decades'])]),

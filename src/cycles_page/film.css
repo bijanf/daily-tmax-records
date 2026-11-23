@@ -50,9 +50,10 @@ html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--
   font-weight: 800; white-space: nowrap; box-shadow: var(--pillshadow); }
 
 /* a scene: the headline, the small line, the picture, the sources */
-.scene { position: absolute; inset: 0; --keyc: var(--markf); --keyglow: var(--markglow); }
-.scene.k-nat { --keyc: var(--natf); --keyglow: var(--natglow); }
-.head { position: absolute; left: var(--left); top: 282px; width: var(--width); text-align: right; }
+.scene { position: absolute; inset: 0; }
+.head { position: absolute; left: var(--left); top: 282px; width: var(--width); text-align: right;
+  --keyc: var(--markf); --keyglow: var(--markglow); }
+.head.k-nat { --keyc: var(--natf); --keyglow: var(--natglow); }
 .head .line { display: block; font-weight: 800; font-size: 74px; line-height: 104px; white-space: nowrap;
   text-shadow: var(--headshadow); }
 .head .key { background: var(--keyc); color: #fff; border-radius: 18px; padding: 0 16px 4px; margin: 0 2px;

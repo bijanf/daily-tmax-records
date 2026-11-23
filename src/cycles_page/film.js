@@ -238,14 +238,18 @@ async function main() {
   }
   const ring = (dotEl, t) => { dotEl.style.scale = (1 + 0.16 * Math.sin(2 * Math.PI * t / 1.2)).toFixed(3); };   // a place's dot breathes
 
-  function frame(sc) {
-    const root = el("div", "scene k-" + KEY[sc.key], stage);
-    const head = el("div", "head", root);
-    const lines = sc.title.split(" // ").map(s => { const ln = el("span", "line", head); marked(ln, s); return ln; });
-    const small = sc.small ? el("span", "small", head, sc.small) : null;
+  function headOf(root, title, small, side) {       // a headline: its lines, its small line, the side its highlight wears
+    const head = el("div", "head k-" + side, root);
+    const lines = title.split(" // ").map(s => { const ln = el("span", "line", head); marked(ln, s); return ln; });
+    return { head, lines, small: small ? el("span", "small", head, small) : null };
+  }
+  function frame(sc) {                               // a scene with "before" has two headlines: the natural side first,
+    const root = el("div", "scene", stage), heads = [];   // then its own from the cue "human" on
+    if (sc.before) heads.push(headOf(root, sc.before, "", "nat"));
+    heads.push(headOf(root, sc.title, sc.small, KEY[sc.key]));
     const body = css(el("div", "abs", root), { inset: "0" });
     const src = el("div", "sources", root, sc.source);
-    return { root, head, lines, small, body, src, fits: [] };
+    return { root, heads, body, src, fits: [] };
   }
 
   // ── 1: the ice age wiped to today and back ──
@@ -316,6 +320,7 @@ async function main() {
     const f = frame(sc), b = f.body, q = F.cues.speed, K = Wd.speed, sv = svg("svg", full(), b);
     svg("line", { x1: CH.x0, x2: CH.x1, y1: CH.y0, y2: CH.y0, stroke: col.axis, "stroke-width": 3 }, sv);
     svg("line", { x1: CH.x0, x2: CH.x1, y1: cy(0), y2: cy(0), stroke: col.ink, "stroke-width": 2, "stroke-dasharray": "8 10", opacity: 0.38 }, sv);
+    const calm = svg("rect", { x: cx(10000), y: CH.y1 - 30, width: cx(0) - cx(10000), height: CH.y0 - CH.y1 + 30, rx: 12, fill: col.gold, opacity: 0 }, sv);   // the calm ten thousand years
     const band = S.band.filter(p => p[0] <= 20100);
     const bandP = svg("path", { d: pathOf([...band.map(p => [cx(p[0]), cy(p[2])]), ...band.slice().reverse().map(p => [cx(p[0]), cy(p[1])])]) + "Z", fill: col.nat, opacity: 0 }, sv);
     const pts = S.temp.filter(p => p[0] <= 20100).slice().reverse().map(p => [cx(p[0]), cy(p[1])]);
@@ -329,11 +334,27 @@ async function main() {
     const top = svg("circle", { cx: x, cy: cy(last10), r: 17, fill: col.mark, stroke: "#fff", "stroke-width": 5, opacity: 0 }, sv); top.style.filter = `drop-shadow(0 0 16px ${col.mark})`;
     const nat = tag(b, K.nat, col.natf), hum = tag(b, K.hum, col.markf);
     const yNat = cy(interp(S.temp, 15000));
-    f.prep = () => { centreTicks(b); css(nat, { left: cx(15000) + 30, top: yNat + 40 }); css(hum, { left: x - hum.offsetWidth - 34, top: cy(last10) - 120 }); };
+    const pins = (K.markers || []).map((m, k, all) => {   // a dot on the curve at its age, a stem down, its name on a chip: a ladder, the
+      const px = cx(m.age), py = cy(interp(S.temp, m.age)), up = k === all.length - 1;   // the youngest stands above the curve, in gold;
+      const top = up ? 800 : 985 + 75 * (all.length - 2 - k);                              // the older ones below, oldest lowest: no stem crosses a chip or the curve
+      const stem = svg("line", { x1: px, x2: px, y1: py, y2: up ? top + 52 : top + 6, stroke: col.gold, "stroke-width": 4, "stroke-linecap": "round", opacity: 0 }, sv);
+      const dot = svg("circle", { cx: px, cy: py, r: 12, fill: col.gold, stroke: "#fff", "stroke-width": 4, opacity: 0 }, sv);
+      return { px, stem, dot, chip: css(chipAt(b, m.label, up ? "gold" : ""), { top, fontWeight: "800" }) };
+    });
+    f.prep = () => { centreTicks(b); css(nat, { left: cx(15000) + 30, top: yNat + 40 }); css(hum, { left: x - hum.offsetWidth - 34, top: cy(last10) - 120 });
+      pins.forEach(o => css(o.chip, { left: clamp(o.px - 26, L, R - o.chip.offsetWidth) })); };
     return { ...f, update(t) {
       const p = easeInOut(seg(t, q.draw[0], q.draw[1])), sl = pts.slice(0, Math.max(2, Math.round(p * pts.length))), tipP = sl[sl.length - 1];
       line.setAttribute("d", pathOf(sl)); area.setAttribute("d", under(sl, CH.y0)); bandP.setAttribute("opacity", (0.16 * p).toFixed(3));
       lead.setAttribute("cx", tipP[0]); lead.setAttribute("cy", tipP[1]); lead.setAttribute("opacity", p > 0 && p < 1 ? "1" : "0");
+      const away = q.human === undefined ? 0 : seg(t, q.human - 0.1, q.human + 0.3);        // the names leave when the scene turns to the human side; the dots stay
+      if (q.band !== undefined) calm.setAttribute("opacity", (0.13 * easeOut(seg(t, q.band, q.band + 0.5)) * (1 - 0.45 * away)).toFixed(3));
+      pins.forEach((o, k) => {
+        const a = easeOut(seg(t, q.marks[k], q.marks[k] + 0.4)), pop = 0.07 * bump(seg(t, q.marks[k], q.marks[k] + 0.6));
+        o.dot.setAttribute("opacity", a.toFixed(3)); o.dot.setAttribute("r", (12 * (0.6 + 0.4 * a + pop)).toFixed(2));
+        o.stem.setAttribute("opacity", (0.9 * a * (1 - away)).toFixed(3));
+        css(o.chip, { opacity: (a * (1 - away)).toFixed(3), scale: (0.85 + 0.15 * a + pop).toFixed(3) });
+      });
       const n = easeOut(seg(t, q.nat, q.nat + 0.45)); css(nat, { opacity: n.toFixed(3), scale: (0.85 + 0.15 * n + 0.05 * bump(seg(t, q.nat, q.nat + 0.6))).toFixed(3) });
       const s = easeOut(seg(t, q.spike[0], q.spike[1]));
       spike.setAttribute("d", s > 0 ? `M${x},${cy(0)} L${x + 0.5},${cy(last10 * s)}` : "");
@@ -549,8 +570,7 @@ async function main() {
   await document.fonts.ready;
   scenes.forEach(s => {
     s.root.style.display = "block";
-    fit(s.lines, W, 54);
-    fit([...s.head.querySelectorAll(".small")], W, 38);
+    s.heads.forEach(h => { fit(h.lines, W, 54); if (h.small) fit([h.small], W, 38); });
     (s.fits || []).forEach(n => fit([n], W, 34));
     if (s.follow) fit(s.follow, W, 36);
     fit([s.src], W, 26);
@@ -569,9 +589,11 @@ async function main() {
     lit(sc.key, dt);
     const enter = i === 0 ? 1 : easeOut(seg(dt, 0, 0.35));
     css(s.body, { opacity: (0.25 + 0.75 * enter).toFixed(3), transform: `translateY(${(14 * (1 - enter)).toFixed(2)}px)` });
-    [...s.lines, s.small].forEach((ln, k) => {       // the headline arrives line by line (the first scene stands from frame 0)
+    const turn = s.heads.length > 1 ? F.cues[sc.key].human : null, ph = turn !== null && dt >= turn ? 1 : 0, lt = ph ? dt - turn : dt;
+    s.heads.forEach((h, k) => { h.head.style.display = k === ph ? "block" : "none"; });
+    [...s.heads[ph].lines, s.heads[ph].small].forEach((ln, k) => {   // the headline arrives line by line (the first scene stands from frame 0)
       if (!ln) return;
-      const p = i === 0 ? 1 : easeOut(seg(dt, 0.08 * k, 0.30 + 0.08 * k));
+      const p = i === 0 && !ph ? 1 : easeOut(seg(lt, 0.08 * k, 0.30 + 0.08 * k));
       css(ln, { opacity: (0.15 + 0.85 * p).toFixed(3), transform: `translateY(${(22 * (1 - p)).toFixed(2)}px)` });
     });
     segs.forEach((x, k) => { x.style.width = (k < i ? 100 : k > i ? 0 : 100 * dt / sc.length).toFixed(3) + "%"; });
