@@ -425,7 +425,7 @@ def film() -> dict:
                places=dict(PLACES, fastest=n["sink"]["at"]), numbers=dict(sink={k: v for k, v in n["sink"].items() if k != "legend"},
                                                                           green=n["green"], air={k: v for k, v in n["air"].items() if k not in ("series", "smooth")}, chill=n["chill"]),
                legend=n["sink"]["legend"], air=dict(series=n["air"]["series"], smooth=n["air"]["smooth"], first=n["air"]["first"], last=n["air"]["last"]),
-               photos=photos(), person_m=PERSON_M, cover_t=1.2)
+               photos=photos(), person_m=PERSON_M, cover_t=0.4)        # all of Iran and «کرمان» at full strength
     (BUILD / "film.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
 
