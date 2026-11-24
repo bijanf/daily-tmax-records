@@ -1,0 +1,64 @@
+/* «زمینِ رفسنجان پایین می‌رود» (kerman_fa): one 1080 x 1920 stage, drawn for a time t by film.js (no CSS animation).
+   The documentary night of the ice-age film's cut d, turned to the desert: an umber night, the clay of the qanats.
+   Red = the ground that sinks, green = the orchards' canopy, blue = water, gold = what has lasted. */
+@font-face { font-family: "Vazirmatn"; font-weight: 500; src: url("/fonts/vazirmatn/Vazirmatn-Medium.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 700; src: url("/fonts/vazirmatn/Vazirmatn-Bold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 800; src: url("/fonts/vazirmatn/Vazirmatn-ExtraBold.ttf"); }
+@font-face { font-family: "Vazirmatn"; font-weight: 900; src: url("/fonts/vazirmatn/Vazirmatn-Black.ttf"); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url("/fonts/inter/ttf/Inter-Medium.ttf"); }
+@font-face { font-family: "Lalezar"; font-weight: 400; src: url("/fonts/lalezar/Lalezar-Regular.ttf"); }
+
+:root {
+  --page: #0C0806; --ink: #F7EFE4; --dim: #C9B8A4; --soft: #EFE3D3;
+  --red: #FF4E3C; --redf: #D7362A; --green: #A6DB55; --greenf: #4F8C1C; --blue: #5AAEFF; --bluef: #1F68D2;
+  --gold: #F2B544; --goldink: #1D1204;
+  --stage: radial-gradient(900px 820px at 50% 48%, rgba(150, 86, 40, 0.26), rgba(150, 86, 40, 0) 70%),
+           linear-gradient(180deg, #0B0705 0%, #170F0A 50%, #0A0604 100%);
+  --glass: rgba(16, 10, 6, 0.82); --chipshadow: 0 0 0 1.5px rgba(255, 238, 214, 0.20), 0 10px 26px rgba(0, 0, 0, 0.55);
+  --left: 96px; --width: 828px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--page); }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: var(--ink);
+  font-family: "Vazirmatn", sans-serif; font-weight: 500; direction: rtl; background: var(--stage); }
+.abs { position: absolute; }
+svg { position: absolute; overflow: visible; }
+.scene { position: absolute; inset: 0; }
+
+/* the headline: the heavy display face, its highlight in the colour of what the scene is about */
+.head { position: absolute; left: var(--left); top: 282px; width: var(--width); text-align: right; z-index: 5;
+  --keyc: var(--redf); --keyglow: rgba(255, 78, 60, 0.5); }
+.head.k-green { --keyc: var(--greenf); --keyglow: rgba(166, 219, 85, 0.45); }
+.head.k-blue { --keyc: var(--bluef); --keyglow: rgba(90, 174, 255, 0.5); }
+.head.k-gold { --keyc: #B07A12; --keyglow: rgba(242, 181, 68, 0.5); }
+.head .line { display: block; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 116px; line-height: 152px;
+  white-space: nowrap; text-shadow: 0 4px 26px rgba(0, 0, 0, 0.85); }
+.head .key { background: var(--keyc); color: #fff; border-radius: 20px; padding: 0 20px 2px; margin: 0 2px;
+  box-shadow: 0 10px 30px var(--keyglow), 0 1px 0 rgba(255, 255, 255, 0.28) inset; text-shadow: none;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.small { display: block; font-weight: 700; font-size: 48px; line-height: 66px; white-space: nowrap; color: var(--soft);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9); }
+.head .line + .small { margin-top: 30px; }
+.small + .small { margin-top: 0; }
+.small.ask { color: var(--gold); font-weight: 800; margin-top: 18px !important; }
+.sources { position: absolute; right: calc(1080px - var(--left) - var(--width)); top: 1494px; direction: ltr; z-index: 5;
+  font: 500 30px "Inter", sans-serif; color: var(--dim); opacity: 0.8; white-space: nowrap; letter-spacing: 0.2px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
+
+/* chips on the map, the years of the wipe, the tags */
+.chip { position: absolute; background: var(--glass); color: var(--ink); border-radius: 14px; padding: 0 16px 3px;
+  font-size: 42px; line-height: 58px; white-space: nowrap; font-weight: 800; box-shadow: var(--chipshadow); }
+.chip.gold { background: var(--gold); color: var(--goldink); box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35), 0 0 26px rgba(242, 181, 68, 0.55); }
+.chip.red { background: var(--redf); color: #fff; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.3), 0 0 26px rgba(255, 78, 60, 0.6); }
+.tag { position: absolute; font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 62px; line-height: 80px; white-space: nowrap; color: #fff; background: var(--redf);
+  border-radius: 16px; padding: 0 18px 5px; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28) inset, 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 26px rgba(255, 78, 60, 0.45); }
+.tick { position: absolute; font-size: 34px; line-height: 44px; white-space: nowrap; color: var(--dim); font-weight: 700; }
+.label { position: absolute; font-size: 30px; line-height: 40px; white-space: nowrap; color: var(--ink); font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95); }
+
+/* a photograph's lines: what it shows, and its credit */
+.what { right: calc(1080px - var(--left) - var(--width)); top: 1412px; font-weight: 700; font-size: 28px; line-height: 38px; white-space: nowrap;
+  color: #fff; opacity: 0.82; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95); }
+.credit { left: var(--left); top: 1452px; direction: ltr; font: 500 24px "Inter", "Vazirmatn", sans-serif; color: #fff; opacity: 0.62;
+  white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
+.num { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 38px; }   /* decimals: Vazirmatn draws «٫» like «/» */
