@@ -4,9 +4,10 @@ Asked for by a reader from Kerman (a journalist of the province's meteorology of
 ("water and climate ... for Kerman, from open data", 23 Nov). Five scenes on the documentary night look of the ice-age
 film's cut d, no voice:
 
-    sink    the Rafsanjan plain from space (Landsat 2025) with the ground that sinks glowing on it (Sentinel-1 radar,
-            Payne et al. 2025, checked against Haghshenas Haghighi & Motagh 2024); a pole shows 8 years of it against a
-            person
+    sink    all of Iran from space (EOX Sentinel-2 cloudless 2016) with every sinking ground of the radar glowing on it
+            and Kerman province outlined; a dive into the Rafsanjan plain (Landsat 2025) in the first 3 s, the ground
+            that sinks glowing on it (Sentinel-1: Payne et al. 2025, checked against Haghshenas Haghighi & Motagh 2024);
+            a pole shows 8 years of it against a person
     qanat   a qanat with water (Shafiabad, Kerman province), then a dry one: «for centuries the qanat brought Kerman's
             water» / «the Rafsanjan plain today: the qanats have dried up» (Mirnezami et al. 2020)
     wells   the plain in 1987 wiped to 2025, the green canopy tinted: wells from about 70 to more than 1,300 (Motagh et
@@ -214,6 +215,57 @@ def chill() -> dict:
     return out
 
 
+# ── the dive: Iran, Kerman, the plain ───────────────────────────────────────────────────────────────────────────
+ZOOM = DATA / "zoom"
+TEX = dict(iran=((40.0, 22.0, 67.0, 44.0), "tex_iran.jpg"), kerman=((53.8, 27.6, 59.4, 32.4), "tex_kerman.jpg"))   # get_subsidence.wms boxes
+
+
+def zoom() -> dict:
+    """The two satellite pictures of the dive (EOX Sentinel-2 cloudless 2016, fetched with src/get_subsidence.py's
+    wms() into data/kerman/zoom), each with the sinking ground of Haghshenas Haghighi & Motagh 2024 (all of Iran,
+    2014-2020) as a glow on its own grid (the largest rate inside each of its pixels, so small patches still show at
+    the scale of the country); Iran's border and Kerman province's (geoBoundaries ADM0, ADM1; ODbL), simplified."""
+    import rasterio
+    from PIL import Image
+    from rasterio.transform import from_bounds
+    from rasterio.warp import Resampling, reproject
+    from scipy import ndimage
+    from shapely.geometry import shape
+    layers = []
+    with rasterio.open(SUB / "rate_A.tif") as a:
+        A = a.read(1).astype(np.float32)
+        A[A == a.nodata] = np.nan
+        at = a.transform
+    for key, (box, file) in TEX.items():
+        im = Image.open(ZOOM / file)
+        if im.size[0] > 3072:                                 # a lighter picture for the page (several browsers render at once)
+            im = im.resize((3072, round(im.size[1] * 3072 / im.size[0])), Image.LANCZOS)
+        w, h = im.size
+        im.save(BUILD / file, quality=90)
+        g = np.full((h, w), np.nan, np.float32)
+        reproject(np.nan_to_num(A, nan=-1.0), g, src_transform=at, src_crs="EPSG:4326", dst_transform=from_bounds(*box, w, h),
+                  dst_crs="EPSG:4326", resampling=Resampling.max, src_nodata=None)
+        g = ndimage.maximum_filter(np.where(g >= 2.0, g, 0.0), size=5 if key == "iran" else 1)       # seen at the scale of the country
+        u = np.clip((g - 2.0) / 26.0, 0, 1)
+        stops = np.array([[255, 196, 92], [255, 92, 52], [232, 36, 50], [255, 214, 222]], float)
+        x = u * 3
+        k = np.clip(np.floor(x).astype(int), 0, 2)
+        f = (x - k)[..., None]
+        rgb = stops[k] * (1 - f) + stops[k + 1] * f
+        alpha = np.where(g >= 2.0, (0.75 if key == "iran" else 0.30) + 0.25 * np.sqrt(u), 0.0)
+        Image.fromarray(np.dstack([rgb, 255 * alpha]).round().astype(np.uint8), "RGBA").save(BUILD / f"glow_{key}.png", optimize=True)
+        layers.append(dict(key=key, file=file, glow=f"glow_{key}.png", bounds=list(box), w=w, h=h))
+
+    def rings(geom, tol):
+        g = shape(geom).simplify(tol)
+        polys = [g] if g.geom_type == "Polygon" else list(g.geoms)
+        return [[[round(x, 3), round(y, 3)] for x, y in pl.exterior.coords] for pl in polys if pl.area > 0.02]
+    a0 = json.loads((ZOOM / "geob_adm0.geojson").read_text())["features"][0]["geometry"]
+    a1 = [f for f in json.loads((ZOOM / "geob_adm1.geojson").read_text())["features"] if f["properties"]["shapeName"] == "Kerman"]
+    assert len(a1) == 1
+    return dict(layers=layers, iran=rings(a0, 0.03), kerman=rings(a1[0]["geometry"], 0.01), label=[29.9, 57.3])
+
+
 # ── the photographs ──────────────────────────────────────────────────────────────────────────────────────────────
 def photos() -> dict:
     """Each photograph cut to 9:16 around its point (1620 x 2880, or the largest the picture allows if smaller), as
@@ -268,11 +320,12 @@ def words(n: dict) -> dict:
             city=("شهرِ کرمان هم: // {زمین نشست، لوله‌ی آب شکست}",
                   "آبان ۱۴۰۵، آبفای استان: نشستِ %s تا %s سانتی‌متری // شما ترکِ زمین دیده‌اید؟" % (fa(LIT["pipe_cm"][0]), fa(LIT["pipe_cm"][1])))),
         qanat_before=("قرن‌ها قنات // {آبِ کرمان را می‌آورد}", "قناتِ گوهرریزِ جوپار: حدودِ %s سال (یونسکو)" % thou(age)),
-        sink=dict(bahreman="بهرمان", rafsanjan="رفسنجان", then="زمین در ۱۳۹۳", now="۱۴۰۱", tag="%s متر" % dec(drop),
+        # province: the place's name, large over the province at frame 0 (the owner, 24 Nov 2026)
+        sink=dict(bahreman="بهرمان", rafsanjan="رفسنجان", province="کرمان", then="زمین در ۱۳۹۳", now="۱۴۰۱", tag="%s متر" % dec(drop),
                   legend="فرونشست، سانتی‌متر در سال", person="۱٫۷۵ متر"),
         wells=dict(then="۱۳۶۶", now="۱۴۰۴", rafsanjan="رفسنجان"),
         warm=dict(first="۱۳۳۰", last="۱۴۰۴", unit="دمای میانگینِ سال، درجه", gap="+%s" % dec(warm)),
-        sources=dict(sink="Sentinel-1 (Payne 2025; Haghshenas Haghighi 2024) · Landsat",
+        sources=dict(sink="Sentinel-1 (Payne 2025; Haghshenas Haghighi 2024) · Landsat · EOX",
                      qanat="ICOMOS/UNESCO 2016 · Mirnezami 2020",
                      wells="Motagh 2017 · Mirnezami 2020 · Landsat 5, 8, 9 (USGS)",
                      warm="CRU TS 4.10 · ERA5-Land · Asadi Oskouei 2023 (Nivar)",
@@ -294,7 +347,7 @@ def reading(W: dict, k: str) -> float:
     full = list(W["scenes"][k])
     half: list = []
     if k == "sink":
-        half += [W["sink"][x] for x in ("bahreman", "rafsanjan", "then", "now", "tag", "legend")]
+        half += [W["sink"][x] for x in ("bahreman", "rafsanjan", "province", "then", "now", "tag", "legend")]
     elif k == "qanat":
         full += list(W["qanat_before"])
     elif k == "wells":
@@ -305,25 +358,40 @@ def reading(W: dict, k: str) -> float:
 
 
 # ── the clock ────────────────────────────────────────────────────────────────────────────────────────────────────
-# moments inside a scene (seconds after its start)
+# moments inside a scene (seconds after its start). The small lines are not timed here: each comes in when the one
+# before it has been read (its words at 2.5 a second, and 0.4 s), and a scene ends when its last line has been read
+# and has stood 1.5 s more (the owner, 24 Nov 2026: "is it not too fast to read the Persian text and the plots?")
+READ, HOLD, GAP = 2.5, 1.5, 0.4
 CUES = dict(
-    sink=dict(glow=[0.0, 2.4], chips=[0.9, 1.5], pole=[2.4, 6.4], tag=6.5, small=6.8, legend=1.8),
-    qanat=dict(turn=5.6, swap=[5.1, 6.0]),                    # the flowing qanat under the first headline, the dry one under the second
-    wells=dict(wipe=[0.5, 2.6], green=[2.7, 3.5], small=[3.8, 5.8]),
-    warm=dict(draw=[0.3, 3.0], gap=3.2, small=[4.0, 6.0]),
-    city=dict(small=[3.0, 5.6]),
+    sink=dict(dive=[0.35, 3.0], glow=[2.7, 3.9], chips=[3.1, 3.6], legend=3.9, pole=[4.3, 7.9], tag=8.0, small=8.4),
+    qanat=dict(),                                             # turn and swap: from the first headline's words (film())
+    wells=dict(wipe=[0.5, 2.8], green=[2.9, 3.7], small=4.2),  # the map is looked at before the first line comes
+    warm=dict(draw=[0.3, 3.0], gap=3.2, small=4.4),            # the chart is drawn and read before the first line
+    city=dict(small=3.2),
 )
-LAST = dict(sink=CUES["sink"]["small"] + 0.6, qanat=CUES["qanat"]["turn"] + 0.5, wells=CUES["wells"]["small"][-1] + 0.6,
-            warm=CUES["warm"]["small"][-1] + 0.6, city=CUES["city"]["small"][-1] + 0.6)
-# the camera over the stage: [t, lon, lat of the frame's anchor point, scale (stage px to screen px), anchor x, y]
+END_HOLD = dict(city=0.5)                                     # the question at the end stands a little longer
+
+
+def need(s: str) -> float:
+    return count(s) / READ
+
+
+def schedule(first: float, smalls: list) -> list:
+    out = [first]
+    for x in smalls[:-1]:
+        out.append(round(out[-1] + need(x) + GAP, 2))
+    return out
+
+
+# the camera: [t, lon, lat of the anchor point, log10 of the screen pixels per degree of latitude, anchor x, y]
+# (east-west is drawn at cos(30.6 deg) of north-south, the plain's own proportion; the Landsat stage has 2,500 px a
+# degree, so its scale s is 10 ** v / 2500)
 VIEW = dict(
-    sink=[[0.0, 55.74, 30.78, 1.06, 540, 900], [6.0, 55.69, 30.84, 1.32, 540, 900], [11.0, 55.67, 30.855, 1.40, 540, 900]],
-    wells=[[0.0, 55.86, 30.60, 0.78, 540, 1010], [10.0, 55.88, 30.58, 0.86, 540, 1010]],
+    sink=[[0.0, 54.3, 32.0, math.log10(56), 540, 1000], [0.35, 54.4, 31.95, math.log10(60), 540, 1000],
+          [3.0, 55.74, 30.78, math.log10(2650), 540, 900], [9.0, 55.69, 30.84, math.log10(3300), 540, 900],
+          [15.0, 55.67, 30.855, math.log10(3500), 540, 900]],
+    wells=[[0.0, 55.82, 30.62, math.log10(1950), 540, 1010], [12.0, 55.84, 30.61, math.log10(2150), 540, 1010]],
 )
-
-
-def seconds(W: dict) -> list[float]:
-    return [math.ceil(4 * max(reading(W, k), LAST[k] + 3.0)) / 4 for k in SCENES]
 
 
 def film() -> dict:
@@ -331,17 +399,27 @@ def film() -> dict:
     R = radar()
     n = dict(sink=sink(meta, R), green=green(), air=air(), chill=chill())
     W = words(n)
-    lens = seconds(W)
+    cues = json.loads(json.dumps(CUES))
     t, scenes = 0.0, []
-    for k, L in zip(SCENES, lens):
-        sc = dict(key=k, start=t, length=L, title=W["scenes"][k][0], small=W["scenes"][k][1], source=W["sources"][k])
-        if k == "qanat":
-            sc.update(before=W["qanat_before"][0], before_small=W["qanat_before"][1], turn=CUES["qanat"]["turn"])
-        if k in ("sink", "wells", "warm", "city"):
-            sc["small_at"] = CUES[k]["small"]
+    for k in SCENES:
+        title, small = W["scenes"][k]
+        sc = dict(key=k, start=t, title=title, small=small, source=W["sources"][k])
+        smalls = [x for x in small.split(" // ") if x] if small else []
+        if k == "qanat":                                      # the first headline and its line are read over the flowing qanat
+            first = 0.4 + need(W["qanat_before"][0] + " " + W["qanat_before"][1]) + 1.2
+            cues[k].update(turn=round(first, 2), swap=[round(first - 0.5, 2), round(first + 0.4, 2)])
+            sc.update(before=W["qanat_before"][0], before_small=W["qanat_before"][1], turn=cues[k]["turn"])
+            done = first + 0.4 + need(title) + HOLD
+        else:
+            at = schedule(cues[k]["small"], smalls)
+            sc["small_at"] = at
+            cues[k]["small"] = at
+            done = at[-1] + need(smalls[-1]) + HOLD + END_HOLD.get(k, 0.0)
+        L = math.ceil(4 * max(done, reading(W, k))) / 4
+        sc["length"] = L
         scenes.append(sc)
         t += L
-    out = dict(size=[1080, 1920], fps=FPS, end=t, scenes=scenes, cues=CUES, view=VIEW, words=W,
+    out = dict(size=[1080, 1920], fps=FPS, end=t, scenes=scenes, cues=cues, view=VIEW, words=W, zoom=zoom(),
                stage=dict(meta, files=dict(then=f"sat_{meta['then']}.jpg", now=f"sat_{meta['now']}.jpg",
                                            green_then=f"green_{meta['then']}.png", green_now=f"green_{meta['now']}.png", sink="sink.png")),
                places=dict(PLACES, fastest=n["sink"]["at"]), numbers=dict(sink={k: v for k, v in n["sink"].items() if k != "legend"},

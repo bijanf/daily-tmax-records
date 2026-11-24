@@ -62,3 +62,6 @@ svg { position: absolute; overflow: visible; }
 .credit { left: var(--left); top: 1452px; direction: ltr; font: 500 24px "Inter", "Vazirmatn", sans-serif; color: #fff; opacity: 0.62;
   white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
 .num { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 38px; }   /* decimals: Vazirmatn draws «٫» like «/» */
+/* the place's name over the map at the first glance: large, gold, the camera flies through it */
+.place { font-family: "Lalezar", "Vazirmatn", sans-serif; font-weight: 400; font-size: 240px; line-height: 260px; white-space: nowrap;
+  color: #FFD47E; text-shadow: 0 6px 40px rgba(0, 0, 0, 0.9), 0 0 34px rgba(242, 181, 68, 0.55), 0 2px 4px rgba(0, 0, 0, 0.7); }

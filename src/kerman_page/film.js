@@ -117,21 +117,31 @@ async function main() {
     return [a, c];
   }
 
-  // ── the plain: one stage the camera moves over ──
-  const ST = F.stage, SF = ST.files;
-  const toStage = (lat, lon) => [(lon - ST.west) / ST.dlon, (ST.north - lat) / ST.dlat];
-  function plain(b, layers) {                        // layers: a list of [name, file]; returns the camera and the layers
-    const wrap = css(el("div", "abs", b), { left: 0, top: 0, width: ST.width, height: ST.height, transformOrigin: "0 0" });
-    const fade = "linear-gradient(180deg, transparent 0, #000 140px)";     // the data's north edge melts into the night
-    css(wrap, { maskImage: fade, webkitMaskImage: fade });
-    const L = {};
-    for (const [name, file] of layers) { const im = css(el("img", "abs", wrap), { left: 0, top: 0, width: ST.width, height: ST.height }); im.src = "/build/" + file; PENDING.push(im.decode().catch(() => {})); L[name] = im; }
-    let V = [0, 0, 1, 0, 0];
-    return { L, wrap,
-      view(v) { V = v; const [x, y] = toStage(v[1], v[0]); wrap.style.transform = `translate(${(v[3] - v[2] * x).toFixed(2)}px, ${(v[4] - v[2] * y).toFixed(2)}px) scale(${v[2].toFixed(5)})`; },
-      at(lat, lon) { const [x, y] = toStage(lat, lon), [x0, y0] = toStage(V[1], V[0]); return { x: V[3] + V[2] * (x - x0), y: V[4] + V[2] * (y - y0) }; },
-      stageX(sx) { const [x0] = toStage(V[1], V[0]); return x0 + (sx - V[3]) / V[2]; } };
+  // ── the camera: every picture placed by its corners in degrees; one view moves them all ──
+  // a view is [lon, lat of the anchor point, log10 of screen px per degree of latitude, anchor x, y]; east-west is drawn
+  // at cos(30.6 deg) of north-south, the proportion of the plain itself
+  const COS0 = Math.cos(30.6 * Math.PI / 180), ST = F.stage, SF = ST.files, ZM = F.zoom;
+  const STB = [ST.west, ST.south, ST.east, ST.north];
+  const Li = ZM.layers.find(o => o.key === "iran"), Lk = ZM.layers.find(o => o.key === "kerman");
+  const FEATHER = "linear-gradient(90deg, transparent 0, #000 120px, #000 calc(100% - 120px), transparent 100%), " +
+                  "linear-gradient(180deg, transparent 0, #000 140px, #000 calc(100% - 120px), transparent 100%)";   // the plain's edges melt into the picture under it
+  function geo(b, layers) {                          // layers: [name, file, [W, S, E, N], natural width, height, feathered]
+    const L = {}, list = [];
+    for (const [name, file, bb, w, h, feather] of layers) {
+      const im = css(el("img", "abs", b), { left: 0, top: 0, width: w, height: h, transformOrigin: "0 0" }); im.src = "/build/" + file;
+      if (feather) css(im, { maskImage: FEATHER, webkitMaskImage: FEATHER, maskComposite: "intersect", webkitMaskComposite: "source-in" });
+      PENDING.push(im.decode().catch(() => {})); L[name] = im; list.push({ im, bb, w, h });
+    }
+    let V = { lon: 0, lat: 0, z: 1, ax: 0, ay: 0 };
+    return { L,
+      view(v) { V = { lon: v[0], lat: v[1], z: Math.pow(10, v[2]), ax: v[3], ay: v[4] };
+        for (const o of list) { const [W0, S0, E0, N0] = o.bb, x = V.ax + (W0 - V.lon) * COS0 * V.z, y = V.ay + (V.lat - N0) * V.z;
+          o.im.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${((E0 - W0) * COS0 * V.z / o.w).toFixed(6)}, ${((N0 - S0) * V.z / o.h).toFixed(6)})`; } },
+      at(lat, lon) { return { x: V.ax + (lon - V.lon) * COS0 * V.z, y: V.ay + (V.lat - lat) * V.z }; },
+      lonAt(x) { return V.lon + (x - V.ax) / (COS0 * V.z); },
+      z() { return V.z; } };
   }
+  const lz = z => Math.log10(z);
   function dotted(b, s, colour, cls) {               // a chip beside a place, with its dot
     const c = css(el("div", "chip " + (cls || ""), b, s), {});
     c.dot = css(el("div", "abs", b), { width: 22, height: 22, borderRadius: "50%", background: colour, boxShadow: `0 0 0 4px #fff, 0 0 24px 8px ${colour}` });
@@ -158,7 +168,15 @@ async function main() {
   // ── 1: the ground that sinks, glowing on the plain; a pole against a person ──
   function sink(sc) {
     const f = frame(sc), b = f.body, q = Q.sink, K = Wd.sink;
-    const map = plain(b, [["sat", SF.now], ["glow", SF.sink]]);
+    const map = geo(b, [["iran", Li.file, Li.bounds, Li.w, Li.h], ["giran", Li.glow, Li.bounds, Li.w, Li.h],
+                        ["kerman", Lk.file, Lk.bounds, Lk.w, Lk.h], ["gkerman", Lk.glow, Lk.bounds, Lk.w, Lk.h],
+                        ["sat", SF.now, STB, ST.width, ST.height, true], ["glow", SF.sink, STB, ST.width, ST.height, true]]);
+    const osv = svg("svg", full(), b);                 // Iran's border, and Kerman province's in gold
+    const lineI = svg("path", { fill: "none", stroke: "rgba(255,240,220,.7)", "stroke-width": 2.5, "stroke-linejoin": "round" }, osv);
+    const lineK = svg("path", { fill: "rgba(242,181,68,.16)", stroke: COL.gold, "stroke-width": 6, "stroke-linejoin": "round" }, osv);
+    lineK.style.filter = `drop-shadow(0 0 10px ${COL.gold})`;
+    const prov = css(el("div", "abs place", b, K.province), { transformOrigin: "50% 50%" });   // the place's name, large, from frame 0
+    const traced = rings => rings.map(r => pathOf(r.map(([lo, la]) => { const p = map.at(la, lo); return [p.x, p.y]; })) + "Z").join("");
     scrims(b, 760, 1180);
     const fast = dotted(b, K.bahreman, COL.red, "red"), city = dotted(b, K.rafsanjan, COL.gold);
     // the legend: the glow's colours, cm a year
@@ -190,8 +208,18 @@ async function main() {
     const Y = ["۱۳۹۳", "۱۳۹۴", "۱۳۹۵", "۱۳۹۶", "۱۳۹۷", "۱۳۹۸", "۱۳۹۹", "۱۴۰۰", "۱۴۰۱"];
     return { ...f, update(t) {
       map.view(keyed(F.view.sink, t));
+      const z = lz(map.z()), kz = seg(z, lz(75), lz(160)), sz = seg(z, lz(1300), lz(2300)), oz = 1 - seg(z, lz(220), lz(700));
+      [map.L.kerman, map.L.gkerman].forEach(e => show(e, kz));              // the province's sharper picture over the country's
+      [map.L.iran, map.L.giran].forEach(e => { e.style.display = kz >= 1 ? "none" : "block"; });   // covered: not drawn at all
+      [map.L.sat, map.L.glow].forEach(e => { e.style.display = sz <= 0 ? "none" : "block"; });
+      show(map.L.sat, sz);                                                   // and the plain's over both
       const gl = easeOut(seg(t, q.glow[0], q.glow[1]));
-      map.L.glow.style.opacity = ((0.45 + 0.55 * gl) * (t > q.glow[1] ? 0.88 + 0.12 * Math.sin(2 * Math.PI * (t - q.glow[1]) / 1.6) : 1)).toFixed(3);
+      map.L.glow.style.opacity = (sz * (0.45 + 0.55 * gl) * (t > q.glow[1] ? 0.88 + 0.12 * Math.sin(2 * Math.PI * (t - q.glow[1]) / 1.6) : 1)).toFixed(3);
+      lineI.setAttribute("d", oz > 0 ? traced(ZM.iran) : ""); lineK.setAttribute("d", oz > 0 ? traced(ZM.kerman) : "");
+      osv.style.opacity = oz.toFixed(3);
+      const pp = map.at(ZM.label[0], ZM.label[1]), grow = Math.pow(map.z() / Math.pow(10, F.view.sink[0][3]), 0.45);
+      css(prov, { left: clamp(pp.x, 330, 750) - prov.offsetWidth / 2, top: pp.y - 130, scale: grow.toFixed(4),   // it grows as the camera dives and is gone
+                  opacity: (1 - seg(t, 1.1, 1.9)).toFixed(3) });                                          // before the plain fills the frame
       const pf = map.at(F.places.fastest[0], F.places.fastest[1]), pc = map.at(F.places.rafsanjan[0], F.places.rafsanjan[1]);
       place(fast, pf, c => 26, -74, easeOut(seg(t, q.chips[0], q.chips[0] + 0.4))); ring(fast.dot, t);
       place(city, pc, c => -c.offsetWidth - 26, -30, easeOut(seg(t, q.chips[1], q.chips[1] + 0.4))); ring(city.dot, t + 0.5);
@@ -227,7 +255,8 @@ async function main() {
   // ── 3: the plain in 1987 wiped to 2025, the green canopy tinted ──
   function wells(sc) {
     const f = frame(sc), b = f.body, q = Q.wells, K = Wd.wells;
-    const map = plain(b, [["now", SF.now], ["gnow", SF.green_now], ["then", SF.then], ["gthen", SF.green_then]]);
+    const map = geo(b, [["kerman", Lk.file, Lk.bounds, Lk.w, Lk.h], ["now", SF.now, STB, ST.width, ST.height, true], ["gnow", SF.green_now, STB, ST.width, ST.height, true],
+                        ["then", SF.then, STB, ST.width, ST.height, true], ["gthen", SF.green_then, STB, ST.width, ST.height, true]]);
     scrims(b, 860, 1240);
     const line = css(el("div", "abs", b), { top: 560, width: 6, height: 980, background: "linear-gradient(180deg, rgba(242,181,68,0), #F2B544 12%, #FFE7AE 50%, #F2B544 88%, rgba(242,181,68,0))", borderRadius: "3px", boxShadow: "0 0 26px 4px rgba(242,181,68,.75)" });
     const then = css(el("div", "chip", b, K.then), { top: 900 }), now = css(el("div", "chip gold", b, K.now), { top: 900 });
@@ -235,14 +264,15 @@ async function main() {
     return { ...f, update(t) {
       map.view(keyed(F.view.wells, t));
       const p = easeInOut(seg(t, q.wipe[0], q.wipe[1])), wx = lerp(1040, 40, p);         // left of wx: 1987; right of it: 2025
-      const sx = map.stageX(wx);
-      [map.L.then, map.L.gthen].forEach(e => { e.style.clipPath = `inset(0 ${Math.max(0, ST.width - sx).toFixed(1)}px 0 0)`; });
+      const sx = (map.lonAt(wx) - ST.west) / (ST.east - ST.west) * ST.width;          // the wipe's line in the plain's own pixels
+      [map.L.then, map.L.gthen].forEach(e => { e.style.clipPath = `inset(0 ${clamp(ST.width - sx, 0, ST.width).toFixed(1)}px 0 0)`; });
       const gA = 0.72 + 0.28 * easeOut(seg(t, q.green[0], q.green[1])) * (0.85 + 0.15 * Math.sin(2 * Math.PI * Math.max(0, t - q.green[0]) / 1.8));
       [map.L.gnow, map.L.gthen].forEach(e => { e.style.opacity = gA.toFixed(3); });
       const moving = p > 0 && p < 1;
       css(line, { left: clamp(wx, 20, 1060) - 3, opacity: moving ? "1" : "0" });
       css(then, { left: p < 1 ? clamp(wx - 30, 120, 1000) - then.offsetWidth : 60, opacity: (p < 0.97 ? 1 : 0).toString() });
-      css(now, { left: p > 0 ? clamp(wx + 30, 80, 940 - now.offsetWidth) : 1200, opacity: (p > 0.02 ? 1 : 0).toString() });
+      const roomy = wx + 30 + now.offsetWidth <= 940;                                   // only where it fits right of the line: never on the other chip
+      css(now, { left: p > 0 ? clamp(wx + 30, 80, 940 - now.offsetWidth) : 1200, opacity: (p > 0.02 && (roomy || p >= 1) ? 1 : 0).toString() });
       place(city, map.at(F.places.rafsanjan[0], F.places.rafsanjan[1]), c => -c.offsetWidth - 26, -30, 1); ring(city.dot, t);
     } };
   }

@@ -36,7 +36,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stills", action="store_true", help="cover and stills only, no video")
     ap.add_argument("--at", type=float, nargs="*", help="stills at these times only")
-    ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--workers", type=int, default=5)      # each browser holds the dive's large pictures: 8 at once ran out of room
     args = ap.parse_args()
     film = json.loads((BUILD / "film.json").read_text(encoding="utf-8"))
     n = round(film["end"] * base.FPS)

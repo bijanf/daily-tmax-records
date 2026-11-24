@@ -50,6 +50,9 @@ def layer(mx, c: dict, q: dict) -> None:
     rng, put = mx.rng, mx.put
     put(kit.impact(2.0, vel=0.26, pitch=52.0), 0.0)                                         # frame 0
     put(doc.whoosh(rng, 0.9, 0.16, 200.0, 2200.0), 0.0)
+    d0, d1 = q["sink"]["dive"]                                                              # the dive from Iran to the plain
+    put(kit.riser(d1 - d0, vel=0.16, f0=120.0, f1=760.0), d0)
+    put(kit.impact(1.8, vel=0.22, pitch=58.0), d1 - 0.05)
     s0 = c["sink"][0]
     for k, t in enumerate(q["sink"]["chips"]):                                              # the places land
         put(kit.santur(hz(4 + 3 * k, 1), dur=2.2, vel=0.12, t60=1.8, detune=2.0, spread=0.3, bright=0.3), s0 + t, 1.0, 0.3 - 0.6 * k)
@@ -95,7 +98,7 @@ def ground(mx, c: dict) -> None:
 
 def groove(mx, c: dict, q: dict) -> None:
     """Daf, tombak and the santur in eighths; every scene holds a whole number of beats (about 100 a minute)."""
-    beats = dict(sink=18, qanat=16, wells=18, warm=17, city=16)
+    beats = {k: round((t1 - t0) / 0.6) for k, (t0, t1) in c.items()}                        # about 100 a minute, whole beats a scene
     drum = dict(sink=0.6, qanat=0.75, wells=1.0, warm=1.0, city=0.85)
     figure = dict(sink=(0, 4, 2, 4), qanat=(0, 2, 4, 2), wells=(0, 2, 4, 7), warm=(0, 1, 2, 4), city=(0, 4, 7, 4))
     dry = (c["qanat"][0] + q["qanat"]["swap"][0], c["qanat"][1])                       # the dry qanat: the santur alone
@@ -132,14 +135,21 @@ def voice(mx, c: dict, q: dict) -> None:
         f = hz(step, octave)
         mx.put(kit.kamancheh(f, dur=dur + 0.25, vel=vel, vib_hz=4.6, vib_cents=22.0, bow=min(0.7, 0.3 * dur)), t, 1.0, -0.12)
         mx.put(kit.kamancheh(f / 2, dur=dur + 0.25, vel=0.42 * vel, vib_hz=4.2, vib_cents=14.0, bow=min(0.9, 0.36 * dur)), t + 0.03, 1.0, 0.16)
+    # the tune was laid on scenes of 10.5, 9.25, 10.5, 10 and 9.25 s; each scene's notes stretch with its own length,
+    # except where a note answers a cue (the drop named, the dry qanat), which keeps its moment
+    old = dict(sink=10.5, qanat=9.25, wells=10.5, warm=10.0, city=9.25)
+    f = {k: (c[k][1] - c[k][0]) / old[k] for k in old}
     s0, q0, w0, m0, k0 = (c[k][0] for k in ("sink", "qanat", "wells", "warm", "city"))
     sw, tg = q["qanat"]["swap"][0], q["sink"]["tag"]
+    S = lambda key, x: x * f[key]                                                          # noqa: E731
     for t, dur, step, octave, vel in (
-            (s0 + 0.6, 2.6, 0, 0, 0.42), (s0 + 3.4, 2.8, 1, 0, 0.42), (s0 + tg - 0.1, 3.4, 0, 0, 0.46),              # sink: C, D koron, C
+            (s0 + 0.6, 2.6, 0, 0, 0.42), (s0 + 3.4, tg - 3.6, 1, 0, 0.42), (s0 + tg - 0.1, 3.4, 0, 0, 0.46),         # sink: C, D koron, C
+            (s0 + tg + 3.6, c["sink"][1] - s0 - tg - 3.4, 4, -1, 0.4),
             (q0 + 0.3, 2.4, 2, 0, 0.42), (q0 + 2.9, sw - 3.0, 3, 0, 0.42), (q0 + sw + 0.4, 3.2, 1, 0, 0.38),         # qanat: up, then down at the dry one
-            (w0 + 0.3, 2.4, 2, 0, 0.46), (w0 + 3.0, 2.6, 4, 0, 0.5), (w0 + 6.0, 3.6, 5, 0, 0.5),                     # wells: the climb
-            (m0 + 0.3, 2.8, 4, 0, 0.5), (m0 + 3.4, 2.4, 5, 0, 0.52), (m0 + 6.0, 3.2, 7, 0, 0.54),                    # warm: the top
-            (k0 + 0.3, 2.2, 5, 0, 0.48), (k0 + 2.9, 2.4, 4, 0, 0.46), (k0 + 5.6, 3.4, 4, 0, 0.44)):                  # city: open on the fifth
+            (q0 + sw + 3.8, c["qanat"][1] - q0 - sw - 3.6, 0, 0, 0.36),
+            (w0 + S("wells", 0.3), S("wells", 2.4), 2, 0, 0.46), (w0 + S("wells", 3.0), S("wells", 2.6), 4, 0, 0.5), (w0 + S("wells", 6.0), S("wells", 3.6), 5, 0, 0.5),   # wells: the climb
+            (m0 + S("warm", 0.3), S("warm", 2.8), 4, 0, 0.5), (m0 + S("warm", 3.4), S("warm", 2.4), 5, 0, 0.52), (m0 + S("warm", 6.0), S("warm", 3.2), 7, 0, 0.54),   # warm: the top
+            (k0 + S("city", 0.3), S("city", 2.2), 5, 0, 0.48), (k0 + S("city", 2.9), S("city", 2.4), 4, 0, 0.46), (k0 + S("city", 5.6), S("city", 3.4), 4, 0, 0.44)):   # city: open on the fifth
         sing(t, dur, step, octave, vel)
 
 
